@@ -1,0 +1,491 @@
+/* Material icons polyfills */
+
+.material-icons {
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    direction: inherit;
+    display: inline-block;
+    font-feature-settings: "liga";
+    font-size: 24px;
+    font-style: normal;
+    font-weight: normal;
+    height: 1em;
+    letter-spacing: normal;
+    line-height: 1;
+    text-rendering: optimizeLegibility;
+    text-transform: none;
+    white-space: nowrap;
+    word-wrap: normal;
+}
+
+.material-icons.home {
+    content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMjRweCIgZmlsbD0iI0ZGRkZGRiI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0xMCAyMHYtNmg0djZoNXYtOGgzTDEyIDMgMiAxMmgzdjh6Ii8+PC9zdmc+");
+}
+
+.material-icons.add {
+    content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMjRweCIgZmlsbD0iI0ZGRkZGRiI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0xOSAxM2gtNnY2aC0ydi02SDV2LTJoNlY1aDJ2Nmg2djJ6Ii8+PC9zdmc+");
+}
+
+.material-icons.delete {
+    content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMjRweCIgZmlsbD0iI0ZGRkZGRiI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik02IDE5YzAgMS4xLjkgMiAyIDJoOGMxLjEgMCAyLS45IDItMlY3SDZ2MTJ6TTE5IDRoLTMuNWwtMS0xaC01bC0xIDFINXYyaDE0VjR6Ii8+PC9zdmc+");
+}
+
+/*
+theme.css
+*/
+
+.button-delete {
+    background: rgb(247, 0, 0);
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.button-delete:disabled {
+    background: rgb(105, 0, 0);
+    color: rgba(127, 127, 127, 0.87);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/*
+Emby Button
+*/
+
+.emby-button {
+    -moz-user-select: none;
+    -ms-user-select: none;
+    /* Disable webkit tap highlighting */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-user-select: none;
+    align-items: center;
+    border: 0;
+    border-radius: 0.2em;
+    box-sizing: border-box;
+    color: inherit;
+
+    cursor: pointer;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    /* Not crazy about this but it normalizes heights between anchors and buttons */
+    line-height: 1.35;
+    margin: 0.3em;
+    /* These are getting an outline in opera tv browsers, which run chrome 30 */
+    outline: none !important;
+    outline-width: 0;
+    padding: 0.9em 1em;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+
+    transform-origin: center;
+    transition: 0.2s;
+
+    user-select: none;
+    vertical-align: middle;
+    z-index: 0;
+}
+
+.emby-button.show-focus:focus {
+    transform: scale(1.2);
+    z-index: 1;
+}
+
+.emby-button::-moz-focus-inner {
+    border: 0;
+}
+
+.button-flat {
+    background: transparent;
+}
+
+.button-link {
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    vertical-align: initial;
+}
+
+.button-link:hover {
+    text-decoration: underline;
+}
+
+.emby-button>.material-icons {
+    /* For non-fab buttons that have icons */
+    font-size: 1.36em;
+}
+
+.button-link>.material-icons {
+    font-size: 1em;
+}
+
+.fab {
+    align-items: center;
+    border-radius: 50%;
+    box-sizing: border-box;
+    display: inline-flex;
+    justify-content: center;
+    padding: 0.6em;
+    text-align: center;
+}
+
+.emby-button.block {
+    align-items: center;
+    display: block;
+    justify-content: center;
+    margin: 0.25em 0;
+    width: 100%;
+}
+
+.paper-icon-button-light {
+    -moz-user-select: none;
+    -ms-user-select: none;
+    /* Disable webkit tap highlighting */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-user-select: none;
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    box-sizing: border-box;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: inherit;
+    height: auto;
+    justify-content: center;
+    margin: 0 0.29em;
+    min-height: initial;
+    min-width: initial;
+    /* These are getting an outline in opera tv browsers, which run chrome 30 */
+    outline: none !important;
+    overflow: hidden;
+    padding: 0.556em;
+    position: relative;
+
+    text-align: center;
+    transform-origin: center;
+    transition: 0.2s;
+
+    user-select: none;
+    vertical-align: middle;
+    width: auto;
+    z-index: 0;
+}
+
+.paper-icon-button-light.show-focus:focus {
+    transform: scale(1.3);
+    z-index: 1;
+}
+
+.paper-icon-button-light::-moz-focus-inner {
+    border: 0;
+}
+
+.paper-icon-button-light:disabled {
+    cursor: default;
+    opacity: 0.3;
+}
+
+.paper-icon-button-light>.material-icons {
+    font-size: 1.66956521739130434em;
+
+    /* Make sure its on top of the ripple */
+    position: relative;
+    vertical-align: middle;
+    z-index: 1;
+}
+
+.paper-icon-button-light>div {
+    display: inline;
+    margin: 0 auto;
+    max-height: 100%;
+    position: relative;
+    transform: scale(1.8);
+    vertical-align: middle;
+    z-index: 1;
+}
+
+.emby-button-foreground {
+    position: relative;
+    z-index: 1;
+}
+
+.btnFilterWithBubble {
+    position: relative;
+}
+
+.filterButtonBubble {
+    align-items: center;
+    background: #03a9f4;
+    border-radius: 100em;
+    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12),
+        0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    color: #fff;
+    display: flex;
+    font-size: 82%;
+    font-weight: bold;
+    height: 1.6em;
+    justify-content: center;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 1.6em;
+    z-index: 100000000;
+}
+
+/* fonts.scss */
+
+html {
+    -webkit-font-smoothing: antialiased;
+    font-family: "Noto Sans", "Noto Sans HK", "Noto Sans JP", "Noto Sans KR",
+        "Noto Sans SC", "Noto Sans TC", sans-serif;
+    text-rendering: optimizeLegibility;
+    text-size-adjust: 100%;
+}
+
+html[lang|="ja"] {
+    font-family: "Noto Sans", "Noto Sans JP", "Noto Sans HK", "Noto Sans KR",
+        "Noto Sans SC", "Noto Sans TC", sans-serif;
+}
+
+html[lang|="ko"] {
+    font-family: "Noto Sans", "Noto Sans KR", "Noto Sans HK", "Noto Sans JP",
+        "Noto Sans SC", "Noto Sans TC", sans-serif;
+}
+
+html[lang|="zh-CN"] {
+    font-family: "Noto Sans", "Noto Sans SC", "Noto Sans HK", "Noto Sans JP",
+        "Noto Sans KR", "Noto Sans TC", sans-serif;
+}
+
+html[lang|="zh-TW"] {
+    font-family: "Noto Sans", "Noto Sans TC", "Noto Sans HK", "Noto Sans JP",
+        "Noto Sans KR", "Noto Sans SC", sans-serif;
+}
+
+html[lang|="zh-HK"] {
+    font-family: "Noto Sans", "Noto Sans HK", "Noto Sans JP", "Noto Sans KR",
+        "Noto Sans SC", "Noto Sans TC", sans-serif;
+}
+
+.layout-tv {
+    /* Per WebOS and Tizen guidelines, fonts must be 20px minimum.
+       This takes the 16px baseline and multiplies it by 1.25 to get 20px. */
+    font-size: 125%;
+}
+
+.layout-mobile {
+    font-size: 90%;
+}
+
+/* site.scss */
+
+html {
+    line-height: 1.35;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    background-color: transparent !important;
+    overflow-x: hidden;
+}
+
+.clipForScreenReader {
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+}
+
+.material-icons {
+    /* Fix font ligatures on older WebOS versions */
+    font-feature-settings: "liga";
+}
+
+.backgroundContainer {
+    bottom: 0;
+    contain: strict;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+}
+
+.layout-mobile,
+.layout-tv {
+    -webkit-touch-callout: none;
+    user-select: none;
+}
+
+.mainAnimatedPage {
+    contain: style size !important;
+}
+
+.pageContainer {
+    overflow-x: visible !important;
+}
+
+.bodyWithPopupOpen {
+    overflow-y: hidden !important;
+}
+
+div[data-role="page"] {
+    outline: 0;
+}
+
+.pageTitle {
+    font-family: inherit;
+    margin-top: 0;
+}
+
+.fieldDescription {
+    font-weight: 400;
+    padding-left: 0.15em;
+    white-space: normal !important;
+}
+
+.fieldDescription+.fieldDescription {
+    margin-top: 0.3em;
+}
+
+.content-primary,
+.padded-bottom-page,
+.page,
+.pageWithAbsoluteTabs .pageTabContent {
+    /* provides room for the music controls */
+    padding-bottom: 5em !important;
+}
+
+.readOnlyContent {
+
+
+
+    @media all and (min-width: 50em) {
+        max-width: 54em;
+    }
+
+}
+
+form {
+
+
+
+    @media all and (min-width: 50em) {
+        max-width: 54em;
+    }
+
+}
+
+.headerHelpButton {
+    margin-left: 1.25em !important;
+    padding-bottom: 0.4em !important;
+    padding-top: 0.4em !important;
+}
+
+.mediaInfoContent {
+    margin-left: auto;
+    margin-right: auto;
+    width: 85%;
+}
+
+.headroom {
+    transition: transform 200ms linear;
+    will-change: transform;
+}
+
+.drawerContent {
+    /* make sure the bottom of the drawer is visible when music is playing */
+    padding-bottom: 4em;
+}
+
+.force-scroll {
+    overflow-y: scroll;
+}
+
+.hide-scroll {
+    overflow-y: hidden;
+}
+
+.w-100 {
+    width: 100%;
+}
+
+.margin-auto-x {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.margin-auto-y {
+    margin-bottom: auto;
+    margin-top: auto;
+}
+
+/* Fix checkboxes */
+
+/* Customize the label (the container) */
+
+*/ .checkbox-wrapper {
+    position: relative;
+}
+
+.checkbox-wrapper [type="checkbox"] {
+    -webkit-appearance: none;
+    height: 20px;
+    left: 0px;
+    /*display:  none;*/
+    position: absolute;
+    top: 0px;
+    width: 20px;
+}
+
+.checkbox-label {
+    align-items: center;
+    display: flex;
+    font-size: 20px;
+    font-weight: 400;
+    justify-content: flex-start;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.checkbox-label:before,
+.checkbox-label:after {
+    pointer-events: none;
+}
+
+.checkbox-label:before {
+    border: 0.14em solid white;
+    border-radius: 0.14em;
+    content: " ";
+    display: flex;
+    height: 20px;
+    /* background:  #fff; */
+
+    margin-right: 10px;
+    width: 20px;
+}
+
+.checkbox-label:after {
+    background: none;
+    border: 0.14em solid white;
+    border-radius: 0.14em;
+    content: " ";
+    display: flex;
+    height: 20px;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 20px;
+}
+
+.checkbox-wrapper input[type="checkbox"]:checked+.checkbox-label:after {
+    background-color: #2196f3;
+    content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMjRweCIgZmlsbD0iI0ZGRkZGRiI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik05IDE2LjJMNC44IDEybC0xLjQgMS40TDkgMTkgMjEgN2wtMS40LTEuNEw5IDE2LjJ6Ii8+PC9zdmc+");
+}
