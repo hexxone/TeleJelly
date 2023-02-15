@@ -1,4 +1,4 @@
-name: '🏷️ Sync labels'
+name: 'Sync labels'
 
 on:
   schedule:
