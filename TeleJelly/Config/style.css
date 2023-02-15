@@ -1,0 +1,63 @@
+.emby-textarea {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    /* Prevent padding from causing width overflow */
+    box-sizing: border-box;
+    color: inherit;
+
+    display: block;
+
+    /* General select styles: change as needed */
+    font-family: inherit;
+    /* Remove select styling */
+
+    /* Font size must the 16px or larger to prevent iOS page zoom on focus */
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+
+    margin-bottom: 0 !important;
+    outline: none !important;
+    padding: 0.35em 0.25em;
+    width: 100%;
+}
+
+.emby-textarea::-moz-focus-inner {
+    border: 0;
+}
+
+.textareaLabel {
+    display: inline-block;
+    margin-bottom: 0.25em;
+    transition: all 0.2s ease-out;
+}
+
+.emby-textarea+.fieldDescription {
+    margin-top: 0.25em;
+}
+
+.sso-role-mapping-container,
+.sso-bordered-list {
+    /*
+  border-color: #101010;
+  border-color: #383838;
+  */
+    border-color: rgba(255, 255, 255, 0.135);
+
+    border-style: solid;
+    margin-top: 0.25em;
+    padding-top: 0.5em;
+}
+
+.sso-role-mapping-container+.sso-role-mapping-container,
+.sso-bordered-list+.sso-bordered-list {
+    margin-top: 1em;
+}
+
+.sso-role-mapping-container .sso-folder-list {
+    padding-bottom: 0.25em;
+    padding-left: 1em;
+}
+
+.sso-role-mapping-input-label {
+    padding-left: 0.5em;
+}
