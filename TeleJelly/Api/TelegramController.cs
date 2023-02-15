@@ -130,7 +130,7 @@ public class TelegramController : ControllerBase
         {
             _logger.LogError(ex.ToString());
 
-            var errorPageUrl = WebUtility.UrlEncode($"{requestBase}/sso/Telegram/{nameof(Login)}?error={ex.Message}");
+            var errorPageUrl = WebUtility.UrlEncode($"/{nameof(Login)}?error={ex.Message}");
 
             return await Task.FromResult<IActionResult>(Redirect(errorPageUrl));
         }

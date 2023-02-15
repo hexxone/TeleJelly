@@ -67,6 +67,18 @@ If a User's profile picture fails to download even though the url is given, he h
 
 If a User were to change/sell his Username, a random person would possibly be able to use this Service, but having Names over ID's is much more convenient for Management.
 
+## Screenshots
+
+### Login Page
+
+![Login Page](./screenshots/01.jpg)
+
+### Config Page
+
+![Config Page 1](./screenshots/02.jpg)
+
+![Config Page 2](./screenshots/03.jpg)
+
 ## Todo
 
 - publish
