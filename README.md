@@ -19,11 +19,23 @@ Template from: <https://github.com/jellyfin/jellyfin-plugin-template>
 6. On Success -> set user Cookie tg_data (24hrs);  SET JELLYFIN LOGIN ???;  redirect to Jellyfin Dashboard
 7. On Failure -> redirect to Step 2.
 
-## Installation
+## Install
 
 Currently only manual.
 
-- Download 'latest' Version, put it into `config/plugins` folder.
+1. Download the 'latest' Version from Releases on the right
+2. put it into `config/plugins/TeleJelly` folder
+3. restart jellyfin
+
+There is an example config included, but it will also get created automatically if you'd prefer editing the UI.
+
+## Compile
+
+You can also easily compile yourself if you dont trust the download.
+
+1. `git clone https://github.com/hexxone/TeleJelly.git`
+2. install [.NET6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+3. run `publish.ps1`.
 
 ## Usage
 
