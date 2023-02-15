@@ -1,4 +1,4 @@
-name: '🔀 PR Rebase Command'
+name: 'PR Rebase Command'
 
 on:
   repository_dispatch:

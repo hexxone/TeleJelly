@@ -2,20 +2,11 @@
 
 A Plugin for logging into [Jellyfin](https://jellyfin.org/) using the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
 
-The plugin requires assinging a telegram user to one or more virtual groups in order for him to Login.
+The plugin also allows a simple Group management in order to manage Admin/Library-access.
 
-Each group can then have access to all or specified Jellyfin-folders.
+Having a Telegram Username is mandatory.
 
-__Important__:
-
-The user whitelisting and group assignment is done __using Telegram Usernames__. In other words: __having a Telegram Username is mandatory__.
-It would have been possible to use User-Id's as fallback but they are rather ugly in the UI and its annoying to manage long numeric lists.
-So that's a rather small inconvenience imho.
-
-Some code yoinked from:
-
-- <https://github.com/jellyfin/jellyfin-plugin-template>
-- <https://github.com/9p4/jellyfin-plugin-sso>
+Template from: <https://github.com/jellyfin/jellyfin-plugin-template>
 
 ## Scenario
 
@@ -30,7 +21,9 @@ Some code yoinked from:
 
 ## Installation
 
-WIP.
+Currently only manual.
+
+- Download 'latest' Version, put it into `config/plugins` folder.
 
 ## Usage
 
@@ -41,6 +34,38 @@ Then go to the configuration page and fill in the Bot-Token and Bot-Username fir
 Aferwards you can add yourself into the "Administrators" list for full access, or create a Group.
 
 Now you should be able to log in to jellyfin by visiting `yourjellyfin.com/sso/Telegram/login`.
+
+If you are running Jellyfin Version >= 10.8, you may also include this link in the "Branding" via Markdown.
+
+E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram/login)`
+
+## Features
+
+- SSO Login page (at /sso/Telegram/Login)
+  - styled in the
+  - shows a "Back to Normal Login" button
+  - shows error message if given
+  - shows the Telegram Login Widget
+
+- SSO Redirect page (at /sso/Telegram/Redirect)
+  - checks the Telegram Auth data
+  - if data is invalid -> redirect back to login with error
+  - takes the Jellyfin Auth Response and loggs in the user
+  - fancy loading animation
+
+- Config page (reachable via Jellyfin Plugin Page)
+  - allows setting the Telegram Bot Token & Name (required)
+  - allows setting a List of Administrator Telegram Usernames (get full Access)
+  - allows forcing an external Protocol Scheme (for problems with reverse Proxies)
+  - allows Creating/Editing/Deleting a "virtual" management Group
+    - Grants access to all OR specific Libraries for non-Administrators.
+    - A user needs to be Admin OR part of at least ONE Group to Log-in.
+
+## Known issues
+
+If a User's profile picture fails to download even though the url is given, he has probably set it private.
+
+If a User were to change/sell his Username, a random person would possibly be able to use this Service, but having Names over ID's is much more convenient for Management.
 
 ## Done
 

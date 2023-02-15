@@ -1,5 +1,5 @@
 # Allows for the definition of PR and Issue /commands
-name: '📟 Slash Command Dispatcher'
+name: 'Slash Command Dispatcher'
 
 on:
   issue_comment:
