@@ -67,24 +67,10 @@ If a User's profile picture fails to download even though the url is given, he h
 
 If a User were to change/sell his Username, a random person would possibly be able to use this Service, but having Names over ID's is much more convenient for Management.
 
-## Done
-
-- Create basic project
-- Create GUID
-- make it work for Telegram
-- fix jellyfin login via Localstorage
-  - maybe http / https url in Authreseponse is the problem? (yes it was)
-- fix Font Https
-- fix SSO Login page style
-- minify manually returned html/css/js
-- implement config page
-- show ?error message on login if given.
-
 ## Todo
 
-- fix 404 download profilepic from tg?
-- installation instructions
 - publish
+- installation instructions
 
 ## Licensing
 
