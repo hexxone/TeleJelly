@@ -1,8 +1,6 @@
 <h1 align="center">TeleJelly Plugin</h1>
 
-<p align="center">
-A Plugin for logging into <a href="https://jellyfin.org/">Jellyfin</a> using the <a href="https://core.telegram.org/widgets/login">Telegram Login Widget</a> as "SSO" provider.
-</p>
+A Plugin for logging into [Jellyfin](https://jellyfin.org/) using the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
 
 Allows for simple Group creation/editing/deleting in order to manage Admins/Users/Library-access.
 
