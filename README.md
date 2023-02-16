@@ -1,23 +1,28 @@
-# TeleJelly Plugin
+<h1 align="center">TeleJelly Plugin</h1>
 
-A Plugin for logging into [Jellyfin](https://jellyfin.org/) using the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
+<p align="center">
+A Plugin for logging into <a href="https://jellyfin.org/">Jellyfin</a> using the <a href="https://core.telegram.org/widgets/login">Telegram Login Widget</a> as "SSO" provider.
+</p>
 
-The plugin also allows a simple Group management in order to manage Admin/Library-access.
+Allows for simple Group creation/editing/deleting in order to manage Admins/Users/Library-access.
 
 Having a Telegram Username is mandatory.
 
-Template from: <https://github.com/jellyfin/jellyfin-plugin-template>
+Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plugin-ldapauth) and [jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso).
+
+Created from [This Template](https://github.com/jellyfin/jellyfin-plugin-template)
 
 ## Scenario
 
-1. a user wants to access Jellyfin
-2. user lands on the page "yourjellyfin.com/sso/Telegram/login" (you have to get him there)
-3. TeleJelly Plugin shows a Page with Single "Telegram Login" button.
+0. a user wants to access Jellyfin
+1. user sees the "Telegram-Login" Disclaimer Link on Default Login Page
+2. user lands on the page "yourjellyfin.com/sso/Telegram/login"
+3. Plugin shows a Page with a Single-Click "Telegram Login" button.
 3.1 The Widget gets instructed to redirect to url on success: "yourfellyfin.com/sso/Telegram/confirm?user=123123&name=sdfsd.....&hash=asdasdasdasd"
 4. When the button is clicked, The plugin redirects to the URL with filled parameters.
-5. TeleJelly Plugin tries to validate the User data using custom Telegram logic.
-6. On Success -> set user Cookie tg_data (24hrs);  SET JELLYFIN LOGIN ???;  redirect to Jellyfin Dashboard
-7. On Failure -> redirect to Step 2.
+5. Plugin tries to validate the User data using custom Telegram logic.
+6. On Success -> Auth & redirect to Jellyfin Dashboard
+7. On Failure -> back to Login with Error Message (e.g. Invalid Data, not Whitelisted)
 
 ## Install
 
@@ -39,9 +44,7 @@ You can also easily compile yourself if you dont trust the download.
 
 ## Usage
 
-After installing, reboot your Jellyfin server.
-
-Then go to the configuration page and fill in the Bot-Token and Bot-Username first.
+Go to the configuration page and fill in the Bot-Token and Bot-Username first.
 
 Aferwards you can add yourself into the "Administrators" list for full access, or create a Group.
 
@@ -75,7 +78,7 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram/login)`
 
 ## Known issues
 
-If a User's profile picture fails to download even though the url is given, he has probably set it private.
+If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to private. This is weird behaviour by Telegram imho.
 
 If a User were to change/sell his Username, a random person would possibly be able to use this Service, but having Names over ID's is much more convenient for Management.
 
@@ -90,11 +93,6 @@ If a User were to change/sell his Username, a random person would possibly be ab
 ![Config Page 1](./screenshots/02.jpg)
 
 ![Config Page 2](./screenshots/03.jpg)
-
-## Todo
-
-- publish
-- installation instructions
 
 ## Licensing
 
