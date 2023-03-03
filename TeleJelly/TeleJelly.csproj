@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <MSBuildArgs>/property:GenerateFullPaths=true /consoleloggerparameters:NoSummary</MSBuildArgs>
@@ -57,6 +57,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>jellyfin;jellyfin-plugin;telegram;telegram-bot;</PackageTags>
     <Nullable>enable</Nullable>
+    <Version>1.0.2.0</Version>
   </PropertyGroup>
 
 </Project>

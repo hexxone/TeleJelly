@@ -27,7 +27,7 @@ Created from [This Template](https://github.com/jellyfin/jellyfin-plugin-templat
 Currently only manual.
 
 1. Download the 'latest' Version from Releases on the right
-2. put it into `config/plugins/TeleJelly` folder
+2. put files into `config/plugins/TeleJelly` folder
 3. restart jellyfin
 
 There is an example config included, but it will also get created automatically if you'd prefer editing the UI.
@@ -36,9 +36,11 @@ There is an example config included, but it will also get created automatically 
 
 You can also easily compile yourself if you dont trust the download.
 
-1. `git clone https://github.com/hexxone/TeleJelly.git`
-2. install [.NET6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
-3. run `publish.ps1`.
+1. `git clone https://github.com/hexxone/TeleJelly.git` or download Repo as zip.
+2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+3. run `publish.ps1`
+2. put `./publish/` files into `config/plugins/TeleJelly` folder
+3. restart jellyfin
 
 ## Usage
 
