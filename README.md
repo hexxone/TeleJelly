@@ -32,6 +32,14 @@ Currently only manual.
 
 There is an example config included, but it will also get created automatically if you'd prefer editing the UI.
 
+### Why no repository?
+
+- Jellyfin plugin repository management is supidly over-complicated.. even though I like overengineering things.
+- there are 3 bazillion actions, but I still have to trigger a release manually?
+- the github actions simply do not work?
+- there is no useful doumentation for the release gh actions?
+- github actions are genereally annoying. The UI is bad. GitLab CI is way better.
+
 ## Compile
 
 You can also easily compile yourself if you dont trust the download.
@@ -75,6 +83,11 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram/login)`
   - allows Creating/Editing/Deleting a "virtual" management Group
     - Grants access to all OR specific Libraries for non-Administrators.
     - A user needs to be Admin OR part of at least ONE Group to Log-in.
+	
+- uses "NUglify" to reduce web response size
+
+- uses "Fody" for packing the multiple dependcy dlls into one single plugin dll
+
 
 ## Known issues
 
