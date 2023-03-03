@@ -28,10 +28,6 @@
                     </div>
                     <p>
                         <i>Note:</i>
-                        Making changes to this configuration requires a restart
-                        of Jellyfin.
-                    </p>
-                    <p>
                         This plug-in is free open-source software.
                         <br />
                         Not everything will be working perfectly and I do not
@@ -43,6 +39,9 @@
                             Without a set Telegram Username you currently cannot
                             use this Login Method.
                         </strong>
+                        <br />
+                        A Telegram User has to be Administrator OR part of at
+                        least one Group in order to login.
                     </p>
                     <p>
                         Here is the
@@ -57,8 +56,8 @@
                         </strong>
                         .
                         <br />
-                        If you are running Jellyfin Version >= 10.8, you may
-                        also include this link in the "Branding" via Markdown.
+                        You may also include this link in the "Branding" via
+                        Markdown.
                         <br />
                         Here is an example:
                         <style>
@@ -180,22 +179,16 @@
                                         id="TgAdministrators"
                                         type="text"
                                         class="sso-line-list emby-textarea"
+                                        onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
                                     ></textarea>
                                     <div class="fieldDescription">
-                                        A List of Telegram
+                                        A List of
                                         <strong>
-                                            Usernames to grant Jellyfin Admin
-                                            privileges </strong
-                                        >, one per-line.
-                                        <br />
-                                        <strong>
-                                            Without a set Telegram Username you
-                                            cannot use this Login Method.
+                                            Telegram Usernames to grant Jellyfin
+                                            Admin privileges
                                         </strong>
+                                        , one per-line.
                                         <br />
-                                        A Telegram user has to be Administrator
-                                        OR part of at least one Group in order
-                                        to login.
                                     </div>
                                 </div>
 
@@ -363,8 +356,8 @@
                                     />
                                     <div class="fieldDescription">
                                         <strong>
-                                            Only allows alphanumeric characters
-                                            and underscores.
+                                            Only alphanumeric characters and
+                                            underscores allowed.
                                         </strong>
                                         <br />
                                         The name used by the Plugin to identify
@@ -397,8 +390,8 @@
                                         class="fieldDescription checkboxFieldDescription"
                                     >
                                         If enabled, ALL libraries on this server
-                                        will be accessible to any user that logs
-                                        in through this Group.
+                                        will be accessible to all Users which
+                                        Login through this Group.
                                     </div>
                                 </div>
 
@@ -438,14 +431,11 @@
                                         id="UserNames"
                                         type="text"
                                         class="sso-line-list emby-textarea"
+                                        onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
                                     ></textarea>
                                     <div class="fieldDescription">
-                                        A "Whitelist" of Telegram Usernames, one
-                                        per-line.
-                                        <br />
-                                        A Telegram user has to be Administrator
-                                        OR part of at least one Group in order
-                                        to login.
+                                        A list of allowed Telegram Usernames for
+                                        this group, one per-line.
                                     </div>
                                 </div>
 
