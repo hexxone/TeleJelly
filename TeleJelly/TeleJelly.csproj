@@ -59,8 +59,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="mkdir C:\ProgramData\Jellyfin\Server\plugins\TeleJelly&#xD;&#xA;copy $(ProjectDir)$(OutDir)*.dll C:\ProgramData\Jellyfin\Server\plugins\TeleJelly /y" />
-  </Target>
-
 </Project>
