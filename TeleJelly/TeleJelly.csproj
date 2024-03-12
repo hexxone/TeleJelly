@@ -63,27 +63,27 @@
   <PropertyGroup>
     <LocalAppDataPath>$(LocalAppData)</LocalAppDataPath>
   </PropertyGroup>
-  
+
   <Target Name="ILRepacker" AfterTargets="Build">
     <Message Importance="high" Text="
       Repacking DLLs...
     "/>
     <ItemGroup>
-      <TempAssemblies Include="$(OutputPath)\*.dll" />
-      <TempAssemblies Remove="$(OutputPath)$(AssemblyName).dll" />
-      <InputAssemblies Include="$(OutputPath)$(AssemblyName).dll" />
-      <InputAssemblies Include="@(TempAssemblies)" />
+      <InputAssemblies Include="$(TargetPath)"/>
+      <InputAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot'" />
     </ItemGroup>
     <ILRepack
       Parallel="true"
+      DebugInfo="true"
       Internalize="false"
       NoRepackRes="true"
+      Verbose="true"
       InputAssemblies="@(InputAssemblies)"
       TargetKind="Dll"
       OutputFile="$(OutputPath)merged\$(AssemblyName).dll"
     />
   </Target>
-  
+
   <Target Name="PostBuild" AfterTargets="ILRepacker" Condition=" '$(OS)' == 'Windows_NT' And '$(Configuration)' == 'Debug' ">
     <Message Importance="high" Text="
       Copying built Plugin to JellyFin Server...
