@@ -111,12 +111,12 @@ Emby Button
     text-decoration: underline;
 }
 
-.emby-button>.material-icons {
+.emby-button > .material-icons {
     /* For non-fab buttons that have icons */
     font-size: 1.36em;
 }
 
-.button-link>.material-icons {
+.button-link > .material-icons {
     font-size: 1em;
 }
 
@@ -189,7 +189,7 @@ Emby Button
     opacity: 0.3;
 }
 
-.paper-icon-button-light>.material-icons {
+.paper-icon-button-light > .material-icons {
     font-size: 1.66956521739130434em;
 
     /* Make sure its on top of the ripple */
@@ -198,7 +198,7 @@ Emby Button
     z-index: 1;
 }
 
-.paper-icon-button-light>div {
+.paper-icon-button-light > div {
     display: inline;
     margin: 0 auto;
     max-height: 100%;
@@ -222,7 +222,7 @@ Emby Button
     background: #03a9f4;
     border-radius: 100em;
     box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12),
-        0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
     color: #fff;
     display: flex;
     font-size: 82%;
@@ -241,34 +241,34 @@ Emby Button
 html {
     -webkit-font-smoothing: antialiased;
     font-family: "Noto Sans", "Noto Sans HK", "Noto Sans JP", "Noto Sans KR",
-        "Noto Sans SC", "Noto Sans TC", sans-serif;
+    "Noto Sans SC", "Noto Sans TC", sans-serif;
     text-rendering: optimizeLegibility;
     text-size-adjust: 100%;
 }
 
 html[lang|="ja"] {
     font-family: "Noto Sans", "Noto Sans JP", "Noto Sans HK", "Noto Sans KR",
-        "Noto Sans SC", "Noto Sans TC", sans-serif;
+    "Noto Sans SC", "Noto Sans TC", sans-serif;
 }
 
 html[lang|="ko"] {
     font-family: "Noto Sans", "Noto Sans KR", "Noto Sans HK", "Noto Sans JP",
-        "Noto Sans SC", "Noto Sans TC", sans-serif;
+    "Noto Sans SC", "Noto Sans TC", sans-serif;
 }
 
 html[lang|="zh-CN"] {
     font-family: "Noto Sans", "Noto Sans SC", "Noto Sans HK", "Noto Sans JP",
-        "Noto Sans KR", "Noto Sans TC", sans-serif;
+    "Noto Sans KR", "Noto Sans TC", sans-serif;
 }
 
 html[lang|="zh-TW"] {
     font-family: "Noto Sans", "Noto Sans TC", "Noto Sans HK", "Noto Sans JP",
-        "Noto Sans KR", "Noto Sans SC", sans-serif;
+    "Noto Sans KR", "Noto Sans SC", sans-serif;
 }
 
 html[lang|="zh-HK"] {
     font-family: "Noto Sans", "Noto Sans HK", "Noto Sans JP", "Noto Sans KR",
-        "Noto Sans SC", "Noto Sans TC", sans-serif;
+    "Noto Sans SC", "Noto Sans TC", sans-serif;
 }
 
 .layout-tv {
@@ -351,7 +351,7 @@ div[data-role="page"] {
     white-space: normal !important;
 }
 
-.fieldDescription+.fieldDescription {
+.fieldDescription + .fieldDescription {
     margin-top: 0.3em;
 }
 
@@ -366,7 +366,6 @@ div[data-role="page"] {
 .readOnlyContent {
 
 
-
     @media all and (min-width: 50em) {
         max-width: 54em;
     }
@@ -374,7 +373,6 @@ div[data-role="page"] {
 }
 
 form {
-
 
 
     @media all and (min-width: 50em) {
@@ -431,7 +429,10 @@ form {
 
 /* Customize the label (the container) */
 
-*/ .checkbox-wrapper {
+*
+
+/
+.checkbox-wrapper {
     position: relative;
 }
 
@@ -485,7 +486,7 @@ form {
     width: 20px;
 }
 
-.checkbox-wrapper input[type="checkbox"]:checked+.checkbox-label:after {
+.checkbox-wrapper input[type="checkbox"]:checked + .checkbox-label:after {
     background-color: #2196f3;
     content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMjRweCIgZmlsbD0iI0ZGRkZGRiI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik05IDE2LjJMNC44IDEybC0xLjQgMS40TDkgMTkgMjEgN2wtMS40LTEuNEw5IDE2LjJ6Ii8+PC9zdmc+");
 }

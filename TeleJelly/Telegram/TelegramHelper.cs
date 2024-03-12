@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Jellyfin.Data.Entities;
 using Jellyfin.Data.Enums;
+using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller.Authentication;
 using MediaBrowser.Controller.Library;
@@ -21,22 +23,29 @@ using Microsoft.Net.Http.Headers;
 
 #pragma warning disable CA2254
 
-namespace Jellyfin.Plugin.TeleJelly.Api;
+namespace Jellyfin.Plugin.TeleJelly.Telegram;
 
 /// <summary>
 ///     Telegram to Jellyfin interaction Helper class.
 /// </summary>
 public class TelegramHelper
 {
-    private readonly TeleJellyPlugin _instance;
+    /// <summary>
+    ///     How old (in seconds) can authorization attempts be to be considered valid (compared to the auth_date field).
+    /// </summary>
+    private const long AllowedTimeOffset = 30;
+
     private readonly PluginConfiguration _config;
+    private readonly ICryptoProvider _cryptoProvider;
+
+    private readonly HMACSHA256 _hmac;
+    private readonly TeleJellyPlugin _instance;
+    private readonly ILogger _logger;
 
     private readonly ISessionManager _sessionManager;
     private readonly IUserManager _userManager;
-    private readonly ICryptoProvider _cryptoProvider;
-    private readonly ILogger _logger;
 
-    private readonly HMACSHA256 _hmac;
+    private static readonly DateTime _unixStart = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramHelper" /> class.
@@ -46,7 +55,7 @@ public class TelegramHelper
     /// <param name="userManager">for getting and creating users.</param>
     /// <param name="cryptoProvider">for hashing passwords.</param>
     /// <param name="logger">for outputting errors.</param>
-    public TelegramHelper(TeleJellyPlugin instance, ISessionManager sessionManager, IUserManager userManager, ICryptoProvider cryptoProvider, ILogger logger)
+    internal TelegramHelper(TeleJellyPlugin instance, ISessionManager sessionManager, IUserManager userManager, ICryptoProvider cryptoProvider, ILogger logger)
     {
         _instance = instance;
         _config = instance.Configuration;
@@ -80,7 +89,7 @@ public class TelegramHelper
         var userName = GetDictValue(authData, "username");
         if (userId == null || userName == null)
         {
-            throw new ArgumentException("No Username set.");
+            throw new ArgumentException("Username not set.");
         }
 
         var isAdmin = _config.AdminUserNames.Any(admin => string.Equals(admin, userName, StringComparison.CurrentCultureIgnoreCase));
@@ -107,11 +116,16 @@ public class TelegramHelper
             user.Password = _cryptoProvider.CreatePasswordHash(Convert.ToBase64String(randBytes)).ToString();
         }
 
-        // Update User Properties & Permissions etc.
-        // TODO download user image from Telegram if given.
-        await DownloadUserImage(user, authData);
+        // download user image from Telegram if given.
+        var gotImageFromTelegram = await DownloadUserImage(user, authData);
+        if (!gotImageFromTelegram)
+        {
+            var setDefaultImage = await SetDefaultUserImage(user);
+            Debug.Assert(setDefaultImage, "Failed to set default image.");
+        }
 
-        user.MaxActiveSessions = 3;
+        // Update User Properties & Permissions etc.
+        user.MaxActiveSessions = _config.MaxSessionCount;
         user.EnableAutoLogin = true;
 
         user.SetPermission(PermissionKind.IsAdministrator, isAdmin);
@@ -125,7 +139,7 @@ public class TelegramHelper
             user.SetPreference(PreferenceKind.EnabledFolders, userFolders);
         }
 
-        // save it again.
+        // save it if changed.
         await _userManager.UpdateUserAsync(user).ConfigureAwait(false);
 
         return user;
@@ -163,38 +177,55 @@ public class TelegramHelper
     /// <summary>
     ///     Verifies the given user credentials with given hash by Bot Token.
     /// </summary>
-    /// <param name="authData">unverified URL parameter data.</param>
+    /// <param name="fields">unverified URL parameter data.</param>
     /// <exception cref="Exception">if data is invalid in any way.</exception>
-    public void CheckTelegramAuthorizationImpl(SortedDictionary<string, string> authData)
+    /// <returns>result.</returns>
+    public TelegramAuthResult CheckTelegramAuthorizationImpl(SortedDictionary<string, string> fields)
     {
-        if (authData == null || authData.Keys.Count == 0)
+        Debug.Assert(fields != null, nameof(fields) + " != null");
+
+        if (!fields.ContainsKey(Field.Id) ||
+            !fields.TryGetValue(Field.AuthDate, out string? authDate) ||
+            !fields.TryGetValue(Field.Hash, out string? hash))
         {
-            throw new Exception("Data is null");
+            return new TelegramAuthResult { ErrorMessage = "Data has missing fields." };
         }
 
-        var checkHash = GetDictValue(authData, "hash");
-        if (checkHash is not { Length: 64 })
+        if (!long.TryParse(authDate, out long timestamp))
         {
-            throw new Exception("Hash is invalid");
+            return new TelegramAuthResult { ErrorMessage = "Invalid AuthDate Format." };
         }
 
-        var orderedKeys = authData.Keys.Where(k => !string.Equals("hash", k, StringComparison.CurrentCultureIgnoreCase)).ToArray();
-        var dataCheckArr = orderedKeys.Select(key => $"{key}={authData[key]}").ToArray();
-        var dataCheckString = string.Join("\n", dataCheckArr);
+        if (Math.Abs(DateTime.UtcNow.Subtract(_unixStart).TotalSeconds - timestamp) > AllowedTimeOffset)
+        {
+            return new TelegramAuthResult { ErrorMessage = "Data is too old." };
+        }
 
-        var signature = _hmac.ComputeHash(Encoding.UTF8.GetBytes(dataCheckString));
+        if (hash is not { Length: 64 })
+        {
+            return new TelegramAuthResult { ErrorMessage = "Invalid hash." };
+        }
 
         // Adapted from: https://stackoverflow.com/a/14333437/6845657
-        if (signature.Where((t, i) => checkHash[i * 2] != 87 + (t >> 4) + ((((t >> 4) - 10) >> 31) & -39) || checkHash[(i * 2) + 1] != 87 + (t & 0xF) + ((((t & 0xF) - 10) >> 31) & -39)).Any())
+        var orderedKeys = fields.Keys.Where(k => !string.Equals("hash", k, StringComparison.CurrentCultureIgnoreCase)).ToArray();
+        var dataCheckString = string.Join("\n", orderedKeys.Select(key => $"{key}={fields[key]}"));
+        var signature = _hmac.ComputeHash(Encoding.UTF8.GetBytes(dataCheckString));
+
+        if (signature.Where(FailCheckPredicate).Any())
         {
-            throw new Exception($"Data is NOT from Telegram. Data: [{dataCheckString}]");
+            return new TelegramAuthResult { ErrorMessage = "Invalid hash." };
         }
 
-        var authDate = int.Parse(authData["auth_date"], new NumberFormatInfo());
-        var currentTime = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-        if (currentTime - authDate > 86400)
+        return new TelegramAuthResult { Ok = true };
+
+        bool FailCheckPredicate(byte t, int i)
         {
-            throw new Exception("Data is outdated");
+            if (hash[i * 2] != 87 + (signature[i] >> 4) + ((((signature[i] >> 4) - 10) >> 31) & -39))
+            {
+                return true;
+            }
+
+            return hash[(i * 2) + 1] != 87 + (signature[i] & 0xF) + ((((signature[i] & 0xF) - 10) >> 31) & -39);
         }
     }
 
@@ -204,13 +235,8 @@ public class TelegramHelper
     /// </summary>
     /// <param name="request">Incoming Context.</param>
     /// <returns>string of Format "FQDN.TLD".</returns>
-    public string? GetRequestBase(HttpRequest? request)
+    public string GetRequestBase(HttpRequest request)
     {
-        if (request == null)
-        {
-            return default;
-        }
-
         var requestPort = request.Host.Port ?? -1;
         var requestScheme = _config.ForceUrlScheme ? _config.ForcedUrlScheme : request.Scheme;
 
@@ -239,7 +265,7 @@ public class TelegramHelper
     /// <summary>
     ///     Function which tries to download a Telegram user image for the given jellyfin user.
     /// </summary>
-    /// <param name="user">To set the Profilepicture for.</param>
+    /// <param name="user">To set the Profile picture for.</param>
     /// <param name="authData">To download from Telegram.</param>
     /// <returns>whether image was successfully downloaded and set.</returns>
     public async Task<bool> DownloadUserImage(User user, SortedDictionary<string, string> authData)
@@ -290,6 +316,7 @@ public class TelegramHelper
             else
             {
                 user.ProfileImage.Path = userImgFile;
+                user.ProfileImage.LastModified = DateTime.UtcNow;
             }
 
             _logger.LogInformation("Successfully downloaded telegram image for '{Username}'.", user.Username);
@@ -301,5 +328,74 @@ public class TelegramHelper
             _logger.LogError(ex, "Failed to download telegram image for '{Username}' from '{PhotoUrl}'.", user.Username, cleanedUrl);
             return false;
         }
+    }
+
+    /// <summary>
+    ///     Try to set the default user image from embedded resources.
+    /// </summary>
+    /// <param name="user">Jellyfin Telegram User.</param>
+    /// <returns>Whether action was successful.</returns>
+    public async Task<bool> SetDefaultUserImage(User user)
+    {
+        var view = _instance.GetExtraFiles().FirstOrDefault(extra => extra.Name == Constants.DefaultUserImageExtraFile);
+        if (view == null)
+        {
+            _logger.LogError("Failed to get DefaultUserImageExtraFile {Resource}", Constants.DefaultUserImageExtraFile);
+            return false;
+        }
+
+        var stream = _instance.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
+        if (stream == null)
+        {
+            _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
+            return false;
+        }
+
+        var userImgPath = Path.Combine(_instance.ApplicationPaths.PluginsPath, Constants.PluginName, Constants.PluginDataFolder, Constants.UserImageFolder);
+        _logger.LogDebug("Trying to save default image for '{Username}' into '{UserImgPath}'", user.Username, userImgPath);
+
+        try
+        {
+            if (!Directory.Exists(userImgPath))
+            {
+                Directory.CreateDirectory(userImgPath);
+            }
+
+            var userImgFile = Path.Combine(userImgPath, $"{user.Username}.jpg");
+
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(3);
+
+            // Copy Resource file stream to User image location on disk.
+            await using var fileStream = new FileStream(userImgFile, FileMode.Create);
+            await stream.CopyToAsync(fileStream);
+
+            // If download succeeds, update user image and return true.
+            if (user.ProfileImage == null)
+            {
+                user.ProfileImage = new ImageInfo(userImgFile);
+            }
+            else
+            {
+                user.ProfileImage.Path = userImgFile;
+                user.ProfileImage.LastModified = DateTime.UtcNow;
+            }
+
+            _logger.LogInformation("Successfully set default telegram user image for '{Username}'.", user.Username);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Log error and return false.
+            _logger.LogError(ex, "Failed to set default telegram user image for '{Username}' from '{PhotoUrl}'.", user.Username, view.EmbeddedResourcePath);
+            return false;
+        }
+    }
+
+    private static class Field
+    {
+        public const string AuthDate = "auth_date";
+        public const string Id = "id";
+        public const string Hash = "hash";
     }
 }

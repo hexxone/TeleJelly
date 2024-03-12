@@ -5,6 +5,8 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
+// TODO [assembly:CLSCompliant(true)]
+
 namespace Jellyfin.Plugin.TeleJelly;
 
 /// <summary>
@@ -49,18 +51,18 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     ///     has replaceable params:
     ///     - {{SERVER_URL}} = Jellyfin base Url
     ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
-    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username
-    ///     - {{TELEGRAM_AUTH_URL}} = Callback Url for Login.
+    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
     /// </summary>
     public PluginPageInfo TelegramLoginPage => new() { Name = "login", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.telegram.login.html" };
 
     /// <summary>
-    ///     Gets the Resource-Info for the Telegram Auth Page.
-    ///     has replaceable params:
-    ///     - {{AUTH_RESULT_DATA}} = Stringified Json AuthResponse
-    ///     - {{AUTH_REDIRECT_URL}} = Callback Url for Login.
+    ///     Returns the available internal web pages of this plugin.
     /// </summary>
-    public PluginPageInfo TelegramRedirectPage => new() { Name = "redirect", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.telegram.redirect.html" };
+    /// <returns>A list of internal webpages in this application.</returns>
+    public IEnumerable<PluginPageInfo> GetPages()
+    {
+        return new PluginPageInfo[] { new() { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Config.configPage.html" }, new() { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Config.config.js" }, new() { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Config.style.css" } };
+    }
 
     /// <summary>
     ///     Gets the always available list of extra files for Telegram SSO.
@@ -69,15 +71,12 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <returns>A list of internal webpages in this application.</returns>
     public IEnumerable<PluginPageInfo> GetExtraFiles()
     {
-        return new[] { new PluginPageInfo { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.material_icons.woff2" } };
-    }
-
-    /// <summary>
-    ///     Returns the available internal web pages of this plugin.
-    /// </summary>
-    /// <returns>A list of internal webpages in this application.</returns>
-    public IEnumerable<PluginPageInfo> GetPages()
-    {
-        return new[] { new PluginPageInfo { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Config.configPage.html" }, new PluginPageInfo { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Config.config.js" }, new PluginPageInfo { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Config.style.css" } };
+        return new PluginPageInfo[]
+        {
+            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.css" },
+            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.js" },
+            new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.material_icons.woff2" },
+            new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.TeleJellyLogo.jpg" },
+        };
     }
 }

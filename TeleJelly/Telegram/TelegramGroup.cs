@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace Jellyfin.Plugin.TeleJelly;
+namespace Jellyfin.Plugin.TeleJelly.Telegram;
 
 /// <summary>
 ///     The configuration required for a virtual Group of Telegram users.

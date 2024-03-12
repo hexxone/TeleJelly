@@ -10,7 +10,6 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "jellyfin", "C:\Program File
 		Executable = C:\Program Files\Jellyfin\Server\jellyfin.exe
 		RemoteMachine = 
 		StartingDirectory = C:\Program Files\Jellyfin\Server
-		Arguments = --datadir "C:\ProgramData\Jellyfin\Server"
 		Environment = Default
 		LaunchingEngine = 00000000-0000-0000-0000-000000000000
 		UseLegacyDebugEngines = No
@@ -18,6 +17,8 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "jellyfin", "C:\Program File
 		AttachLaunchAction = No
 		IORedirection = Auto
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpsReverseProxy", "HttpsReverseProxy\HttpsReverseProxy.csproj", "{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +40,14 @@ Global
 		{824EA731-D05B-4F35-83E6-C32BDA2BDF0C}.Debug|x64.ActiveCfg = Release|x64
 		{824EA731-D05B-4F35-83E6-C32BDA2BDF0C}.Release|Any CPU.ActiveCfg = Release|x64
 		{824EA731-D05B-4F35-83E6-C32BDA2BDF0C}.Release|x64.ActiveCfg = Release|x64
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Debug|x64.Build.0 = Debug|Any CPU
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Release|x64.ActiveCfg = Release|Any CPU
+		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

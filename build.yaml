@@ -1,7 +1,7 @@
 ---
 name: "TeleJelly"
 guid: "4b71013d-00ba-470c-9e4d-0c451a435328"
-version: "1.0.0.0"
+version: "1.0.3.0"
 targetAbi: "10.8.0.0"
 framework: "net6.0"
 overview: "A Plugin for logging into Jellyfin using the Telegram Login Widget"
