@@ -3,61 +3,97 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.3.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <MSBuildArgs>/property:GenerateFullPaths=true /consoleloggerparameters:NoSummary</MSBuildArgs>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <PackageProjectUrl>https://github.com/hexxone/TeleJelly</PackageProjectUrl>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/hexxone/TeleJelly</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Pages\Files\material_icons.woff2" />
+    <None Remove="Pages\Files\material_icons.woff2"/>
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Config\config.js" />
-    <EmbeddedResource Include="Config\configPage.html" />
-    <EmbeddedResource Include="Config\emby-restyle.css" />
-    <EmbeddedResource Include="Config\style.css" />
-    <EmbeddedResource Include="Pages\Files\material_icons.woff2" />
-    <EmbeddedResource Include="Pages\telegram.redirect.html" />
-    <EmbeddedResource Include="Pages\telegram.login.html" />
+    <EmbeddedResource Include="Config\*.js"/>
+    <EmbeddedResource Include="Config\*.html"/>
+    <EmbeddedResource Include="Config\*.css"/>
+    <EmbeddedResource Include="Pages\*.js"/>
+    <EmbeddedResource Include="Pages\*.html"/>
+    <EmbeddedResource Include="Pages\*.css"/>
+    <EmbeddedResource Include="Pages\Files\*"/>
   </ItemGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Costura.Fody" Version="5.7.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive; compile</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Fody" Version="6.6.4">
+    <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.26">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Jellyfin.Controller" Version="10.8.4" />
-    <PackageReference Include="Jellyfin.Model" Version="10.8.4" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
-    <PackageReference Include="NUglify" Version="1.20.5" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.8.13"/>
+    <PackageReference Include="Jellyfin.Model" Version="10.8.13"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All" />
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.376" PrivateAssets="All" />
-    <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All" />
-    <PackageReference Include="WebMarkupMin.Core" Version="2.13.8" />
+    <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All"/>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.376" PrivateAssets="All"/>
+    <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All"/>
+    <PackageReference Include="Telegram.Bot" Version="19.0.0" />
+    <PackageReference Include="WebMarkupMin.Core" Version="2.16.0"/>
   </ItemGroup>
 
   <PropertyGroup>
     <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <Title>TeleJelly plugin</Title>
-    <Description>Telegram Login provider Plugin for Jelllyfin</Description>
+    <Description>Telegram Login provider plugin for Jelllyfin</Description>
     <Copyright>hexxone</Copyright>
     <RepositoryType>git</RepositoryType>
     <PackageTags>jellyfin;jellyfin-plugin;telegram;telegram-bot;</PackageTags>
     <Nullable>enable</Nullable>
-    <Version>1.0.2.0</Version>
+    <Version>1.0.3.0</Version>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <LocalAppDataPath>$(LocalAppData)</LocalAppDataPath>
+  </PropertyGroup>
+  
+  <Target Name="ILRepacker" AfterTargets="Build">
+    <Message Importance="high" Text="
+      Repacking DLLs...
+    "/>
+    <ItemGroup>
+      <TempAssemblies Include="$(OutputPath)\*.dll" />
+      <TempAssemblies Remove="$(OutputPath)$(AssemblyName).dll" />
+      <InputAssemblies Include="$(OutputPath)$(AssemblyName).dll" />
+      <InputAssemblies Include="@(TempAssemblies)" />
+    </ItemGroup>
+    <ILRepack
+      Parallel="true"
+      Internalize="false"
+      NoRepackRes="true"
+      InputAssemblies="@(InputAssemblies)"
+      TargetKind="Dll"
+      OutputFile="$(OutputPath)merged\$(AssemblyName).dll"
+    />
+  </Target>
+  
+  <Target Name="PostBuild" AfterTargets="ILRepacker" Condition=" '$(OS)' == 'Windows_NT' And '$(Configuration)' == 'Debug' ">
+    <Message Importance="high" Text="
+      Copying built Plugin to JellyFin Server...
+    "/>
+    <Delete Files="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*" />
+    <Copy
+      SourceFiles="$(TargetDir)merged\$(ProjectName).dll"
+      DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly"
+      OverwriteReadOnlyFiles="true"
+    />
+  </Target>
 
 </Project>

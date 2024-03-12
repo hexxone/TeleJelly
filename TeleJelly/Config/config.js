@@ -207,6 +207,53 @@ const tgConfigPage = {
     },
 };
 
+
+const tgTokenHelper = {
+    // Function to call the validation API
+    validateToken(token) {
+        fetch('/api/TeleJellyConfig/ValidateBotToken', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({token}),
+        })
+            .then(response => response.json())
+            .then(data => {
+                tgTokenHelper.handleValidationResponse(data);
+            })
+            .catch(error => {
+                console.error('Error validating token:', error);
+            });
+    },
+
+    // Function to handle the API response
+    handleValidationResponse(response) {
+        const inputElement = document.getElementById('TgBotToken');
+        if (response.ok) {
+            inputElement.style.borderColor = 'green';
+            tgTokenHelper.displayErrorMessage(''); // Hide error message
+            // Optionally set the BotUsername somewhere
+            // document.getElementById('BotUsername').textContent = response.BotUsername;
+        } else {
+            inputElement.style.borderColor = 'red';
+            tgTokenHelper.displayErrorMessage(response.ErrorMessage || 'Invalid token.');
+        }
+    },
+
+    // Function to display/hide the error message
+    displayErrorMessage(message) {
+        const inputElement = document.getElementById('TgBotToken');
+        let errorElement = document.getElementById('tokenError');
+        if (!errorElement) {
+            errorElement = document.createElement('div');
+            errorElement.id = 'tokenError';
+            inputElement.parentNode.insertBefore(errorElement, inputElement.nextSibling);
+        }
+        errorElement.textContent = message;
+    },
+}
+
 export default function (view) {
     Dashboard.showLoadingMsg();
 
@@ -243,6 +290,16 @@ export default function (view) {
     const loginUrl = ApiClient.getUrl("/sso/Telegram/Login");
     view.querySelector("#sso-telegram-login").href = loginUrl;
     view.querySelector("#exampleBrandingCode").innerHTML = `[Telegram-Login](${loginUrl})`;
+
+    // Event listener for input changes with debounce
+    let debounce;
+    const inputElement  = view.querySelector("#TgBotToken");
+    inputElement .addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => tgTokenHelper.validateToken(inputElement.value), 200);
+    });
+    // Validate the token once initially
+    tgTokenHelper.validateToken(inputElement.value);
 
     Dashboard.hideLoadingMsg();
 }

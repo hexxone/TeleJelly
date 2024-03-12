@@ -29,4 +29,9 @@ public static class Constants
     ///     Currently only used for storing user images.
     /// </summary>
     public static string UserImageFolder => "userimages";
+
+    /// <summary>
+    ///     Gets which ExtraFile to use as default, if the Telegram User has not set one.
+    /// </summary>
+    public static string DefaultUserImageExtraFile => "TeleJellyLogo.jpg";
 }

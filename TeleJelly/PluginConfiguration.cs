@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Xml.Serialization;
+using Jellyfin.Plugin.TeleJelly.Telegram;
 using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.TeleJelly;
@@ -25,6 +26,11 @@ public class PluginConfiguration : BasePluginConfiguration
     ///     TODO Be careful! Usernames in Telegram can be sold, bought and changed easily.
     /// </summary>
     public List<string> AdminUserNames { get; set; } = new();
+
+    /// <summary>
+    ///     Gets or sets a Hard Cap for Login Sessions for User with Telegram..
+    /// </summary>
+    public int MaxSessionCount { get; set; } = -1;
 
     /// <summary>
     ///     Gets or sets a value indicating whether we should force a Specific protocol Scheme on externally returned URLS ("ForcedUrlScheme").

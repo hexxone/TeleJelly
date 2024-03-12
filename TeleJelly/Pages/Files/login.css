@@ -1,0 +1,115 @@
+﻿@font-face {
+    font-family: "Material Symbols Outlined";
+    font-style: normal;
+    font-weight: 400;
+    src: url("{{SERVER_URL}}/sso/Telegram/ExtraFiles/material_icons.woff2") format("woff2");
+}
+
+body {
+    transition: opacity ease-in 0.2s;
+}
+
+body[unresolved] {
+    display: block;
+    opacity: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+h1,
+h2 {
+    font-family: Noto Sans, Noto Sans HK, Noto Sans JP, Noto Sans KR,
+    Noto Sans SC, sans-serif;
+    font-weight: 400;
+}
+
+.material-symbols-outlined {
+    direction: ltr;
+    display: inline-block;
+    font-family: "Material Symbols Outlined";
+    font-size: 24px;
+    font-style: normal;
+    font-weight: normal;
+    letter-spacing: normal;
+    line-height: 1;
+    text-transform: none;
+    white-space: nowrap;
+    word-wrap: normal;
+}
+
+.pageTitle {
+    align-items: center;
+    display: inline-flex;
+    flex-shrink: 1;
+    height: 1.7em;
+    margin: 0 0 0 0.5em;
+}
+
+.pageTitleWithLogo {
+    background-position: 0;
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 13.2em;
+}
+
+.pageTitleWithDefaultLogo {
+    background-image: url({{SERVER_URL}}/web/assets/img/banner-light.png);
+}
+
+.skinHeader {
+    border: 0;
+    contain: layout style paint;
+    display: flex;
+    flex-direction: column;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    transition: background 0.5s ease-in-out;
+    z-index: 999;
+}
+
+.skinHeader, html {
+    color: #ddd;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.skinHeader.semiTransparent {
+    backdrop-filter: none !important;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.headerTop {
+    padding: 0.8em;
+}
+
+.mainContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    margin-top: 4em;
+    max-width: 800px;
+}
+
+.spacedContent {
+    margin: 1em 0.2em;
+    text-align: center;
+}
+
+.headerBackButton {
+    color: #ddd;
+    background-color: rgba(100, 100, 100, 0.1);
+    border-radius: 50%;
+    border-width: 0;
+    padding: 0.5em;
+    transition: all 0.25s ease-in-out;
+}
+
+.headerBackButton:hover {
+    color: #ddd;
+    border-color: #ddd;
+    background-color: rgba(100, 100, 100, 0.3);
+    border-width: 0.05em;
+}

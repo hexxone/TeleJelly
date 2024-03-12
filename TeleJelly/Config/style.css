@@ -31,7 +31,7 @@
     transition: all 0.2s ease-out;
 }
 
-.emby-textarea+.fieldDescription {
+.emby-textarea + .fieldDescription {
     margin-top: 0.25em;
 }
 
@@ -48,8 +48,8 @@
     padding-top: 0.5em;
 }
 
-.sso-role-mapping-container+.sso-role-mapping-container,
-.sso-bordered-list+.sso-bordered-list {
+.sso-role-mapping-container + .sso-role-mapping-container,
+.sso-bordered-list + .sso-bordered-list {
     margin-top: 1em;
 }
 
@@ -60,4 +60,11 @@
 
 .sso-role-mapping-input-label {
     padding-left: 0.5em;
+}
+
+code {
+    border: 1px dotted #777;
+    display: block;
+    padding: 1rem;
+    max-width: 54em;
 }
