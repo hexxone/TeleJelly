@@ -69,8 +69,8 @@
       Repacking DLLs...
     "/>
     <ItemGroup>
-      <InputAssemblies Include="$(TargetPath)"/>
-      <InputAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'"/>
+      <ILRepackAssemblies Include="$(TargetPath)"/>
+      <ILRepackAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'"/>
     </ItemGroup>
     <ILRepack
       Parallel="true"
@@ -78,9 +78,15 @@
       Internalize="false"
       NoRepackRes="true"
       Verbose="true"
-      InputAssemblies="@(InputAssemblies)"
+      InputAssemblies="@(ILRepackAssemblies)"
       TargetKind="Dll"
-      OutputFile="$(OutputPath)merged\$(AssemblyName).dll"
+      OutputFile="$(OutDir)merged/$(AssemblyName).dll"
+    />
+    <Copy
+      Condition="'$(PublishProtocol)'!=''"
+      SourceFiles="$(OutDir)merged/$(ProjectName).dll"
+      DestinationFolder="$(PublishDir)/merged/"
+      OverwriteReadOnlyFiles="true"
     />
   </Target>
 
@@ -90,7 +96,7 @@
     "/>
     <Delete Files="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*"/>
     <Copy
-      SourceFiles="$(TargetDir)merged\$(ProjectName).dll"
+      SourceFiles="$(OutDir)merged/$(ProjectName).dll"
       DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly"
       OverwriteReadOnlyFiles="true"
     />

@@ -1,1 +1,1 @@
-dotnet publish . -c Release -o ./publish
+dotnet publish ./TeleJelly/TeleJelly.csproj -c Release -o ./publish
