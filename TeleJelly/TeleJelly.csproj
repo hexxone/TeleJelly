@@ -36,14 +36,14 @@
     </PackageReference>
     <PackageReference Include="Jellyfin.Controller" Version="10.8.13"/>
     <PackageReference Include="Jellyfin.Model" Version="10.8.13"/>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.4"/>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All"/>
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.376" PrivateAssets="All"/>
     <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All"/>
-    <PackageReference Include="Telegram.Bot" Version="19.0.0" />
+    <PackageReference Include="Telegram.Bot" Version="19.0.0"/>
     <PackageReference Include="WebMarkupMin.Core" Version="2.16.0"/>
   </ItemGroup>
 
@@ -70,7 +70,7 @@
     "/>
     <ItemGroup>
       <InputAssemblies Include="$(TargetPath)"/>
-      <InputAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot'" />
+      <InputAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'"/>
     </ItemGroup>
     <ILRepack
       Parallel="true"
@@ -88,7 +88,7 @@
     <Message Importance="high" Text="
       Copying built Plugin to JellyFin Server...
     "/>
-    <Delete Files="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*" />
+    <Delete Files="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*"/>
     <Copy
       SourceFiles="$(TargetDir)merged\$(ProjectName).dll"
       DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly"

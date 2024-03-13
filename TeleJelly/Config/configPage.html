@@ -15,43 +15,46 @@
         <div class="content-primary">
             <!-- Title and Infos -->
             <div class="sectionTitleContainer flex align-items-center">
-                <h2 class="sectionTitle">TeleJelly Configuration:</h2>
-                <br/>
+                <h2 class="sectionTitle">TeleJelly Configuration</h2>
+                <h3>Version: <b id="TeleJellyVersion">1.0.3.0</b></h3>
                 <a href="https://github.com/hexxone/TeleJelly"
-                   class="raised button-alt headerHelpButton"
-                    is="emby-button"
-                    target="_blank">
-                    Github Repository
-                </a>
+                   class="button-link emby-button headerHelpButton"
+                   is="emby-linkbutton"
+                   target="_blank"> Github Repository</a>
             </div>
             <p>
-            <h3>Version: <b id="TeleJellyVersion">1.0.3.0</b></h3>
-            <i>Note:</i>
-            This plug-in is free open-source software.
-            <br/>
-            Not everything will be working perfectly and I do not
-            accept any responsibility for errors.
-            <br/>
-            <strong>"Production"-usage is NOT recommended.</strong>
-            <br/>
-            <strong>
-                Without a set Telegram Username you currently cannot
-                use this Login Method.
-            </strong>
-            <br/>
-            A Telegram User has to be Administrator OR part of at
-            least one Group in order to login.
+                <i>Note:</i>
+                This plug-in is free open-source software.
+                <br/>
+                <strong>"Production"-usage is NOT recommended.</strong>
+                <br/>
+                Not everything will be working perfectly and I do not
+                accept any responsibility for errors.
+            </p>
+            <p>
+                A Telegram Bot is required to validate the Telegram login.
+                <br/>
+                A valid, public domain SSL certificate is required for the Login Widget to work.
+                <br/>
+                The Bot Token can be obtained from <a class="button-link emby-button" is="emby-linkbutton" href="https://t.me/Botfather">@BotFather</a>.
+                <br/>
+                Once you have chosen a bot, use the <i>/setdomain</i> command to link your jellyfin domain to the bot.
+                <br/>
+            </p>
+            <p>
+                <strong>
+                    You must have a Telegram username to use this login method.
+                </strong>
+                <br/>
+                A Telegram User has to be Administrator OR part of at
+                least one Group in order to login.
             </p>
             <p>
                 Here is the
                 <strong>
-                    <a
-                        class="button-link"
-                        id="sso-telegram-login"
-                        is="emby-linkbutton"
-                        target="_blank"
-                    >Link to the Login Page</a
-                    >
+                    <a class="button-link" id="sso-telegram-login" is="emby-linkbutton" target="_blank">
+                        Link to the Login Page
+                    </a>
                 </strong>
                 .
                 <br/>
@@ -73,72 +76,38 @@
 
                         <!-- BotToken -->
                         <div class="inputContainer">
-                            <label class="inputLabel inputLabelUnfocused" for="TgBotToken">
-                                Telegram Bot Token:
-                                <label class="inputLabel inputLabelUnfocused" for="toggleTgBotToken">
-                                    Show
-                                </label>
-                                <input id="toggleTgBotToken" onclick="toggleTokenFunction()" type="checkbox"/>
-                                <script>
-                                    function toggleTokenFunction() {
-                                        var x =
-                                            document.getElementById(
-                                                "TgBotToken"
-                                            );
-                                        if (x.type === "password") {
-                                            x.type = "text";
-                                        } else {
-                                            x.type = "password";
-                                        }
-                                    }
-                                </script>
-                            </label>
-                            <input
-                                class="sso-text"
-                                id="TgBotToken"
-                                is="emby-input"
-                                maxlength="200"
-                                required=""
-                                type="password"
-                            />
+                            <label class="inputLabel inputLabelUnfocused" for="TgBotToken">Telegram Bot Token:</label>
+                            <div style="position: relative;">
+                                <input class="sso-text" id="TgBotToken" is="emby-input" maxlength="200" required="" type="password"/>
+                                <div class="toggle-eye" onclick="toggleTokenFunction()">
+                                    <div class="eye-icon"></div>
+                                    <div class="eye-slash"></div>
+                                </div>
+                            </div>
                             <div class="fieldDescription">
-                                The related Telegram Bot Token. Is
-                                required in order to verify user
-                                details.
-                                <br/>
-                                Can be obtained from
-                                <a href="https://t.me/Botfather">@BotFather </a>
-                                .
-
-                                For more setup instructions also
-                                <a href="https://core.telegram.org/widgets/login">
-                                    read this Telegram Blogpost
-                                </a>
-                                .
+                                <div class="paperlist">
+                                    <p>Telegram Bot Username:</p>
+                                    <p id="TgBotUsername"></p>
+                                </div>
                             </div>
                         </div>
+                        <script>
+                            function toggleTokenFunction() {
+                                const x = document.getElementById("TgBotToken");
+                                const eyeIcon = document.querySelector('.eye-icon');
+                                const eyeSlash = document.querySelector('.eye-slash');
+                                if (x.type === "password") {
+                                    x.type = "text";
+                                    eyeIcon.style.display = "none";
+                                    eyeSlash.style.display = "block";
+                                } else {
+                                    x.type = "password";
+                                    eyeIcon.style.display = "block";
+                                    eyeSlash.style.display = "none";
+                                }
+                            }
+                        </script>
 
-                        <!-- BotUsername -->
-                        <div class="inputContainer">
-                            <label
-                                class="inputLabel inputLabelUnfocused"
-                                for="TgBotUsername">
-                                Telegram Bot Username:
-                            </label>
-                            <input
-                                class="sso-text"
-                                id="TgBotUsername"
-                                is="emby-input"
-                                maxlength="100"
-                                required=""
-                                type="text"
-                                disabled
-                            />
-                            <div class="fieldDescription">
-                                The related Telegram Bot Username.
-                                Should get filled automatically when changing the Token.
-                            </div>
-                        </div>
 
                         <!-- List: Administrators -->
                         <div class="inputContainer">
@@ -169,7 +138,6 @@
                                 <input
                                     id="ForceUrlScheme"
                                     is="emby-checkbox"
-                                    name="ForceUrlScheme"
                                     onclick="toggleUrlSchemeFunction()"
                                     type="checkbox"
                                 />
@@ -203,7 +171,7 @@
                                 <label class="inputLabel inputLabelUnfocused" for="ForcedUrlScheme">
                                     Enforced URL Scheme:
                                 </label>
-                                <select class="emby-select-withcolor emby-select" id="ForcedUrlScheme" name="ForcedUrlScheme">
+                                <select class="emby-select-withcolor emby-select" id="ForcedUrlScheme">
                                     <option value="https">
                                         Secure (https://)
                                     </option>
@@ -243,7 +211,6 @@
                                 class="emby-select-withcolor emby-select"
                                 id="selectGroup"
                                 is="emby-select"
-                                name="selectGroup"
                             ></select>
                             <div class="selectArrowContainer">
                                 <div style="display: none; visibility: hidden;">
@@ -321,7 +288,6 @@
                                 <input
                                     id="EnableAllFolders"
                                     is="emby-checkbox"
-                                    name="EnableAllFolders"
                                     type="checkbox"
                                 />
                                 <span>Enable All Folders</span>

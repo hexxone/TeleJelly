@@ -1,7 +1,11 @@
+#region
+
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using Jellyfin.Plugin.TeleJelly.Telegram;
 using MediaBrowser.Model.Plugins;
+
+#endregion
 
 namespace Jellyfin.Plugin.TeleJelly;
 

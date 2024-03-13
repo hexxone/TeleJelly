@@ -96,6 +96,8 @@ If a User's profile picture fails to download even though the url is given (err 
 
 If a User were to change/sell his Username, a random person would possibly be able to use this Service, but having Names over ID's is much more convenient for Management.
 
+If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy! Otherwise adversaries might be able to lag the system.
+
 ## Development
 
 1. Clone Repo

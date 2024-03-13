@@ -1,9 +1,13 @@
+#region
+
 using System;
 using System.Collections.Generic;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+
+#endregion
 
 // TODO [assembly:CLSCompliant(true)]
 
@@ -71,12 +75,6 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <returns>A list of internal webpages in this application.</returns>
     public IEnumerable<PluginPageInfo> GetExtraFiles()
     {
-        return new PluginPageInfo[]
-        {
-            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.css" },
-            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.js" },
-            new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.material_icons.woff2" },
-            new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.TeleJellyLogo.jpg" },
-        };
+        return new PluginPageInfo[] { new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.css" }, new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.js" }, new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.material_icons.woff2" }, new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.TeleJellyLogo.jpg" }, };
     }
 }
