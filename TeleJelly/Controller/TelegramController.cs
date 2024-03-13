@@ -1,3 +1,5 @@
+#region
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,6 +19,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
+#endregion
+
 #pragma warning disable CA2254
 
 namespace Jellyfin.Plugin.TeleJelly.Controller;
@@ -30,11 +34,13 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Route("sso/{Controller}")]
 public class TelegramController : ControllerBase
 {
+    private readonly ILogger _logger;
+    private readonly TeleJellyPlugin _instance;
+
+    private readonly TelegramHelper _telegramHelper;
+
     private readonly BrandingOptions _brandingOptions;
 
-    private readonly TeleJellyPlugin _instance;
-    private readonly ILogger<TelegramController> _logger;
-    private readonly TelegramHelper _telegramHelper;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramController" /> class.
@@ -66,7 +72,7 @@ public class TelegramController : ControllerBase
         // stolen from https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Controllers/BrandingController.cs
         _brandingOptions = configurationManager.GetConfiguration<BrandingOptions>("branding");
 
-        _logger.LogInformation("Telegram Controller initialized");
+        _logger.LogDebug("Telegram Controller initialized");
     }
 
     /// <summary>
@@ -170,7 +176,7 @@ public class TelegramController : ControllerBase
         if (stream == null)
         {
             _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
-            return StatusCode(500, $"Missing Assembly resource: {view.EmbeddedResourcePath}");
+            return StatusCode(500, $"Resource not found: {view.EmbeddedResourcePath}");
         }
 
         var mimeType = MimeTypes.GetMimeType(view.EmbeddedResourcePath);

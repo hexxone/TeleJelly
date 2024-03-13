@@ -1,7 +1,8 @@
+#region
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -20,6 +21,8 @@ using MediaBrowser.Model.Cryptography;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
+
+#endregion
 
 #pragma warning disable CA2254
 
@@ -68,7 +71,7 @@ public class TelegramHelper
         using var sha256 = SHA256.Create();
         _hmac = new HMACSHA256(sha256.ComputeHash(Encoding.ASCII.GetBytes(_config.BotToken)));
 
-        _logger.LogInformation("Telegram Helper initialized");
+        _logger.LogDebug("Telegram Helper initialized");
     }
 
     /// <summary>

@@ -1,4 +1,6 @@
-﻿using System;
+﻿#region
+
+using System;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes;
@@ -6,6 +8,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Telegram.Bot;
+
+#endregion
 
 namespace Jellyfin.Plugin.TeleJelly.Controller;
 
@@ -25,14 +29,13 @@ public class TeleJellyConfigController : ControllerBase
     [HttpPost(nameof(ValidateBotToken))]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ValidateBotTokenResponse>> ValidateBotToken([FromBody] ValidateBotTokenRequest request)
     {
-        var result = await ValidateToken(request.Token);
-        return result.Ok ? Ok(result) : StatusCode(500, result);
+        return Ok(await ValidateToken(request.Token));
     }
 
-    private async Task<ValidateBotTokenResponse> ValidateToken(string token)
+    private static async Task<ValidateBotTokenResponse> ValidateToken(string token)
     {
         try
         {
@@ -50,7 +53,7 @@ public class TeleJellyConfigController : ControllerBase
         }
         catch (Exception ex)
         {
-            return new ValidateBotTokenResponse { ErrorMessage = $"Validation Error: '{ex.GetType().Name}'" };
+            return new ValidateBotTokenResponse { ErrorMessage = $"Error: '{ex.GetType().Name}'" };
         }
     }
 }

@@ -12,9 +12,14 @@ const tgConfigPage = {
     },
     populateConfiguration: (page, config) => {
 
+        if (config.BotToken) {
+            // Validate the token once initially
+            tgTokenHelper.validateToken(config.BotToken);
+        }
+
         // set basic config values
-        page.querySelector('#TgBotToken').value = config.BotToken || "12341234:xxxxxxxx";
-        page.querySelector('#TgBotUsername').value = config.BotUsername || "ExampleBot";
+        page.querySelector('#TgBotToken').value = config.BotToken || tgTokenHelper.currentToken;
+        page.querySelector('#TgBotUsername').innerHTML = config.BotUsername || tgTokenHelper.currentUserName;
         page.querySelector('#TgAdministrators').value = config.AdminUserNames?.join('\r\n') || "";
 
         page.querySelector('#ForceUrlScheme').checked = config.ForceUrlScheme || false;
@@ -71,7 +76,7 @@ const tgConfigPage = {
             return out;
         });
 
-        if (checkboxes.length === 0) {
+        if (checkboxes.length === 0 && container.children.length === 0) {
             const missing = document.createElement("label");
             missing.innerHTML = "<span>No Media Libraries configured.</span>";
             checkboxes.push(missing)
@@ -141,8 +146,8 @@ const tgConfigPage = {
                 tgConfigPage.pluginUniqueId
             ).then((config) => {
                 // apply config
-                config.BotToken = page.querySelector('#TgBotToken').value.trim() || "";
-                config.BotUsername = page.querySelector('#TgBotUsername').value.trim() || "";
+                config.BotToken = tgTokenHelper.currentToken;
+                config.BotUsername = tgTokenHelper.currentUserName;
                 config.AdminUserNames = tgConfigPage.parseTextList(page.querySelector('#TgAdministrators'));
                 config.ForceUrlScheme = page.querySelector('#ForceUrlScheme').checked || false;
                 config.ForcedUrlScheme = page.querySelector('#ForcedUrlScheme').value || "";
@@ -209,49 +214,51 @@ const tgConfigPage = {
 
 
 const tgTokenHelper = {
+
+    currentToken: "12341234:xxxxxxxx",
+    currentUserName: "ExampleBot",
+
     // Function to call the validation API
     validateToken(token) {
-        fetch('/api/TeleJellyConfig/ValidateBotToken', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({token}),
+        // TODO disable save button
+        const saveButton = document.getElementById("SaveConfig");
+        saveButton.disabled = true;
+        saveButton.classList.add("raised");
+
+        tgTokenHelper.currentToken = token.trim();
+        return ApiClient.ajax({
+            url: ApiClient.getUrl('/api/TeleJellyConfig/ValidateBotToken'),
+            type: 'POST',
+            data: JSON.stringify({Token: token}),
+            contentType: "application/json",
+            dataType: "json"
         })
-            .then(response => response.json())
-            .then(data => {
+            .then((data) => {
                 tgTokenHelper.handleValidationResponse(data);
             })
-            .catch(error => {
-                console.error('Error validating token:', error);
+            .catch(response => {
+                tgTokenHelper.handleValidationResponse({});
             });
     },
 
     // Function to handle the API response
-    handleValidationResponse(response) {
-        const inputElement = document.getElementById('TgBotToken');
-        if (response.ok) {
-            inputElement.style.borderColor = 'green';
-            tgTokenHelper.displayErrorMessage(''); // Hide error message
-            // Optionally set the BotUsername somewhere
-            // document.getElementById('BotUsername').textContent = response.BotUsername;
+    handleValidationResponse(data) {
+        const tokenElement = document.getElementById('TgBotToken');
+        const nameElement = document.getElementById('TgBotUsername');
+        if (data.Ok) {
+            nameElement.style.color = tokenElement.style.borderColor = 'limegreen';
+            tgTokenHelper.currentUserName = data.BotUsername;
+            nameElement.innerHTML = `@${data.BotUsername}`;
+            // TODO enable save button
+            const saveButton = document.getElementById("SaveConfig");
+            saveButton.disabled = false;
+            saveButton.classList.remove("raised");
         } else {
-            inputElement.style.borderColor = 'red';
-            tgTokenHelper.displayErrorMessage(response.ErrorMessage || 'Invalid token.');
+            nameElement.style.color = tokenElement.style.borderColor = 'indianred';
+            tgTokenHelper.currentUserName = '';
+            nameElement.innerHTML = data.ErrorMessage || 'Invalid token';
         }
-    },
-
-    // Function to display/hide the error message
-    displayErrorMessage(message) {
-        const inputElement = document.getElementById('TgBotToken');
-        let errorElement = document.getElementById('tokenError');
-        if (!errorElement) {
-            errorElement = document.createElement('div');
-            errorElement.id = 'tokenError';
-            inputElement.parentNode.insertBefore(errorElement, inputElement.nextSibling);
-        }
-        errorElement.textContent = message;
-    },
+    }
 }
 
 export default function (view) {
@@ -293,13 +300,11 @@ export default function (view) {
 
     // Event listener for input changes with debounce
     let debounce;
-    const inputElement  = view.querySelector("#TgBotToken");
-    inputElement .addEventListener('input', function () {
+    const inputElement = view.querySelector("#TgBotToken");
+    inputElement.addEventListener('input', function () {
         clearTimeout(debounce);
-        debounce = setTimeout(() => tgTokenHelper.validateToken(inputElement.value), 200);
+        debounce = setTimeout(() => tgTokenHelper.validateToken(inputElement.value), 250);
     });
-    // Validate the token once initially
-    tgTokenHelper.validateToken(inputElement.value);
 
     Dashboard.hideLoadingMsg();
 }
