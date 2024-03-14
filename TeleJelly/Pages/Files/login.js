@@ -1,6 +1,39 @@
-﻿// get data from login widget
+﻿const loadingSpinner = {
+    // depends on https://github.com/jellyfin/jellyfin-web/blob/master/src/components/loading/loading.scss
+
+    loader: undefined,
+
+    createLoader: () => {
+        const elem = document.createElement('div');
+        elem.setAttribute('dir', 'ltr');
+        elem.classList.add('docspinner');
+        elem.classList.add('mdl-spinner');
+
+        elem.innerHTML = '<div class="mdl-spinner__layer mdl-spinner__layer-1"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-2"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-3"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-4"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div>';
+
+        document.body.appendChild(elem);
+        return elem;
+    },
+
+    show: () => {
+        if (!loadingSpinner.loader) {
+            loadingSpinner.loader = loadingSpinner.createLoader();
+        }
+        loadingSpinner.loader.classList.add('mdlSpinnerActive');
+    },
+
+    hide: () => {
+        if (loadingSpinner.loader) {
+            loadingSpinner.loader.classList.remove('mdlSpinnerActive');
+        }
+    }
+};
+
+
+// get data from login widget
 function onTelegramAuth(user) {
-    console.debug("Logged in as User", user);
+    loadingSpinner.show();
+    console.debug("Logging in as User", user);
     teleJellyAuthenticate(user);
 }
 
@@ -21,7 +54,8 @@ function teleJellyResponse(data) {
     if (data.Ok) {
         setCredentialsAndRedirect(data.AuthenticatedUser);
     } else {
-        showError(data.ErrorMessage ?? "Unknown Error")
+        showError(data.ErrorMessage ?? "Unknown Error");
+        loadingSpinner.hide();
     }
 }
 
