@@ -1,8 +1,4 @@
-#region
-
 using MediaBrowser.Controller.Authentication;
-
-#endregion
 
 namespace Jellyfin.Plugin.TeleJelly.Classes;
 

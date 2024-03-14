@@ -1,5 +1,3 @@
-#region
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,8 +16,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-
-#endregion
 
 #pragma warning disable CA2254
 
@@ -40,7 +36,6 @@ public class TelegramController : ControllerBase
     private readonly TelegramHelper _telegramHelper;
 
     private readonly BrandingOptions _brandingOptions;
-
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramController" /> class.
