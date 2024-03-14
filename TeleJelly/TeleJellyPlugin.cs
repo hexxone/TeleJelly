@@ -1,13 +1,9 @@
-#region
-
 using System;
 using System.Collections.Generic;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-
-#endregion
 
 // TODO [assembly:CLSCompliant(true)]
 

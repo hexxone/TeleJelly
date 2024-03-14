@@ -83,8 +83,8 @@
       OutputFile="$(OutDir)merged/$(AssemblyName).dll"
     />
     <Copy
-      Condition="'$(PublishProtocol)'!=''"
-      SourceFiles="$(OutDir)merged/$(ProjectName).dll"
+      Condition="'$(Configuration)' == 'Release'"
+      SourceFiles="$(OutDir)merged/$(AssemblyName).dll"
       DestinationFolder="$(PublishDir)/merged/"
       OverwriteReadOnlyFiles="true"
     />

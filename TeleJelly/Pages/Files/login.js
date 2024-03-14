@@ -1,7 +1,6 @@
 ﻿// get data from login widget
 function onTelegramAuth(user) {
-    alert('Logged in as ' + user.first_name + ' ' + user.last_name + ' (' + user.id + (user.username ? ', @' + user.username : '') + ')');
-    console.log("User", user);
+    console.debug("Logged in as User", user);
     teleJellyAuthenticate(user);
 }
 
@@ -20,7 +19,7 @@ function teleJellyAuthenticate(user) {
 // receive JSON response, redirect or show error.
 function teleJellyResponse(data) {
     if (data.Ok) {
-        setCredentialsAndRedirect(data.AuthResult);
+        setCredentialsAndRedirect(data.AuthenticatedUser);
     } else {
         showError(data.ErrorMessage ?? "Unknown Error")
     }

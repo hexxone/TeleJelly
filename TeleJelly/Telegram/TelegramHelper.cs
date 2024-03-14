@@ -1,5 +1,3 @@
-#region
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,8 +19,6 @@ using MediaBrowser.Model.Cryptography;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
-
-#endregion
 
 #pragma warning disable CA2254
 
