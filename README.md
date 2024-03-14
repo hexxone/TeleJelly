@@ -12,22 +12,21 @@ Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plug
 
 Created from [this template](https://github.com/jellyfin/jellyfin-plugin-template).
 
-## Scenario
+## Usage
 
-0. a user wants to access Jellyfin
-1. user sees the "Telegram-Login" Disclaimer Link on Default Login Page
-2. user lands on the page "yourjellyfin.com/sso/Telegram/login"
+0. A user wants to access Jellyfin
+1. User clicks the "Sign In with Telegram" Disclaimer Link on Default Login Page
+2. User lands on the page "/sso/Telegram/login"
 3. Plugin shows a Page with a Single-Click "Telegram Login" button.
-    - The Widget gets instructed to redirect to url on success
-    - -> "yourfellyfin.com/sso/Telegram/confirm?user=123123&name=sdfsd.....&hash=asdasdasdasd"
-4. When the button is clicked, The plugin redirects to the URL with filled parameters.
-5. Plugin tries to validate the User data using custom Telegram logic.
-6. On Success -> Auth & redirect to Jellyfin Dashboard
-7. On Failure -> back to Login with Error Message (e.g. Invalid Data, not Whitelisted)
+4. When the button is clicked, the Plugin validates User credentials using custom Telegram logic.
+5. On Success -> Authenticate & User is redirected to Jellyfin Dashboard
+6. On Failure -> Show Error Message (e.g. Invalid Data, not Whitelisted)
 
 ## Install
 
-Currently only manual.
+Currently only manual install. No repository.
+
+### Option 1: Download Release
 
 1. Download the 'latest' Version from Releases on the right
 2. put files into `config/plugins/TeleJelly` folder
@@ -35,17 +34,9 @@ Currently only manual.
 
 There is an example config included, but it will also get created automatically if you'd prefer editing the UI.
 
-### Why no repository?
+### Option 2: Compile by yourself
 
-- Jellyfin plugin repository management is supidly over-complicated.. even though I like overengineering things.
-- there are 3 bazillion actions, but I still have to trigger a release manually?
-- the github actions simply do not work?
-- there is no useful doumentation for the release gh actions?
-- github actions are genereally annoying. The UI is bad. GitLab CI is way better.
-
-## Compile
-
-You can also easily compile yourself if you dont trust the download.
+You can also compile the Plugin by yourself if you dont trust the download.
 
 1. `git clone https://github.com/hexxone/TeleJelly.git` or download Repo as zip.
 2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
@@ -53,46 +44,47 @@ You can also easily compile yourself if you dont trust the download.
 4. put `./publish/` files into `config/plugins/TeleJelly` folder
 5. restart jellyfin
 
-## Usage
+## Setup
 
-Go to the configuration page and fill in the Bot-Token and Bot-Username first.
+Go to the Plugin configuration page and fill in the Bot-Token first.
+
+Make sure to use the `/setdomain` command to link your jellyfin domain (needs valid SSL cert).
 
 Afterwards you can add yourself into the "Administrators" list for full access, or create a Group.
 
 Now you should be able to log in to jellyfin by visiting `yourjellyfin.com/sso/Telegram/login`.
 
-If you are running Jellyfin Version >= 10.8, you may also include this link in the "Branding" via Markdown.
+If you are running Jellyfin Version >= 10.8, you may also include this link in the "Branding" via Markdown or HTML.
 
 E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram/login)`
 
 ## Features
 
 - SSO Login page (at /sso/Telegram/Login)
-  - styled in the
+  - styled similar to the regular login page
   - shows a "Back to Normal Login" button
-  - shows error message if given
   - shows the Telegram Login Widget
-
-- SSO Redirect page (at /sso/Telegram/Redirect)
-  - checks the Telegram Auth data
-  - if data is invalid -> redirect back to login with error
-  - takes the Jellyfin Auth Response and loggs in the user
-  - fancy loading animation
+  - checks the Telegram Auth data against the backend
+  - if data is invalid -> show error message
+  - if data is valid -> takes the Jellyfin Auth Response and authenticates the user
+  - loading animation
 
 - Config page (reachable via Jellyfin Plugin Page)
-  - allows setting the Telegram Bot Token & Name (required)
+  - allows setting the Telegram Bot Token (required)
   - allows setting a List of Administrator Telegram Usernames (get full Access)
   - allows forcing an external Protocol Scheme (for problems with reverse Proxies)
   - allows Creating/Editing/Deleting a "virtual" management Group
     - Grants access to all OR specific Libraries for non-Administrators.
     - A user needs to be Admin OR part of at least ONE Group to Log-in.
 
-- uses "NUglify" to reduce web response size
-- uses "Fody" for packing the multiple dependency dlls into one single plugin dll
+- uses "ILRepack" for packing the multiple dependency dlls into one single plugin dll
 
 ## Known issues
 
-If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to private. This is weird behaviour by Telegram imho.
+The "Sign In with Telegram" button will sometimes get hidden by Browser Plugins like "I dont like Cookies" or "UBlock Origin". Just disable these for your Jellyfin domain.
+
+If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to private.
+In this case, we will set the default TeleJelly plugin icon.
 
 If a User were to change/sell his Username, a random person would possibly be able to use this Service, but having Names over ID's is much more convenient for Management.
 
@@ -106,7 +98,7 @@ If your server is publicly reachable, make sure to take care of rate limiting wi
 4. Run Debug
 5. Open http://localhost:8096
 
-## Screenshots
+## Screenshots (outdated)
 
 ### Login Page
 
