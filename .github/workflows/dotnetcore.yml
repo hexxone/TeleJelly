@@ -25,7 +25,7 @@ jobs:
         run: |
           dotnet tool restore
           echo "version=$(dotnet tool run minver)" >> $GITHUB_OUTPUT
-          dotnet build --configuration Release -p:Version=${{ steps.shell.outputs.version }}
+          dotnet build TeleJelly --configuration Release -p:Version=${{ steps.shell.outputs.version }}
 
       - name: Generate Manifest
         run: |
@@ -33,8 +33,8 @@ jobs:
 
       - name: Publish Manifest
         run: |
-          git config --global user.name  'TeleJelly-bot'
-          git config --global user.email 'TeleJelly-bot@users.noreply.github.com'
+          git config --global user.name  'TeleJelly-Release-bot'
+          git config --global user.email 'TeleJelly-Release-bot@users.noreply.github.com'
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}
 
           git checkout --orphan dist
