@@ -42,21 +42,26 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 
 ## Install
 
-Currently only two options for manual install. Sorry - No repository.
+You can choose between three (3) options.
 
-### Option 1: Download Release
+### Option 1: (NEW) Plugin Repository
 
-1. Download the 'latest' Version from Releases on the right
-2. put files into `config/plugins/TeleJelly` folder
+Note: _this is barely tested_
+
+1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json>
+2. install `TeleJelly Plugin` automatically
+
+### Option 2: Download manually
+
+1. Download the 'latest' [Release](https://github.com/hexxone/TeleJelly/releases)
+2. Unzip files into `config/plugins/TeleJelly` folder (create it if non-existing)
 3. restart jellyfin
 
-There is an example config included, but it will also get created automatically if you'd prefer editing the UI.
+### Option 3: Compile by yourself
 
-### Option 2: Compile by yourself
+Don't trust the downloads?
 
-You can also compile the Plugin by yourself if you dont trust the download.
-
-1. `git clone https://github.com/hexxone/TeleJelly.git` or download Repo as zip.
+1. `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
 2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
 3. run `publish.ps1`
 4. put `./publish/` files into `config/plugins/TeleJelly` folder
