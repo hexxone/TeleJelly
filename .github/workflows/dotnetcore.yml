@@ -24,8 +24,9 @@ jobs:
       - name: Build Plugins
         run: |
           dotnet tool restore
-          echo "version=$(dotnet tool run minver)" >> $GITHUB_OUTPUT
-          dotnet build TeleJelly --configuration Release -p:Version=${{ steps.shell.outputs.version }}
+          version=$(dotnet tool run minver)
+          echo "version=$version" >> $GITHUB_OUTPUT
+          dotnet build TeleJelly --configuration Release -p:Version=$version
 
       - name: Generate Manifest
         run: |
