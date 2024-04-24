@@ -1,5 +1,8 @@
 name: Release TeleJelly Plugin
 
+# TODO: rename file
+# TODO: trigger on tag?
+
 on:
   workflow_dispatch:
 
