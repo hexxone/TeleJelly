@@ -1,5 +1,5 @@
 <p align="center">
-<img alt="Logo" src="./TeleJelly/thumb.jpg" style="max-height: 256px;"/>
+<img alt="Logo" src="./TeleJelly/thumb.jpg" height="256"/>
 <br/>
 <br/>
 <a href="https://github.com/hexxone/TeleJelly/blob/main/LICENSE">
