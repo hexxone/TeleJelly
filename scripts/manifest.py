@@ -25,7 +25,7 @@ def generate(filename, version):
 
 def main():
     filename = sys.argv[1]
-    version = filename.split('@', maxsplit=1)[1] \
+    version = filename.split('_', maxsplit=1)[1] \
         .removeprefix('v') \
         .removesuffix('.zip')
 
