@@ -5,101 +5,98 @@
     <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
     <AssemblyVersion>1.0.3.0</AssemblyVersion>
     <FileVersion>1.0.3.0</FileVersion>
+    <Version>1.0.3.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <MSBuildArgs>/property:GenerateFullPaths=true /consoleloggerparameters:NoSummary</MSBuildArgs>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <PackageProjectUrl>https://github.com/hexxone/TeleJelly</PackageProjectUrl>
-    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageLicenseUrl>https://github.com/hexxone/TeleJelly/blob/main/LICENSE</PackageLicenseUrl>
+    <PackageTags>jellyfin;jellyfin-plugin;telegram;telegram-bot;</PackageTags>
+    <PackageIcon>thumb.jpg</PackageIcon>
+    <PackageId>TeleJelly</PackageId>
+    <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/hexxone/TeleJelly</RepositoryUrl>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="Pages\Files\material_icons.woff2"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Config\*.js"/>
-    <EmbeddedResource Include="Config\*.html"/>
-    <EmbeddedResource Include="Config\*.css"/>
-    <EmbeddedResource Include="Pages\*.js"/>
-    <EmbeddedResource Include="Pages\*.html"/>
-    <EmbeddedResource Include="Pages\*.css"/>
-    <EmbeddedResource Include="Pages\Files\*"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App"/>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.26">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Jellyfin.Controller" Version="10.8.13"/>
-    <PackageReference Include="Jellyfin.Model" Version="10.8.13"/>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.4"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All"/>
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.376" PrivateAssets="All"/>
-    <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All"/>
-    <PackageReference Include="Telegram.Bot" Version="19.0.0"/>
-    <PackageReference Include="WebMarkupMin.Core" Version="2.16.0"/>
-  </ItemGroup>
-
-  <PropertyGroup>
+    <NeutralLanguage>en</NeutralLanguage>
     <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <Title>TeleJelly plugin</Title>
     <Description>Telegram Login provider plugin for Jelllyfin</Description>
-    <Copyright>hexxone</Copyright>
-    <RepositoryType>git</RepositoryType>
-    <PackageTags>jellyfin;jellyfin-plugin;telegram;telegram-bot;</PackageTags>
+    <Copyright>Copyright © 2024 hexxone</Copyright>
+    <Company>TeleJelly</Company>
+    <Product>TeleJelly</Product>
     <Nullable>enable</Nullable>
-    <Version>1.0.3.0</Version>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Pages\Files\material_icons.woff2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Pages\*" />
+    <EmbeddedResource Include="Pages\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <PackageReference Include="Jellyfin.Controller" Version="10.8.13" />
+    <PackageReference Include="Jellyfin.Model" Version="10.8.13" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Telegram.Bot" Version="19.0.0" />
+    <PackageReference Include="MinVer" Version="5.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.26">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.376" PrivateAssets="All" />
+    <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All" />
+    <PackageReference Include="WebMarkupMin.Core" Version="2.16.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <LocalAppDataPath>$(LocalAppData)</LocalAppDataPath>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
-  <Target Name="ILRepacker" AfterTargets="Build">
-    <Message Importance="high" Text="
-      Repacking DLLs...
-    "/>
+<!--  <Target Name="ILRepacker" AfterTargets="Build">-->
+<!--    <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    " />-->
+<!--    <ItemGroup>-->
+<!--      <ILRepackAssemblies Include="$(TargetPath)" />-->
+<!--      <ILRepackAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'" />-->
+<!--    </ItemGroup>-->
+<!--    <ILRepack Parallel="true" DebugInfo="true" Internalize="false" NoRepackRes="true" Verbose="false" InputAssemblies="@(ILRepackAssemblies)" TargetKind="Dll" OutputFile="$(OutDir)$(AssemblyName).dll" />-->
+<!--    <Copy Condition="'$(Configuration)' == 'Release'" SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="$(PublishDir)/$(AssemblyName).dll" OverwriteReadOnlyFiles="true" />-->
+<!--  </Target>-->
+
+  <Target Name="CopyToServer" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(OS)' == 'Windows_NT' and '$(Configuration)'=='Debug'">
+    <Message Importance="high" Text="&#xA;      Copying built Plugin to JellyFin Server...&#xA;    " />
     <ItemGroup>
-      <ILRepackAssemblies Include="$(TargetPath)"/>
-      <ILRepackAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'"/>
+      <ServerFilesToDelete Include="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*.*" />
+      <BuiltFilesToCopy Include="$(OutDir)/**/*.*" />
     </ItemGroup>
-    <ILRepack
-      Parallel="true"
-      DebugInfo="true"
-      Internalize="false"
-      NoRepackRes="true"
-      Verbose="true"
-      InputAssemblies="@(ILRepackAssemblies)"
-      TargetKind="Dll"
-      OutputFile="$(OutDir)merged/$(AssemblyName).dll"
-    />
-    <Copy
-      Condition="'$(Configuration)' == 'Release'"
-      SourceFiles="$(OutDir)merged/$(AssemblyName).dll"
-      DestinationFolder="$(PublishDir)/merged/"
-      OverwriteReadOnlyFiles="true"
-    />
+    <Delete Files="$(ServerFilesToDelete)" />
+    <Copy SourceFiles="@(BuiltFilesToCopy)" DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/%(RecursiveDir)" OverwriteReadOnlyFiles="true" />
   </Target>
-
-  <Target Name="PostBuild" AfterTargets="ILRepacker" Condition=" '$(OS)' == 'Windows_NT' And '$(Configuration)' == 'Debug' ">
-    <Message Importance="high" Text="
-      Copying built Plugin to JellyFin Server...
-    "/>
-    <Delete Files="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*"/>
-    <Copy
-      SourceFiles="$(OutDir)merged/$(ProjectName).dll"
-      DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly"
-      OverwriteReadOnlyFiles="true"
-    />
+  
+  <Target Name="ReleaseZip" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release'">
+    <Message Importance="high" Text="&#xA;      Creating Release ZIP Archive...&#xA;    " />
+    <ItemGroup>
+      <OldReleaseFiles Include="$(ProjectDir)..\TeleJelly*.zip"/>
+      <TempZipDirectory Include="$(OutputPath)output" />
+    </ItemGroup>
+    <Delete Files="@(OldReleaseFiles)" />
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="@(TempZipDirectory)" />
+    <ZipDirectory SourceDirectory="@(TempZipDirectory)" DestinationFile="$(ProjectDir)..\TeleJelly_v$(Version).zip" />
+    <RemoveDir Directories="@(TempZipDirectory)" />
   </Target>
-
+  
 </Project>
