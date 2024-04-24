@@ -1,7 +1,5 @@
-<h1 align="center">TeleJelly Plugin</h1>
-
 <p align="center">
-<img alt="Logo" src="./thumb.jpg"/>
+<img alt="Logo" src="./TeleJelly/thumb.jpg" style="max-height: 256px;"/>
 <br/>
 <br/>
 <a href="https://github.com/hexxone/TeleJelly/blob/main/LICENSE">
@@ -21,6 +19,7 @@
 </a>
 </p>
 
+<h1 align="center">TeleJelly Plugin</h1>
 
 A Plugin for logging into [Jellyfin](https://jellyfin.org/) using the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
 
