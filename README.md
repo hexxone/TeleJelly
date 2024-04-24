@@ -1,5 +1,25 @@
-# TeleJelly Plugin
+<h1 align="center">TeleJelly Plugin</h1>
 
+<p align="center">
+<img alt="Logo" src="./thumb.jpg"/>
+<br/>
+<br/>
+<a href="https://github.com/hexxone/TeleJelly/blob/main/LICENSE">
+<img alt="GPL 3.0 License" src="https://img.shields.io/github/license/hexxone/TeleJelly"/>
+</a>
+<a href="https://github.com/hexxone/TeleJelly/releases">
+<img alt="Current Release" src="https://img.shields.io/github/release/hexxone/TeleJelly"/>
+</a>
+<a href="https://github.com/hexxone/TeleJelly/releases">
+<img alt="Current Release Date" src="https://img.shields.io/github/release-date/hexxone/TeleJelly?color=blue"/>
+</a>
+<a href="https://github.com/hexxone/TeleJelly/releases">
+<img alt="GitHub Downloads" src="https://img.shields.io/github/downloads/hexxone/telejelly/total"/>
+</a>
+<a href="https://github.com/hexxone/TeleJelly/stargazers">
+<img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/hexxone/TeleJelly"/>
+</a>
+</p>
 
 
 A Plugin for logging into [Jellyfin](https://jellyfin.org/) using the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
@@ -10,21 +30,20 @@ Having a Telegram Username is mandatory.
 
 Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plugin-ldapauth) and [jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso).
 
-Created from [this template](https://github.com/jellyfin/jellyfin-plugin-template).
+Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plugin-template).
 
 ## Usage
 
-0. A user wants to access Jellyfin
-1. User clicks the "Sign In with Telegram" Disclaimer Link on Default Login Page
+1. User clicks the "Sign In with Telegram" Disclaimer Link on the Jellyfin Login Page
 2. User lands on the page "/sso/Telegram/login"
-3. Plugin shows a Page with a Single-Click "Telegram Login" button.
+3. Plugin shows a Page with embedded "Telegram Login" button.
 4. When the button is clicked, the Plugin validates User credentials using custom Telegram logic.
 5. On Success -> Authenticate & User is redirected to Jellyfin Dashboard
 6. On Failure -> Show Error Message (e.g. Invalid Data, not Whitelisted)
 
 ## Install
 
-Currently only manual install. No repository.
+Currently only two options for manual install. Sorry - No repository.
 
 ### Option 1: Download Release
 
@@ -81,7 +100,8 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram/login)`
 
 ## Known issues
 
-The "Sign In with Telegram" button will sometimes get hidden by Browser Plugins like "I dont like Cookies" or "UBlock Origin". Just disable these for your Jellyfin domain.
+The "Sign In with Telegram" button will sometimes get hidden by Browser Plugins like "I dont like Cookies" or "UBlock Origin".
+Try disabling these for your Jellyfin domain.
 
 If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to private.
 In this case, we will set the default TeleJelly plugin icon.

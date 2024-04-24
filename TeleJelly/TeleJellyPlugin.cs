@@ -61,7 +61,11 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <returns>A list of internal webpages in this application.</returns>
     public IEnumerable<PluginPageInfo> GetPages()
     {
-        return new PluginPageInfo[] { new() { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Config.configPage.html" }, new() { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Config.config.js" }, new() { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Config.style.css" } };
+        return new PluginPageInfo[] {
+            new() { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Config.config.html" },
+            new() { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Config.config.js" },
+            new() { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Config.config.css" }
+        };
     }
 
     /// <summary>
@@ -71,6 +75,12 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <returns>A list of internal webpages in this application.</returns>
     public IEnumerable<PluginPageInfo> GetExtraFiles()
     {
-        return new PluginPageInfo[] { new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.css" }, new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.js" }, new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.material_icons.woff2" }, new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.TeleJellyLogo.jpg" }, };
+        return new PluginPageInfo[]
+        {
+            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.css" },
+            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.js" },
+            new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.material_icons.woff2" },
+            new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.TeleJellyLogo.jpg" },
+        };
     }
 }

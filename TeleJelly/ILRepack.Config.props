@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <ItemGroup>
+<!--        <InputAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'"/>-->
+<!--        <InputAssemblies Include="@(ReferencePathWithRefAssemblies->HasMetadata('filename')->WithMetadataValue('filename','Newtonsoft.Json'))"/>-->
+    </ItemGroup>
+    <PropertyGroup>
+        <Internalize>false</Internalize>
+        <NoRepackRes>true</NoRepackRes>
+    </PropertyGroup>
+</Project>
