@@ -26,7 +26,7 @@ def generate(filename, version):
         'changelog': f'Automatic Release by Github Actions: https://github.com/hexxone/TeleJelly/releases/tag/{version}',
         'targetAbi': '10.8.0.0',
         'sourceUrl': 'https://github.com/hexxone/TeleJelly/releases/download/'
-                     f'v{version}/TeleJelly_v{version}.zip',
+                     f'{version}/TeleJelly_v{version}.zip',
         'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
         'version': fix_version_string(version)
     }
