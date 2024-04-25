@@ -23,7 +23,7 @@ def fix_version_string(version_str):
 def generate(filename, version):
     return {
         'checksum': md5sum(filename),
-        'changelog': 'Auto Release by GH Actions',
+        'changelog': f'Automatic Release by Github Actions: https://github.com/hexxone/TeleJelly/releases/tag/{version}',
         'targetAbi': '10.8.0.0',
         'sourceUrl': 'https://github.com/hexxone/TeleJelly/releases/download/'
                      f'v{version}/TeleJelly_v{version}.zip',

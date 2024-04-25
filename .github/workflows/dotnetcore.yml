@@ -1,7 +1,6 @@
 name: Release TeleJelly Plugin
 
 # TODO: rename file
-# TODO: trigger on tag?
 
 on:
   workflow_dispatch:
@@ -54,7 +53,7 @@ jobs:
         with:
           body: _Automatic Release by Github Actions_
           draft: false
-          tag_name: v${{env.version}}
+          tag_name: ${{env.version}}
           name: Release v${{env.version}}
           append_body: true
           fail_on_unmatched_files: true
