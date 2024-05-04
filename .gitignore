@@ -5,3 +5,4 @@ obj/
 artifacts
 publish/
 *.zip
+manifest.json

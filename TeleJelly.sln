@@ -10,7 +10,7 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "jellyfin", "C:\Program File
 		Executable = C:\Program Files\Jellyfin\Server\jellyfin.exe
 		RemoteMachine = 
 		StartingDirectory = C:\Program Files\Jellyfin\Server
-		Environment = Default
+		Environment = Standard
 		LaunchingEngine = 00000000-0000-0000-0000-000000000000
 		UseLegacyDebugEngines = No
 		LaunchSQLEngine = No
@@ -18,7 +18,9 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "jellyfin", "C:\Program File
 		IORedirection = Auto
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpsReverseProxy", "HttpsReverseProxy\HttpsReverseProxy.csproj", "{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HttpsReverseProxy", "HttpsReverseProxy\HttpsReverseProxy.csproj", "{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JellyfinPluginHelper", "JellyfinPluginHelper\JellyfinPluginHelper.csproj", "{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -48,6 +50,14 @@ Global
 		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Release|x64.ActiveCfg = Release|Any CPU
 		{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}.Release|x64.Build.0 = Release|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Debug|x64.Build.0 = Debug|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Release|x64.ActiveCfg = Release|Any CPU
+		{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

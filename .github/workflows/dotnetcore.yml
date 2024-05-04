@@ -43,7 +43,7 @@ jobs:
           git checkout --orphan dist
           git rm -rf .
           git add manifest.json
-          git commit -m "Auto Updated by Actions"
+          git commit -m "Auto added v${{env.version}} by Github Actions"
           git push -f -u origin dist
 
       - name: Upload Plugin
