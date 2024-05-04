@@ -7,7 +7,7 @@
             <InputAssemblies Include="$(TargetPath)" />
             <!-- Telegram.Bot requires Newtonsoft.Json, ILogger requires Logging.Abstractions -->
             <InputAssemblies Include="@(ReferencePathWithRefAssemblies)"
-                             Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging.Abstractions' Or '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions'"/>
+                             Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions'"/>
         </ItemGroup>
     
         <ILRepack

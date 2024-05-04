@@ -3,9 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
-    <AssemblyVersion>1.0.5.0</AssemblyVersion>
-    <FileVersion>1.0.5.0</FileVersion>
-    <Version>1.0.5.0</Version>
+    <AssemblyVersion>1.0.6.0</AssemblyVersion>
+    <FileVersion>1.0.6.0</FileVersion>
+    <Version>1.0.6.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <MSBuildArgs>/property:GenerateFullPaths=true /consoleloggerparameters:NoSummary</MSBuildArgs>
@@ -34,7 +34,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Jellyfin.Controller" Version="10.8.13" />
     <PackageReference Include="Jellyfin.Model" Version="10.8.13" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageReference Include="Telegram.Bot" Version="19.0.0" />
     <PackageReference Include="MinVer" Version="5.0.0">
       <PrivateAssets>all</PrivateAssets>

@@ -15,7 +15,6 @@ using MediaBrowser.Model.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 #pragma warning disable CA2254
 
@@ -30,7 +29,7 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Route("sso/{Controller}")]
 public class TelegramController : ControllerBase
 {
-    private readonly ILogger _logger;
+    //private readonly ILogger _logger;
     private readonly TeleJellyPlugin _instance;
 
     private readonly TelegramHelper _telegramHelper;
@@ -47,13 +46,13 @@ public class TelegramController : ControllerBase
     /// <param name="configurationManager">Instance of the <see cref="IConfigurationManager" /> interface.</param>
     /// <exception cref="Exception">if plugin was not properly initialized before usage.</exception>
     public TelegramController(
-        ILogger<TelegramController> logger,
+        //ILogger logger,
         ISessionManager sessionManager,
         IUserManager userManager,
         ICryptoProvider cryptoProvider,
         IConfigurationManager configurationManager)
     {
-        _logger = logger;
+        //_logger = logger;
 
         if (TeleJellyPlugin.Instance == null)
         {
@@ -62,12 +61,12 @@ public class TelegramController : ControllerBase
 
         _instance = TeleJellyPlugin.Instance;
 
-        _telegramHelper = new TelegramHelper(_instance, sessionManager, userManager, cryptoProvider, logger);
+        _telegramHelper = new TelegramHelper(_instance, sessionManager, userManager, cryptoProvider);
 
         // stolen from https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Controllers/BrandingController.cs
         _brandingOptions = configurationManager.GetConfiguration<BrandingOptions>("branding");
 
-        _logger.LogDebug("Telegram Controller initialized");
+        //_logger.LogDebug("Telegram Controller initialized");
     }
 
     /// <summary>
@@ -89,7 +88,7 @@ public class TelegramController : ControllerBase
 
         if (stream == null)
         {
-            _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
+            //_logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
             return NotFound();
         }
 
@@ -143,7 +142,7 @@ public class TelegramController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex.ToString());
+            //_logger.LogError(ex.ToString());
 
             return StatusCode(500, new SsoAuthenticationResult { ServerAddress = requestBase, ErrorMessage = ex.ToString() });
         }
@@ -170,7 +169,7 @@ public class TelegramController : ControllerBase
         var stream = _instance.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
         if (stream == null)
         {
-            _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
+            //_logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
             return StatusCode(500, $"Resource not found: {view.EmbeddedResourcePath}");
         }
 
