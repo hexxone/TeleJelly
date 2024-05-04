@@ -7,7 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Yarp.ReverseProxy" Version="2.1.0"/>
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.1.0" />
   </ItemGroup>
 
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Message Importance="high" Text="&#xA;      Building Plugin...&#xA;    " />
+    <Exec Command="dotnet build ../TeleJelly/TeleJelly.csproj" />
+  </Target>
 </Project>
