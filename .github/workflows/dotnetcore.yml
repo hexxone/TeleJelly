@@ -23,7 +23,7 @@ jobs:
           dotnet tool restore
           version=$(dotnet tool run minver)
           echo "version=$version" >> $GITHUB_ENV
-          dotnet build TeleJelly --configuration Release -p:Version=$version
+          dotnet publish TeleJelly -c Release
           
       - name: Publish Manifest
         run: |

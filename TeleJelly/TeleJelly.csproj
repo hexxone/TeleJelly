@@ -82,6 +82,6 @@
     <Message Importance="high" Text="&#xA;      Running Jellyfin Plugin Helper...&#xA;    " />
     <Exec Command="dotnet restore ../JellyfinPluginHelper/JellyfinPluginHelper.csproj" />
     <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Build" />
-    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RunArguments=&quot;$(MinVerVersion)&quot; &quot;$(SolutionDir).&quot; &quot;$(ProjectDir)$(OutDir)$(AssemblyName).dll&quot;" />
+    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RunArguments=%22$(MinVerVersion)&quot; &quot;$(ProjectDir)../&quot; &quot;$(ProjectDir)$(OutDir)$(AssemblyName).dll&quot;" />
   </Target>
 </Project>
