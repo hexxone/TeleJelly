@@ -78,22 +78,10 @@
     <Copy SourceFiles="@(BuiltFilesToCopy)" DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/%(RecursiveDir)" OverwriteReadOnlyFiles="true" />
   </Target>
 
-  <!--<Target Name="ReleaseZip" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release'">
-    <Message Importance="high" Text="&#xA;      Creating Release ZIP Archive...&#xA;    " />
-    <ItemGroup>
-      <OldReleaseFiles Include="$(ProjectDir)..\TeleJelly*.zip" />
-      <TempZipDirectory Include="$(OutputPath)output" />
-    </ItemGroup>
-    <Delete Files="@(OldReleaseFiles)" />
-    <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="@(TempZipDirectory)" />
-    <ZipDirectory SourceDirectory="@(TempZipDirectory)" DestinationFile="$(ProjectDir)..\TeleJelly_v$(Version).zip" />
-    <RemoveDir Directories="@(TempZipDirectory)" />
-  </Target>-->
-
-  <Target Name="JellyfinPluginHelper" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release' and '$(MinVerVersion)' != '' and '$(RECURSION_FLAG)' != '1'">
+  <Target Name="JellyfinPluginHelper" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release' and '$(MinVerVersion)' != ''">
     <Message Importance="high" Text="&#xA;      Running Jellyfin Plugin Helper...&#xA;    " />
     <Exec Command="dotnet restore ../JellyfinPluginHelper/JellyfinPluginHelper.csproj" />
-    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Build" Properties="RECURSION_FLAG=1" />
-    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RECURSION_FLAG=1;RunArguments=&quot;$(MinVerVersion)&quot; &quot;$(ProjectDir).&quot; &quot;$(OutDir)$(AssemblyName).dll&quot;" />
+    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Build" />
+    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RunArguments=&quot;$(MinVerVersion)&quot; &quot;$(SolutionDir).&quot; &quot;$(ProjectDir)$(OutDir)$(AssemblyName).dll&quot;" />
   </Target>
 </Project>
