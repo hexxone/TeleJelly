@@ -6,10 +6,31 @@ using System.Text.Json;
 
 #endregion
 
-Console.WriteLine("JPH - Jellyfin Plugin Helper starting");
+/*
+ * Jellyfin Plugin Helper (JPH)
+ *
+ * A tool for automating the process of releasing Jellyfin plugins. This includes updating meta information,
+ * packaging the plugin into a zip file, calculating file checksums, and updating the plugin manifest.
+ * Designed to be used in conjunction with CI/CD pipelines, such as GitHub Actions, for seamless plugin releases.
+ *
+ * Author: Hexxone
+ * Project: TeleJelly
+ * License: GPLv3
+ *
+ * Usage: Run with <version> <solutionDir> <dllPath> arguments.
+ *
+ * The tool will:
+ *  1. try to find the meta.json in the solutionDir.
+ *  2. create a new ZIP release file with the freshly built DLL and meta.json.
+ *  3. create a MD5 checksum for the new ZIP release file.
+ *  4. create a new manifest-version with download link and checksum.
+ *  5. download & update the manifest.json from an url in the solutionDir.
+ *
+ * Afterward, you could commit the updated manifest.json to your "repository"
+ * and use a gh-action like softprops/action-gh-release@v2 to automate the Release.
+ */
 
-// TODO fix ZIP path
-// TODO detect manifest path
+Console.WriteLine("JPH - Jellyfin Plugin Helper starting");
 
 const string GitUser = "hexxone";
 const string GitProject = "TeleJelly";
@@ -21,63 +42,44 @@ const string ChangeMessage = "Automatic Release by Github Actions: ";
 
 if (args.Length != 3)
 {
-    Console.WriteLine("JPH - Invalid arguments.\r\nUsage: jph <version> <projectDir> <dllPath>");
+    Console.WriteLine("JPH - Invalid arguments.\r\nUsage: jph <version> <solutionDir> <dllPath>");
     Console.WriteLine("Actual arguments: " + string.Join(", ", args));
     return;
 }
 
 
 var version = args[0];
-var projectDir = args[1];
+var solutionDir = args[1];
 var dllPath = args[2];
 
-await Main(version, projectDir, dllPath);
+await Main(version, solutionDir, dllPath);
 
-static async Task Main(string version, string projectDir, string dllPath)
+static async Task Main(string version, string solutionDir, string dllPath)
 {
     // Assuming meta.json is in the project directory.
-    var metaPath = Path.Combine(projectDir, "meta.json");
+    var metaPath = Path.Combine(solutionDir, "meta.json");
 
     Console.WriteLine("JPH - Working dir:     " + Directory.GetCurrentDirectory());
     Console.WriteLine("JPH - Using version:   " + version);
-    Console.WriteLine("JPH - Using project:   " + projectDir);
+    Console.WriteLine("JPH - Using project:   " + solutionDir);
     Console.WriteLine("JPH - Using dll path:  " + dllPath);
     Console.WriteLine("JPH - Using meta path: " + metaPath);
-
-    if (!Directory.Exists(projectDir))
-    {
-        Console.WriteLine("JPH - Error: project dir does not exist.");
-        return;
-    }
-
-    var dllFullPath = Path.Combine(projectDir, dllPath);
-    if (!File.Exists(dllFullPath))
-    {
-        Console.WriteLine("JPH - Error: dll file does not exist.");
-        return;
-    }
-
-    if (!File.Exists(metaPath))
-    {
-        Console.WriteLine("JPH - Error: meta file does not exist.");
-        return;
-    }
 
     var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
     UpdateMeta(metaPath, version, timestamp);
 
     var zipFilename = $"{GitProject}_v{version}.zip";
-    var zipPath = Path.Combine(projectDir, zipFilename);
+    var zipPath = Path.Combine(solutionDir, zipFilename);
     var sourceUrl = $"https://github.com/{GitUser}/{GitProject}/releases/download/{version}/{zipFilename}";
 
-    MakeZip(zipPath, new[] { dllFullPath, metaPath });
+    MakeZip(zipPath, new[] { dllPath, metaPath });
 
     var checksum = Md5Sum(zipPath);
     var manifestVersion = MakeManifestVersion(checksum, sourceUrl, version, timestamp);
 
     var manifestUrl = $"https://raw.githubusercontent.com/{GitUser}/{GitProject}/{GitManifestBranch}/{GitManifestPath}";
-    var manifestTargetPath = Path.Combine(projectDir, "manifest.json");
+    var manifestTargetPath = Path.Combine(solutionDir, "manifest.json");
     await AddManifestVersion(manifestUrl, manifestTargetPath, manifestVersion);
 
     Console.WriteLine("JPH - Done.");

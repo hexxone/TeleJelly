@@ -7,7 +7,7 @@
   "category": "Metadata",
   "imageUrl": "https://github.com/hexxone/TeleJelly/blob/main/TeleJelly/thumb.jpg?raw=true",
   "targetAbi": "10.8.0.0",
-  "timestamp": "2024-05-04T08:10:48Z",
-  "version": "1.0.3.2",
-  "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.4-alpha.0.2"
+  "timestamp": "2024-05-04T08:23:58Z",
+  "version": "1.0.3.3",
+  "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.4-alpha.0.3"
 }

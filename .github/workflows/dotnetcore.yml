@@ -18,22 +18,13 @@ jobs:
         with:
           dotnet-version: '6.x'
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      - name: Build Plugins
+      - name: Build Plugin
         run: |
           dotnet tool restore
           version=$(dotnet tool run minver)
           echo "version=$version" >> $GITHUB_ENV
           dotnet build TeleJelly --configuration Release -p:Version=$version
-
-      - name: Update Manifest
-        run: |
-          python3 scripts/manifest.py ./TeleJelly_v$version.zip
-
+          
       - name: Publish Manifest
         run: |
           git config --global user.name  'TeleJelly-Release-bot'
@@ -46,7 +37,7 @@ jobs:
           git commit -m "Auto added v${{env.version}} by Github Actions"
           git push -f -u origin dist
 
-      - name: Upload Plugin
+      - name: Publish Release
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
