@@ -175,9 +175,9 @@ public class TelegramController : ControllerBase
         }
 
         var mimeType = MimeTypes.GetMimeType(view.EmbeddedResourcePath);
-        var memeTypes = new[] { "text/html", "text/css", "application/javascript", "application/x-javascript" };
-        // dont try to minify binary files...like fonts... will end badly
-        if (!memeTypes.Contains(mimeType))
+        var textTypes = new[] { "text/html", "text/css", "application/javascript", "application/x-javascript" };
+        // don't try to minify binary files...like fonts... will end badly
+        if (!textTypes.Contains(mimeType))
         {
             return File(stream, mimeType);
         }

@@ -3,9 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
-    <AssemblyVersion>1.0.3.0</AssemblyVersion>
-    <FileVersion>1.0.3.0</FileVersion>
-    <Version>1.0.3.0</Version>
+    <AssemblyVersion>1.0.5.0</AssemblyVersion>
+    <FileVersion>1.0.5.0</FileVersion>
+    <Version>1.0.5.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <MSBuildArgs>/property:GenerateFullPaths=true /consoleloggerparameters:NoSummary</MSBuildArgs>
@@ -60,28 +60,35 @@
   </ItemGroup>
 
   <Target Name="VersionTarget" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
+    <PropertyGroup>
+      <MinVerPreReleaseTrimmed>$([System.Text.RegularExpressions.Regex]::Replace('$(MinVerPreRelease)', '^[^\.]*\.0', ''))</MinVerPreReleaseTrimmed>
+      <AssemblyVersion>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch)$(MinVerPreReleaseTrimmed)</AssemblyVersion>
+      <FileVersion>$(AssemblyVersion)</FileVersion>
+      <ProductVersion>$(MinVerVersion)</ProductVersion>
+    </PropertyGroup>
     <Message Importance="high" Text="Tagging MinVer as Assembly Version... $(MinVerMajor).$(MinVerMinor).$(MinVerPatch)$(MinVerPreReleaseTrimmed)" />
   </Target>
 
   <!-- After Release Build, ILRepack.target gets called. -->
 
-  <Target Name="CopyToServer" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(OS)' == 'Windows_NT' and '$(Configuration)'=='Debug'">
+  <Target Name="JellyfinPluginHelper" AfterTargets="ILRepacker" Condition="'$(MinVerVersion)' != ''">
+    <Message Importance="high" Text="&#xA;      Running Jellyfin Plugin Helper...&#xA;    " />
+    <Exec Command="dotnet restore ../JellyfinPluginHelper/JellyfinPluginHelper.csproj" />
+    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Build" />
+    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RunArguments=%22$(MinVerVersion)&quot; &quot;$(ProjectDir)../&quot; &quot;$(ProjectDir)$(OutDir)$(AssemblyName).dll&quot;" />
+  </Target>
+
+  <Target Name="CopyToServer" AfterTargets="JellyfinPluginHelper" Condition="'$(OS)' == 'Windows_NT'">
     <Message Importance="high" Text="&#xA;      Copying built Plugin to JellyFin Server...&#xA;    " />
     <PropertyGroup>
       <LocalAppDataPath>$(LocalAppData)</LocalAppDataPath>
     </PropertyGroup>
     <ItemGroup>
       <ServerFilesToDelete Include="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*.*" />
-      <BuiltFilesToCopy Include="$(OutDir)/**/*.*" />
+      <BuiltFilesToCopy Include="$(OutDir)$(AssemblyName).dll" />
+      <BuiltFilesToCopy Include="$(ProjectDir)../meta.json" />
     </ItemGroup>
     <Delete Files="$(ServerFilesToDelete)" />
     <Copy SourceFiles="@(BuiltFilesToCopy)" DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/%(RecursiveDir)" OverwriteReadOnlyFiles="true" />
-  </Target>
-
-  <Target Name="JellyfinPluginHelper" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release' and '$(MinVerVersion)' != ''">
-    <Message Importance="high" Text="&#xA;      Running Jellyfin Plugin Helper...&#xA;    " />
-    <Exec Command="dotnet restore ../JellyfinPluginHelper/JellyfinPluginHelper.csproj" />
-    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Build" />
-    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RunArguments=%22$(MinVerVersion)&quot; &quot;$(ProjectDir)../&quot; &quot;$(ProjectDir)$(OutDir)$(AssemblyName).dll&quot;" />
   </Target>
 </Project>

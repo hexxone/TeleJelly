@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <!-- ILRepack -->
-    <Target Name="ILRepacker" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Target Name="ILRepacker" AfterTargets="Build">
         <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    " />
         <ItemGroup>
             <InputAssemblies Include="$(TargetPath)" />
-            <InputAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'"/>
+            <!-- Telegram.Bot requires Newtonsoft.Json, ILogger requires Logging.Abstractions -->
+            <InputAssemblies Include="@(ReferencePathWithRefAssemblies)"
+                             Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging.Abstractions' Or '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions'"/>
         </ItemGroup>
     
         <ILRepack
