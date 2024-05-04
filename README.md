@@ -25,8 +25,6 @@ A Plugin for logging into [Jellyfin](https://jellyfin.org/) using the [Telegram 
 
 Allows for simple Group creation/editing/deleting in order to manage Admins/Users/Library-access.
 
-Having a Telegram Username is mandatory.
-
 Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plugin-ldapauth) and [jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso).
 
 Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plugin-template).
@@ -39,6 +37,12 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 4. When the button is clicked, the Plugin validates User credentials using custom Telegram logic.
 5. On Success -> Authenticate & User is redirected to Jellyfin Dashboard
 6. On Failure -> Show Error Message (e.g. Invalid Data, not Whitelisted)
+
+## Requirements
+
+1. A Telegram Username is mandatory for all users who wish to use this Login method.
+2. A valid, public SSL certificate is needed for the Login Widget to work (e.g. LetsEncrypt).
+3. A Telegram Bot (token) is required to cryptograhpically validate the User Login credentials.
 
 ## Install
 

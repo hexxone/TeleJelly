@@ -15,6 +15,7 @@
     <PackageTags>jellyfin;jellyfin-plugin;telegram;telegram-bot;</PackageTags>
     <PackageIcon>thumb.jpg</PackageIcon>
     <PackageId>TeleJelly</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/hexxone/TeleJelly</RepositoryUrl>
     <NeutralLanguage>en</NeutralLanguage>
@@ -30,20 +31,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Pages\Files\material_icons.woff2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Pages\*" />
-    <EmbeddedResource Include="Pages\**\*" />
-  </ItemGroup>
-
-  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <None Include="..\README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
     <PackageReference Include="Jellyfin.Controller" Version="10.8.13" />
     <PackageReference Include="Jellyfin.Model" Version="10.8.13" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
@@ -52,7 +40,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.26">
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.31">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -62,23 +50,26 @@
     <PackageReference Include="WebMarkupMin.Core" Version="2.16.0" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <LocalAppDataPath>$(LocalAppData)</LocalAppDataPath>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <EmbeddedResource Include="Assets\*" />
+    <EmbeddedResource Include="Assets\**\*" />
+  </ItemGroup>
 
-<!--  <Target Name="ILRepacker" AfterTargets="Build">-->
-<!--    <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    " />-->
-<!--    <ItemGroup>-->
-<!--      <ILRepackAssemblies Include="$(TargetPath)" />-->
-<!--      <ILRepackAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'" />-->
-<!--    </ItemGroup>-->
-<!--    <ILRepack Parallel="true" DebugInfo="true" Internalize="false" NoRepackRes="true" Verbose="false" InputAssemblies="@(ILRepackAssemblies)" TargetKind="Dll" OutputFile="$(OutDir)$(AssemblyName).dll" />-->
-<!--    <Copy Condition="'$(Configuration)' == 'Release'" SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="$(PublishDir)/$(AssemblyName).dll" OverwriteReadOnlyFiles="true" />-->
-<!--  </Target>-->
+  <Target Name="VersionTarget" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
+    <Message Importance="high" Text="Tagging MinVer as Assembly Version... $(MinVerMajor).$(MinVerMinor).$(MinVerPatch)$(MinVerPreReleaseTrimmed)" />
+  </Target>
+
+  <!-- After Release Build, ILRepack.target gets called. -->
 
   <Target Name="CopyToServer" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(OS)' == 'Windows_NT' and '$(Configuration)'=='Debug'">
     <Message Importance="high" Text="&#xA;      Copying built Plugin to JellyFin Server...&#xA;    " />
+    <PropertyGroup>
+      <LocalAppDataPath>$(LocalAppData)</LocalAppDataPath>
+    </PropertyGroup>
     <ItemGroup>
       <ServerFilesToDelete Include="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/**/*.*" />
       <BuiltFilesToCopy Include="$(OutDir)/**/*.*" />
@@ -86,17 +77,23 @@
     <Delete Files="$(ServerFilesToDelete)" />
     <Copy SourceFiles="@(BuiltFilesToCopy)" DestinationFolder="$(LocalAppDataPath)/jellyfin/plugins/TeleJelly/%(RecursiveDir)" OverwriteReadOnlyFiles="true" />
   </Target>
-  
-  <Target Name="ReleaseZip" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release'">
+
+  <!--<Target Name="ReleaseZip" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release'">
     <Message Importance="high" Text="&#xA;      Creating Release ZIP Archive...&#xA;    " />
     <ItemGroup>
-      <OldReleaseFiles Include="$(ProjectDir)..\TeleJelly*.zip"/>
+      <OldReleaseFiles Include="$(ProjectDir)..\TeleJelly*.zip" />
       <TempZipDirectory Include="$(OutputPath)output" />
     </ItemGroup>
     <Delete Files="@(OldReleaseFiles)" />
     <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="@(TempZipDirectory)" />
     <ZipDirectory SourceDirectory="@(TempZipDirectory)" DestinationFile="$(ProjectDir)..\TeleJelly_v$(Version).zip" />
     <RemoveDir Directories="@(TempZipDirectory)" />
+  </Target>-->
+
+  <Target Name="JellyfinPluginHelper" AfterTargets="CleanReferenceCopyLocalPaths" Condition="'$(Configuration)'=='Release' and '$(MinVerVersion)' != '' and '$(RECURSION_FLAG)' != '1'">
+    <Message Importance="high" Text="&#xA;      Running Jellyfin Plugin Helper...&#xA;    " />
+    <Exec Command="dotnet restore ../JellyfinPluginHelper/JellyfinPluginHelper.csproj" />
+    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Build" Properties="RECURSION_FLAG=1" />
+    <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RECURSION_FLAG=1;RunArguments=&quot;$(MinVerVersion)&quot; &quot;$(ProjectDir).&quot; &quot;$(OutDir)$(AssemblyName).dll&quot;" />
   </Target>
-  
 </Project>

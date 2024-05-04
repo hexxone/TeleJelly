@@ -62,9 +62,9 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     public IEnumerable<PluginPageInfo> GetPages()
     {
         return new PluginPageInfo[] {
-            new() { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Config.config.html" },
-            new() { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Config.config.js" },
-            new() { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Config.config.css" }
+            new() { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.html" },
+            new() { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.js" },
+            new() { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.css" }
         };
     }
 
@@ -77,10 +77,10 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     {
         return new PluginPageInfo[]
         {
-            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.css" },
-            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.login.js" },
-            new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.material_icons.woff2" },
-            new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Pages.Files.TeleJellyLogo.jpg" },
+            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.css" },
+            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.js" },
+            new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.material_icons.woff2" },
+            new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.TeleJellyLogo.jpg" },
         };
     }
 }

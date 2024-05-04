@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!-- ILRepack -->
+    <Target Name="ILRepacker" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+        <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    " />
+        <ItemGroup>
+            <InputAssemblies Include="$(TargetPath)" />
+            <InputAssemblies Include="@(ReferencePathWithRefAssemblies)" Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.Logging'"/>
+        </ItemGroup>
+    
+        <ILRepack
+            Parallel="true"
+            DebugInfo="true"
+            Internalize="false"
+            NoRepackRes="true"
+            Verbose="false"
+            InputAssemblies="@(InputAssemblies)"
+            TargetKind="Dll"
+            OutputFile="$(OutputPath)\$(AssemblyName).dll"
+        />
+    </Target>
+    <!-- /ILRepack -->
+</Project>

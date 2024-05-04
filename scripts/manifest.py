@@ -5,6 +5,12 @@ import sys
 from datetime import datetime
 from urllib.request import urlopen
 
+# Settings
+git_user = "hexxone"
+git_project = "TeleJelly"
+git_manifest_branch = "dist"
+git_manifest_path = "manifest.json"
+
 
 def md5sum(filename):
     with open(filename, 'rb') as f:
@@ -12,7 +18,6 @@ def md5sum(filename):
 
 
 def fix_version_string(version_str):
-    # Check if the version string contains "-alpha.0"
     if "-alpha.0" in version_str:
         version_str = version_str.replace("-alpha.0", "")
         parts = version_str.split(".")
@@ -20,31 +25,56 @@ def fix_version_string(version_str):
         return ".".join(parts)
     return version_str
 
-def generate(filename, version):
+
+def make_manifest_version(checksum, source_url, version, timestamp):
     return {
-        'checksum': md5sum(filename),
-        'changelog': f'Automatic Release by Github Actions: https://github.com/hexxone/TeleJelly/releases/tag/{version}',
+        'checksum': checksum,
+        'changelog': f'Automatic Release by Github Actions: https://github.com/{git_user}/{git_project}/releases/tag/{version}',
         'targetAbi': '10.8.0.0',
-        'sourceUrl': 'https://github.com/hexxone/TeleJelly/releases/download/'
-                     f'{version}/TeleJelly_v{version}.zip',
-        'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'sourceUrl': source_url,
+        'timestamp': timestamp,
         'version': fix_version_string(version)
     }
 
 
-def main():
-    filename = sys.argv[1]
-    version = filename.split('_', maxsplit=1)[1] \
-        .removeprefix('v') \
-        .removesuffix('.zip')
-
-    with urlopen('https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json') as f:
+def add_manifest_version(manifest_version):
+    with urlopen(f'https://raw.githubusercontent.com/{git_user}/{git_project}/{git_manifest_branch}/{git_manifest_path}') as f:
         manifest = json.load(f)
 
-    manifest[0]['versions'].insert(0, generate(filename, version))
+    manifest[0]['versions'].insert(0, manifest_version)
 
-    with open('manifest.json', 'w') as f:
+    with open(git_manifest_path, 'w') as f:
         json.dump(manifest, f, indent=2)
+
+
+def update_meta(version, timestamp):
+    print("TODO update meta.json timestamp, version, changelog")
+
+
+def make_zip(target_file, source_files):
+    print("TODO make zip of meta.json and tj.dll")
+
+
+def main():
+    # TODO change how script is called in GH Actions
+    version = sys.argv[1]
+    dll_path = sys.argv[2]
+    
+    zip_filename = f'{git_project}_v{version}.zip'
+    source_url = f'https://github.com/{git_user}/{git_project}/releases/download/{version}/{zip_filename}'
+
+    timestamp = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+    
+    # TODO update_meta
+    meta_path = update_meta(version, timestamp)
+    
+    # TODO remove ZIP from msbuild
+    # TODO make_zip
+    zip_path = make_zip(zip_filename, [dll_path, meta_path])
+    checksum = md5sum(zip_path)
+    manifest_version = make_manifest_version(checksum, version, timestamp)
+
+    add_manifest_version(manifest_version)
 
 
 if __name__ == '__main__':
