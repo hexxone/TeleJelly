@@ -61,7 +61,7 @@ static async Task Main(string version, string solutionDir, string dllPath)
 
     Console.WriteLine("JPH - Working dir:     " + Directory.GetCurrentDirectory());
     Console.WriteLine("JPH - Using version:   " + version);
-    Console.WriteLine("JPH - Using project:   " + solutionDir);
+    Console.WriteLine("JPH - Using solution:  " + solutionDir);
     Console.WriteLine("JPH - Using dll path:  " + dllPath);
     Console.WriteLine("JPH - Using meta path: " + metaPath);
 
