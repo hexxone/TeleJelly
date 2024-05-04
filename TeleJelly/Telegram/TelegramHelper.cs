@@ -17,7 +17,6 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.Cryptography;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 
 #pragma warning disable CA2254
@@ -34,40 +33,40 @@ public class TelegramHelper
     /// </summary>
     private const long AllowedTimeOffset = 30;
 
-    private readonly PluginConfiguration _config;
-    private readonly ICryptoProvider _cryptoProvider;
+    private static readonly DateTime _unixStart = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly HMACSHA256 _hmac;
     private readonly TeleJellyPlugin _instance;
-    private readonly ILogger _logger;
+    //private readonly ILogger _logger;
+    private readonly PluginConfiguration _config;
 
     private readonly ISessionManager _sessionManager;
     private readonly IUserManager _userManager;
+    private readonly ICryptoProvider _cryptoProvider;
 
-    private static readonly DateTime _unixStart = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private readonly HMACSHA256 _hmac;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramHelper" /> class.
     /// </summary>
     /// <param name="instance">of the Plugin.</param>
+    /// <param name="logger">for outputting errors.</param>
     /// <param name="sessionManager">for manual sign-in.</param>
     /// <param name="userManager">for getting and creating users.</param>
     /// <param name="cryptoProvider">for hashing passwords.</param>
-    /// <param name="logger">for outputting errors.</param>
-    internal TelegramHelper(TeleJellyPlugin instance, ISessionManager sessionManager, IUserManager userManager, ICryptoProvider cryptoProvider, ILogger logger)
+    internal TelegramHelper(TeleJellyPlugin instance, ISessionManager sessionManager, IUserManager userManager, ICryptoProvider cryptoProvider)
     {
         _instance = instance;
         _config = instance.Configuration;
+        //_logger = logger;
 
         _sessionManager = sessionManager;
         _userManager = userManager;
-        _logger = logger;
         _cryptoProvider = cryptoProvider;
 
         using var sha256 = SHA256.Create();
         _hmac = new HMACSHA256(sha256.ComputeHash(Encoding.ASCII.GetBytes(_config.BotToken)));
 
-        _logger.LogDebug("Telegram Helper initialized");
+        //_logger.LogDebug("Telegram Helper initialized");
     }
 
     /// <summary>
@@ -105,7 +104,7 @@ public class TelegramHelper
         var user = _userManager.GetUserByName(userName);
         if (user == null)
         {
-            _logger.LogInformation($"Telegram user '{userName}' doesn't exist, creating...");
+            //_logger.LogInformation($"Telegram user '{userName}' doesn't exist, creating...");
             user = await _userManager.CreateUserAsync(userName).ConfigureAwait(false);
 
             // use a secure random password, can be changed later?
@@ -168,7 +167,7 @@ public class TelegramHelper
             Username = user.Username
         };
 
-        _logger.LogInformation("Auth request created...");
+        //_logger.LogInformation("Auth request created...");
 
         return await _sessionManager.AuthenticateDirect(authRequest).ConfigureAwait(false);
     }
@@ -278,7 +277,7 @@ public class TelegramHelper
         var cleanedUrl = HttpUtility.UrlDecode(userPhotoUrl);
 
         var userImgPath = Path.Combine(_instance.ApplicationPaths.PluginsPath, Constants.PluginName, Constants.PluginDataFolder, Constants.UserImageFolder);
-        _logger.LogDebug("Trying to download image for '{Username}' into '{UserImgPath}'", user.Username, userImgPath);
+        //_logger.LogDebug("Trying to download image for '{Username}' into '{UserImgPath}'", user.Username, userImgPath);
 
         try
         {
@@ -298,7 +297,7 @@ public class TelegramHelper
             {
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError("Failed to download user image for {Username} from {PhotoUrl}. StatusCode: {StatusCode}", user.Username, cleanedUrl, response.StatusCode);
+                    //_logger.LogError("Failed to download user image for {Username} from {PhotoUrl}. StatusCode: {StatusCode}", user.Username, cleanedUrl, response.StatusCode);
                     return false;
                 }
 
@@ -318,13 +317,13 @@ public class TelegramHelper
                 user.ProfileImage.LastModified = DateTime.UtcNow;
             }
 
-            _logger.LogInformation("Successfully downloaded telegram image for '{Username}'.", user.Username);
+            //_logger.LogInformation("Successfully downloaded telegram image for '{Username}'.", user.Username);
             return true;
         }
         catch (Exception ex)
         {
             // Log error and return false.
-            _logger.LogError(ex, "Failed to download telegram image for '{Username}' from '{PhotoUrl}'.", user.Username, cleanedUrl);
+            //_logger.LogError(ex, "Failed to download telegram image for '{Username}' from '{PhotoUrl}'.", user.Username, cleanedUrl);
             return false;
         }
     }
@@ -339,19 +338,19 @@ public class TelegramHelper
         var view = _instance.GetExtraFiles().FirstOrDefault(extra => extra.Name == Constants.DefaultUserImageExtraFile);
         if (view == null)
         {
-            _logger.LogError("Failed to get DefaultUserImageExtraFile {Resource}", Constants.DefaultUserImageExtraFile);
+            //_logger.LogError("Failed to get DefaultUserImageExtraFile {Resource}", Constants.DefaultUserImageExtraFile);
             return false;
         }
 
         var stream = _instance.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
         if (stream == null)
         {
-            _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
+            //_logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
             return false;
         }
 
         var userImgPath = Path.Combine(_instance.ApplicationPaths.PluginsPath, Constants.PluginName, Constants.PluginDataFolder, Constants.UserImageFolder);
-        _logger.LogDebug("Trying to save default image for '{Username}' into '{UserImgPath}'", user.Username, userImgPath);
+        //_logger.LogDebug("Trying to save default image for '{Username}' into '{UserImgPath}'", user.Username, userImgPath);
 
         try
         {
@@ -380,13 +379,13 @@ public class TelegramHelper
                 user.ProfileImage.LastModified = DateTime.UtcNow;
             }
 
-            _logger.LogInformation("Successfully set default telegram user image for '{Username}'.", user.Username);
+            //_logger.LogInformation("Successfully set default telegram user image for '{Username}'.", user.Username);
             return true;
         }
         catch (Exception ex)
         {
             // Log error and return false.
-            _logger.LogError(ex, "Failed to set default telegram user image for '{Username}' from '{PhotoUrl}'.", user.Username, view.EmbeddedResourcePath);
+            //_logger.LogError(ex, "Failed to set default telegram user image for '{Username}' from '{PhotoUrl}'.", user.Username, view.EmbeddedResourcePath);
             return false;
         }
     }

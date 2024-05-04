@@ -53,7 +53,7 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
     ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
     /// </summary>
-    public PluginPageInfo TelegramLoginPage => new() { Name = "login", EmbeddedResourcePath = $"{GetType().Namespace}.Pages.telegram.login.html" };
+    public PluginPageInfo TelegramLoginPage => new() { Name = "login", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.html" };
 
     /// <summary>
     ///     Returns the available internal web pages of this plugin.
