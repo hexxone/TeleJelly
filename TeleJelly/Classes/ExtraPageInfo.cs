@@ -8,7 +8,7 @@ namespace Jellyfin.Plugin.TeleJelly.Classes;
 public class ExtraPageInfo : PluginPageInfo
 {
     /// <summary>
-    ///     Whether the file needs to have strings like {{SERVER_URL}} replaced.
+    ///     Gets or sets a value indicating whether the file needs to have strings like {{SERVER_URL}} replaced.
     /// </summary>
     public bool NeedsReplacement { get; set; }
 }

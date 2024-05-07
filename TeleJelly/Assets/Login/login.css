@@ -10,7 +10,7 @@
 }
 
 html {
-    font-family: Montserrat,Noto Sans,Noto Sans HK,Noto Sans JP,Noto Sans KR,Noto Sans SC,Noto Sans TC,sans-serif;
+    font-family: Montserrat, Noto Sans, Noto Sans HK, Noto Sans JP, Noto Sans KR, Noto Sans SC, Noto Sans TC, sans-serif;
     line-height: 1.35;
     text-size-adjust: 100%;
     font-size: 93%;
@@ -21,12 +21,12 @@ body {
     transition: opacity ease-in 0.2s;
 }
 
-    body[unresolved] {
-        display: block;
-        opacity: 0;
-        overflow: hidden;
-        position: relative;
-    }
+body[unresolved] {
+    display: block;
+    opacity: 0;
+    overflow: hidden;
+    position: relative;
+}
 
 h1,
 h2 {
@@ -85,10 +85,10 @@ h2 {
     color: rgba(255, 255, 255, 0.8);
 }
 
-    .skinHeader.semiTransparent {
-        backdrop-filter: none !important;
-        background-color: rgba(0, 0, 0, 0.4);
-    }
+.skinHeader.semiTransparent {
+    backdrop-filter: none !important;
+    background-color: rgba(0, 0, 0, 0.4);
+}
 
 .headerTop {
     padding: 0.8em;
@@ -122,12 +122,12 @@ h2 {
     transition: all 0.25s ease-in-out;
 }
 
-    .headerBackButton:hover {
-        color: #ddd;
-        border-color: #ddd;
-        background-color: rgba(100, 100, 100, 0.3);
-        border-width: 0.05em;
-    }
+.headerBackButton:hover {
+    color: #ddd;
+    border-color: #ddd;
+    background-color: rgba(100, 100, 100, 0.3);
+    border-width: 0.05em;
+}
 
 .linkLogos > * {
     margin: 0.5rem;
@@ -355,8 +355,8 @@ h2 {
 
 @-webkit-keyframes view-slideleft {
     0% {
-        -webkit-transform: translate3d(100%,0,0);
-        transform: translate3d(100%,0,0)
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
     }
 
     to {
@@ -367,8 +367,8 @@ h2 {
 
 @keyframes view-slideleft {
     0% {
-        -webkit-transform: translate3d(100%,0,0);
-        transform: translate3d(100%,0,0)
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
     }
 
     to {
@@ -384,8 +384,8 @@ h2 {
     }
 
     to {
-        -webkit-transform: translate3d(-100%,0,0);
-        transform: translate3d(-100%,0,0)
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
     }
 }
 
@@ -396,15 +396,15 @@ h2 {
     }
 
     to {
-        -webkit-transform: translate3d(-100%,0,0);
-        transform: translate3d(-100%,0,0)
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
     }
 }
 
 @-webkit-keyframes view-slideright {
     0% {
-        -webkit-transform: translate3d(-100%,0,0);
-        transform: translate3d(-100%,0,0)
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
     }
 
     to {
@@ -415,8 +415,8 @@ h2 {
 
 @keyframes view-slideright {
     0% {
-        -webkit-transform: translate3d(-100%,0,0);
-        transform: translate3d(-100%,0,0)
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
     }
 
     to {
@@ -432,8 +432,8 @@ h2 {
     }
 
     to {
-        -webkit-transform: translate3d(100%,0,0);
-        transform: translate3d(100%,0,0)
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
     }
 }
 
@@ -444,8 +444,8 @@ h2 {
     }
 
     to {
-        -webkit-transform: translate3d(100%,0,0);
-        transform: translate3d(100%,0,0)
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
     }
 }
 
@@ -710,9 +710,9 @@ h2 {
     border-color: inherit;
 }
 
-    .mdl-spinner__circle-clipper .mdl-spinner__circle {
-        width: 200%;
-    }
+.mdl-spinner__circle-clipper .mdl-spinner__circle {
+    width: 200%;
+}
 
 .mdl-spinner__circleLeft {
     border-right-color: transparent !important;

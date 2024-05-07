@@ -41,23 +41,23 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 ## Features
 
 - SSO Login page (at `/sso/Telegram`)
-  - styled similar to the regular login page
-  - responsive / mobile capable
-  - shows a "Back to Normal Login" button
-  - shows the Telegram Login Widget
-  - checks the Telegram Auth data against the backend
-  - if data is invalid -> show error message
-  - if data is valid -> takes the Jellyfin Auth Response and authenticates the user
-  - loading animation
-  - supports Custom CSS
+    - styled similar to the regular login page
+    - responsive / mobile capable
+    - shows a "Back to Normal Login" button
+    - shows the Telegram Login Widget
+    - checks the Telegram Auth data against the backend
+    - if data is invalid -> show error message
+    - if data is valid -> takes the Jellyfin Auth Response and authenticates the user
+    - loading animation
+    - supports Custom CSS
 
 - Config page (reachable via Jellyfin Plugin Page)
-  - requires setting the Telegram Bot Token
-  - allows setting a List of Administrator Telegram Usernames (get full Access)
-  - allows forcing an external Protocol Scheme (for reverse proxies like Traefik)
-  - allows Creating/Editing/Deleting a "virtual" management Group
-    - Grants access to all OR specific Libraries for non-Administrators.
-    - _Note: A user needs to be Admin OR part of at least ONE Group to Log-in._
+    - requires setting the Telegram Bot Token
+    - allows setting a List of Administrator Telegram Usernames (get full Access)
+    - allows forcing an external Protocol Scheme (for reverse proxies like Traefik)
+    - allows Creating/Editing/Deleting a "virtual" management Group
+        - Grants access to all OR specific Libraries for non-Administrators.
+        - _Note: A user needs to be Admin OR part of at least ONE Group to Log-in._
 
 ## Requirements
 
@@ -105,16 +105,16 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 ## Known issues
 
 - The `Sign in with Telegram` button will sometimes get hidden by Browser Plugins like "I don't like Cookies" or "UBlock Origin".
-Try disabling these on your Jellyfin domain and inform your users.
+  Try disabling these on your Jellyfin domain and inform your users.
 
 - If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to private.
-In this case, the plugin will fall back to its default icon.
+  In this case, the plugin will fall back to its default icon.
 
 - If a User were to change/sell his Username, a random person would possibly be able to use this Service.
-However, having Names over ID's is much more convenient for Management.
+  However, having Names over ID's is much more convenient for Management.
 
 - If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy,
-otherwise adversaries might be able to lag the system.
+  otherwise adversaries might be able to lag the system.
 
 ## Demo Video
 

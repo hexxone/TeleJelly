@@ -227,7 +227,7 @@ const tgTokenHelper = {
             {
                 url: window.ApiClient.getUrl("/api/TeleJellyConfig/ValidateBotToken"),
                 type: "POST",
-                data: JSON.stringify({ Token: token }),
+                data: JSON.stringify({Token: token}),
                 contentType: "application/json",
                 dataType: "json"
             })
@@ -235,7 +235,7 @@ const tgTokenHelper = {
                 tgTokenHelper.handleValidationResponse(data);
             })
             .catch(error => {
-                tgTokenHelper.handleValidationResponse({ ErrorMessage: error.message });
+                tgTokenHelper.handleValidationResponse({ErrorMessage: error.message});
             });
     },
 

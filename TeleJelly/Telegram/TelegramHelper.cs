@@ -34,6 +34,7 @@ public class TelegramHelper
     private static readonly DateTime _unixStart = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly TeleJellyPlugin _instance;
+
     // private readonly ILogger _logger;
     private readonly PluginConfiguration _config;
 
@@ -206,12 +207,9 @@ public class TelegramHelper
         var dataCheckString = string.Join("\n", orderedKeys.Select(key => $"{key}={fields[key]}"));
         var signature = _hmac.ComputeHash(Encoding.UTF8.GetBytes(dataCheckString));
 
-        if (signature.Where(FailCheckPredicate).Any())
-        {
-            return new TelegramAuthResult { ErrorMessage = "Invalid hash." };
-        }
-
-        return new TelegramAuthResult { Ok = true };
+        return signature.Where(FailCheckPredicate).Any()
+            ? new TelegramAuthResult { ErrorMessage = "Invalid hash." }
+            : new TelegramAuthResult { Ok = true };
 
         bool FailCheckPredicate(byte t, int i)
         {
@@ -224,7 +222,6 @@ public class TelegramHelper
         }
     }
 
-
     /// <summary>
     ///     Small helper for finding the Value for a key, ignoring the CaSiNg Of ThE sTrInG.
     /// </summary>
@@ -232,7 +229,7 @@ public class TelegramHelper
     /// <param name="dataDictionary">string indexed data.</param>
     /// <param name="key">to search for.</param>
     /// <returns>found value or null.</returns>
-    public static T? GetDictValue<T>(IDictionary<string, T>? dataDictionary, string key)
+    private static T? GetDictValue<T>(IDictionary<string, T>? dataDictionary, string key)
     {
         var foundKey = dataDictionary?.Keys.FirstOrDefault(k => string.Equals(k, key, StringComparison.CurrentCultureIgnoreCase));
         return foundKey != null ? dataDictionary![foundKey] : default;
@@ -244,7 +241,7 @@ public class TelegramHelper
     /// <param name="user">To set the Profile picture for.</param>
     /// <param name="authData">To download from Telegram.</param>
     /// <returns>whether image was successfully downloaded and set.</returns>
-    public async Task<bool> DownloadUserImage(User user, SortedDictionary<string, string> authData)
+    private async Task<bool> DownloadUserImage(User user, SortedDictionary<string, string> authData)
     {
         if (user == null)
         {
@@ -316,14 +313,14 @@ public class TelegramHelper
     /// </summary>
     /// <param name="user">Jellyfin Telegram User.</param>
     /// <returns>Whether action was successful.</returns>
-    public async Task<bool> SetDefaultUserImage(User user)
+    private async Task<bool> SetDefaultUserImage(User user)
     {
         if (user == null)
         {
             throw new ArgumentNullException(nameof(user), "User is null.");
         }
 
-        var view = _instance.GetExtraFiles().FirstOrDefault(extra => extra.Name == Constants.DefaultUserImageExtraFile);
+        var view = TeleJellyPlugin.LoginFiles.FirstOrDefault(extra => extra.Name == Constants.DefaultUserImageExtraFile);
         if (view == null)
         {
             // _logger.LogError("Failed to get DefaultUserImageExtraFile {Resource}", Constants.DefaultUserImageExtraFile);
