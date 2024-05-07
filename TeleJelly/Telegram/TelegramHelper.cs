@@ -8,14 +8,20 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+#if JELLYFIN
 using Jellyfin.Data.Entities;
 using Jellyfin.Data.Enums;
-using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Common.Extensions;
+#endif
+using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Controller.Authentication;
+#if DEBUG
+using MediaBrowser.Controller.Entities;
+#endif
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.Cryptography;
+using MediaBrowser.Model.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 
@@ -103,7 +109,13 @@ public class TelegramHelper
         if (user == null)
         {
             // _logger.LogInformation($"Telegram user '{userName}' doesn't exist, creating...");
+#if TELEJELLY
             user = await _userManager.CreateUserAsync(userName).ConfigureAwait(false);
+#endif
+#if DEBUG
+            var userPolicy = new UserPolicy(); // TODO determine proper settings
+            user = await _userManager.CreateUser(userName, userPolicy);
+#endif
 
             // use a secure random password, can be changed later?
             var randBytes = new byte[128];
@@ -136,7 +148,12 @@ public class TelegramHelper
         }
 
         // save it if changed.
+#if TELEJELLY
         await _userManager.UpdateUserAsync(user).ConfigureAwait(false);
+#endif
+#if DEBUG
+        _userManager.UpdateUser(user);
+#endif
 
         return user;
     }
