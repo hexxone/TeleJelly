@@ -29,6 +29,10 @@ Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plug
 
 Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plugin-template).
 
+------
+
+## TODO put everything into WIKI
+
 ## Usage
 
 1. User clicks the `Sign in with Telegram` Disclaimer Link on the Jellyfin Login Page
@@ -39,6 +43,8 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - On Failure -> Show Error Message (e.g. Invalid Data, not Whitelisted)
 
 ## Features
+
+- Works for Jellyfin AND Emby
 
 - SSO Login page (at `/sso/Telegram`)
     - styled similar to the regular login page
@@ -65,23 +71,27 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 2. A valid, public SSL certificate is needed for the Login Widget to work (e.g. LetsEncrypt).
 3. A Telegram Bot (token) is required to cryptograhpically validate the User Login credentials.
 
+------
+
 ## Installation
+
+### Jellyfin
 
 You can choose between 3 options below.
 
-### Option 1: Plugin Repository (easy way)
+#### Option 1: Plugin Repository (easy way)
 
 1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json>
 2. install `TeleJelly` from the Plugin catalogue
 3. restart jellyfin
 
-### Option 2: Download manually
+#### Option 2: Download manually
 
 1. Download the 'latest' [Release](https://github.com/hexxone/TeleJelly/releases)
 2. Unzip files into `config/plugins/TeleJelly` folder (create it if non-existing)
 3. restart jellyfin
 
-### Option 3: Compile by yourself
+#### Option 3: Compile by yourself
 
 Don't trust the downloads?
 
@@ -90,6 +100,16 @@ Don't trust the downloads?
 3. run `publish.ps1`
 4. put `./publish/` files into `config/plugins/TeleJelly` folder
 5. restart jellyfin
+
+### Emby
+
+#### Option 1: Plugin Repository (TODO)
+
+1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist-emby/manifest.json>
+2. install `TeleJelly` from the Plugin catalogue
+3. restart jellyfin
+
+------
 
 ## Configuration
 
@@ -116,9 +136,13 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 - If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy,
   otherwise adversaries might be able to lag the system.
 
+------
+
 ## Demo Video
 
 _Note: Video & Screenshots are taken with [my custom css theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied. The Logo is AI-generated._
+
+### TODO CONVERT TO GIF?
 
 <video src='./screenshots/demo.mp4' width=600></video>
 
