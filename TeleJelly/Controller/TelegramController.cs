@@ -15,8 +15,7 @@ using MediaBrowser.Model.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
-#pragma warning disable CA2254
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Jellyfin.Plugin.TeleJelly.Controller;
 
@@ -29,7 +28,9 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Route("sso/{Controller}")]
 public class TelegramController : ControllerBase
 {
-    //private readonly ILogger _logger;
+    private static readonly string[] _entryPoints = { "index.html", "login", "login.html" };
+
+    // private readonly ILogger _logger;
     private readonly TeleJellyPlugin _instance;
 
     private readonly TelegramHelper _telegramHelper;
@@ -39,20 +40,18 @@ public class TelegramController : ControllerBase
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramController" /> class.
     /// </summary>
-    /// <param name="logger">for outputting errors.</param>
     /// <param name="sessionManager">for manually logging in users.</param>
     /// <param name="userManager">for getting and creating users.</param>
     /// <param name="cryptoProvider">for hashing passwords.</param>
     /// <param name="configurationManager">Instance of the <see cref="IConfigurationManager" /> interface.</param>
     /// <exception cref="Exception">if plugin was not properly initialized before usage.</exception>
     public TelegramController(
-        //ILogger logger,
         ISessionManager sessionManager,
         IUserManager userManager,
         ICryptoProvider cryptoProvider,
         IConfigurationManager configurationManager)
     {
-        //_logger = logger;
+        // _logger = logger;
 
         if (TeleJellyPlugin.Instance == null)
         {
@@ -66,52 +65,94 @@ public class TelegramController : ControllerBase
         // stolen from https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Controllers/BrandingController.cs
         _brandingOptions = configurationManager.GetConfiguration<BrandingOptions>("branding");
 
-        //_logger.LogDebug("Telegram Controller initialized");
+        // _logger.LogDebug("Telegram Controller initialized");
     }
 
     /// <summary>
-    ///     Returns a simple Telegram-Login View with appropriate values for our Bot.
+    ///     Returns the HTML,CSS and JS File-streams of the login page.
+    ///     Replaces certain string params and uses memory caching.
+    ///
     ///     1. User will click on "Login with Telegram"
     ///     2. a Telegram.org popup opens, asking for login and bot permission
     ///     3. when confirmed by user -> will get redirected to "Confirm" method.
+    ///     TODO: cache should be cleared when custom CSS changes
     /// </summary>
-    /// <returns>Html Login Page.</returns>
+    /// <param name="fileName">to search and return.</param>
+    /// <returns>Stream of file.</returns>
     [AllowAnonymous]
-    [HttpGet(nameof(Login))]
-    [Produces(MediaTypeNames.Text.Html)]
+    [HttpGet("{fileName=Login}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Login()
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Files([FromRoute] string fileName)
     {
-        var view = _instance.TelegramLoginPage;
-
-        await using var stream = _instance.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
-
-        if (stream == null)
+        var lowerFilename = fileName.ToLower();
+        if (_entryPoints.Contains(lowerFilename))
         {
-            //_logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
-            return NotFound();
+            lowerFilename = "index";
         }
 
-        var serverUrl = _telegramHelper.GetRequestBase(Request);
+        var view = _instance.GetExtraFiles().FirstOrDefault(extra => extra.Name == lowerFilename);
+        if (view == null)
+        {
+            return NotFound($"Resource not found: '{lowerFilename}'");
+        }
 
-        using var reader = new StreamReader(stream);
+        var mimeType = MimeTypes.GetMimeType(view.EmbeddedResourcePath);
+        if (!view.NeedsReplacement)
+        {
+            // don't try to replace strings in binary files like fonts...
+            var binaryStream = GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
+            if (binaryStream == null)
+            {
+                // _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
+                return StatusCode(500, $"Resource failed to load: {view.EmbeddedResourcePath}");
+            }
+
+            return File(binaryStream, mimeType);
+        }
+
+        var botUsername = _instance.Configuration.BotUsername;
+        var serverUrl = Request.GetRequestBase(_instance.Configuration);
+        var cacheKey = $"{serverUrl}/sso/Telegram/{lowerFilename}/{botUsername}";
+        if (_instance.MemoryCache.Get<string>(cacheKey) is { } foundEntry)
+        {
+            // serving from cache spares us opening the stream, reading it & replacing it.
+            return Content(foundEntry, mimeType);
+        }
+
+        var textStream = GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
+        if (textStream == null)
+        {
+            // _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
+            return StatusCode(500, $"Resource failed to load: {view.EmbeddedResourcePath}");
+        }
+
+        using var reader = new StreamReader(textStream);
         var html = await reader.ReadToEndAsync();
-        html = html
+        var replaced = html
             .Replace("{{SERVER_URL}}", serverUrl)
-            .Replace("{{TELEGRAM_BOT_NAME}}", _instance.Configuration.BotUsername)
+            .Replace("{{TELEGRAM_BOT_NAME}}", botUsername)
             .Replace("/*{{CUSTOM_CSS}}*/", _brandingOptions.CustomCss ?? string.Empty);
 
-        return Content(html, "text/html");
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(60))
+            .SetPriority(CacheItemPriority.Low);
+
+        _instance.MemoryCache.Set(cacheKey, replaced, cacheEntryOptions);
+
+        return Content(replaced, mimeType);
     }
 
     /// <summary>
-    ///     Tries to log-in a Telegram-User from given Url Parameters.
+    ///     Tries to log in a Telegram-User from given Url Parameters.
     ///     Returns a custom object, representing success or failure.
-    ///     1. Validates that a "hash" is present and it's correct
+    ///     1. Validates that a "hash" is present, and it's correct
     ///     2. validates that user has "Username" and is whitelisted
     ///     3. get/creates the user and sets his permissions
     ///     4. we return a custom "login object"
-    ///     5. [Script] sets required values in localStorage for jellyfin
+    ///     5. [Script] sets required values in localStorage for Jellyfin
     ///     5. [Script] redirect to the dashboard.
     /// </summary>
     /// <param name="authData">Telegram Authenticated User data.</param>
@@ -124,7 +165,7 @@ public class TelegramController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<SsoAuthenticationResult>> Authenticate([FromBody] SortedDictionary<string, string> authData)
     {
-        var requestBase = _telegramHelper.GetRequestBase(Request);
+        var requestBase = Request.GetRequestBase(_instance.Configuration);
 
         try
         {
@@ -142,52 +183,9 @@ public class TelegramController : ControllerBase
         }
         catch (Exception ex)
         {
-            //_logger.LogError(ex.ToString());
+            // _logger.LogError(ex.ToString());
 
-            return StatusCode(500, new SsoAuthenticationResult { ServerAddress = requestBase, ErrorMessage = ex.ToString() });
+            return StatusCode(500, new SsoAuthenticationResult { ServerAddress = requestBase, ErrorMessage = ex.Message });
         }
-    }
-
-    /// <summary>
-    ///     Returns extra File-streams.
-    /// </summary>
-    /// <param name="fileName">to search and return.</param>
-    /// <returns>Stream of file.</returns>
-    [AllowAnonymous]
-    [HttpGet(nameof(ExtraFiles) + "/{fileName}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ExtraFiles([FromRoute] string fileName)
-    {
-        var view = _instance.GetExtraFiles().FirstOrDefault(extra => extra.Name == fileName);
-        if (view == null)
-        {
-            return NotFound();
-        }
-
-        var stream = _instance.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
-        if (stream == null)
-        {
-            //_logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
-            return StatusCode(500, $"Resource not found: {view.EmbeddedResourcePath}");
-        }
-
-        var mimeType = MimeTypes.GetMimeType(view.EmbeddedResourcePath);
-        var textTypes = new[] { "text/html", "text/css", "application/javascript", "application/x-javascript" };
-        // don't try to minify binary files...like fonts... will end badly
-        if (!textTypes.Contains(mimeType))
-        {
-            return File(stream, mimeType);
-        }
-
-        var serverUrl = _telegramHelper.GetRequestBase(Request);
-
-        // TODO find better way than this?
-        using var reader = new StreamReader(stream);
-        var html = await reader.ReadToEndAsync();
-        var replaced = html.Replace("{{SERVER_URL}}", serverUrl);
-
-        return Content(replaced, mimeType);
     }
 }

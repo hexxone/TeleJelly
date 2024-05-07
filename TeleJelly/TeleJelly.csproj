@@ -19,7 +19,7 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/hexxone/TeleJelly</RepositoryUrl>
     <NeutralLanguage>en</NeutralLanguage>
-    <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet></CodeAnalysisRuleSet>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <Title>TeleJelly plugin</Title>
     <Description>Telegram Login provider plugin for Jelllyfin</Description>

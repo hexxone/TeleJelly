@@ -20,7 +20,7 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "jellyfin", "C:\Program File
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HttpsReverseProxy", "HttpsReverseProxy\HttpsReverseProxy.csproj", "{2DE7BAB5-5F3E-4990-BD82-BECBD78AAD99}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JellyfinPluginHelper", "JellyfinPluginHelper\JellyfinPluginHelper.csproj", "{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JellyfinPluginHelper", "JellyfinPluginHelper\JellyfinPluginHelper.csproj", "{B955F6A0-5AC3-4CD4-8C35-BE958A56888C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

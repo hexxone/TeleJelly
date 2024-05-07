@@ -1,7 +1,7 @@
-﻿namespace Jellyfin.Plugin.TeleJelly.Classes;
+namespace Jellyfin.Plugin.TeleJelly.Classes;
 
 /// <summary>
-///     TODO.
+///     Bot-Token validation response.
 /// </summary>
 public class ValidateBotTokenResponse
 {

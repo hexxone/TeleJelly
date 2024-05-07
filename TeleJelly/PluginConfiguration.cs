@@ -17,13 +17,12 @@ public class PluginConfiguration : BasePluginConfiguration
 
     /// <summary>
     ///     Gets or sets a value indicating the value Used for the Telegram Login widget...
-    ///     TODO get this from the Token automatically.
     /// </summary>
     public string BotUsername { get; set; } = "MyTelegramBot";
 
     /// <summary>
     ///     Gets or sets a value indicating the List of users to grant admin permissions.
-    ///     TODO Be careful! Usernames in Telegram can be sold, bought and changed easily.
+    ///     Be careful! Usernames in Telegram can be sold, bought and changed easily.
     /// </summary>
     public List<string> AdminUserNames { get; set; } = new();
 
