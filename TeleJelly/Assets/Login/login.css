@@ -1,12 +1,19 @@
-﻿@font-face {
+@font-face {
     font-family: "Material Symbols Outlined";
     font-style: normal;
     font-weight: 400;
-    src: url("{{SERVER_URL}}/sso/Telegram/ExtraFiles/material_icons.woff2") format("woff2");
+    src: url("{{SERVER_URL}}/sso/Telegram/material_icons.woff2") format("woff2");
+}
+
+* {
+    user-select: none;
 }
 
 html {
-    font-family: Noto Sans,Noto Sans HK,Noto Sans JP,Noto Sans KR,Noto Sans SC,Noto Sans TC,sans-serif;
+    font-family: Montserrat,Noto Sans,Noto Sans HK,Noto Sans JP,Noto Sans KR,Noto Sans SC,Noto Sans TC,sans-serif;
+    line-height: 1.35;
+    text-size-adjust: 100%;
+    font-size: 93%;
 }
 
 
@@ -14,17 +21,16 @@ body {
     transition: opacity ease-in 0.2s;
 }
 
-body[unresolved] {
-    display: block;
-    opacity: 0;
-    overflow: hidden;
-    position: relative;
-}
+    body[unresolved] {
+        display: block;
+        opacity: 0;
+        overflow: hidden;
+        position: relative;
+    }
 
 h1,
 h2 {
-    font-family: Noto Sans, Noto Sans HK, Noto Sans JP, Noto Sans KR,
-    Noto Sans SC, sans-serif;
+    font-family: Noto Sans, Noto Sans HK, Noto Sans JP, Noto Sans KR, Noto Sans SC, sans-serif;
     font-weight: 400;
 }
 
@@ -79,13 +85,17 @@ h2 {
     color: rgba(255, 255, 255, 0.8);
 }
 
-.skinHeader.semiTransparent {
-    backdrop-filter: none !important;
-    background-color: rgba(0, 0, 0, 0.4);
-}
+    .skinHeader.semiTransparent {
+        backdrop-filter: none !important;
+        background-color: rgba(0, 0, 0, 0.4);
+    }
 
 .headerTop {
     padding: 0.8em;
+}
+
+.headerLeft {
+    display: flex;
 }
 
 .mainContent {
@@ -112,13 +122,375 @@ h2 {
     transition: all 0.25s ease-in-out;
 }
 
-.headerBackButton:hover {
-    color: #ddd;
-    border-color: #ddd;
-    background-color: rgba(100, 100, 100, 0.3);
-    border-width: 0.05em;
+    .headerBackButton:hover {
+        color: #ddd;
+        border-color: #ddd;
+        background-color: rgba(100, 100, 100, 0.3);
+        border-width: 0.05em;
+    }
+
+.linkLogos > * {
+    margin: 0.5rem;
 }
 
+.linkLogos > .material-symbols-outlined {
+    font-size: 2.5rem;
+}
+
+.telegramButton {
+    margin-bottom: 2.5rem;
+}
+
+/** margin & padding */
+
+.margin-auto-y {
+    margin-bottom: auto;
+    margin-top: auto;
+}
+
+.padded-right {
+    padding-right: 3.3%;
+}
+
+.padded-left {
+    padding-left: 3.3%;
+}
+
+.content-primary, .padded-bottom-page, .page, .pageWithAbsoluteTabs .pageTabContent {
+    padding-bottom: 5em !important;
+}
+
+/** Flex */
+
+.flex {
+    display: -webkit-flex;
+    display: flex
+}
+
+.inline-flex {
+    display: -webkit-inline-flex;
+    display: inline-flex
+}
+
+.flex-direction-column {
+    -webkit-flex-direction: column;
+    flex-direction: column
+}
+
+.flex-direction-row {
+    -webkit-flex-direction: row;
+    flex-direction: row
+}
+
+.flex-grow {
+    -webkit-flex-grow: 1;
+    flex-grow: 1
+}
+
+.flex-shrink-zero {
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0
+}
+
+.align-items-center {
+    -webkit-align-items: center;
+    align-items: center
+}
+
+.align-items-flex-start {
+    -webkit-align-items: flex-start;
+    align-items: flex-start
+}
+
+.align-items-flex-end {
+    -webkit-align-items: flex-end;
+    align-items: flex-end
+}
+
+.justify-content-center {
+    -webkit-justify-content: center;
+    justify-content: center
+}
+
+.justify-content-flex-end {
+    -webkit-justify-content: flex-end;
+    justify-content: flex-end
+}
+
+.justify-content-space-between {
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.flex-wrap-wrap {
+    -webkit-flex-wrap: wrap;
+    flex-wrap: wrap
+}
+
+.align-self-flex-end {
+    -webkit-align-self: flex-end;
+    align-self: flex-end
+}
+
+/** emby-button */
+
+.emby-button {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-align-items: center;
+    align-items: center;
+    border: 0;
+    border-radius: .2em;
+    box-sizing: border-box;
+    color: inherit;
+    cursor: pointer;
+    display: -webkit-inline-flex;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    line-height: 1.35;
+    margin: .3em;
+    outline: none !important;
+    outline-width: 0;
+    padding: .9em 1em;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    -webkit-transform-origin: center;
+    transform-origin: center;
+    transition: .2s;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+    vertical-align: middle;
+    z-index: 0;
+}
+
+.fab, .raised {
+    background: #303030;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.emby-button.block, .fab {
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-justify-content: center;
+    justify-content: center;
+}
+
+.emby-button.block {
+    /*display: block;*/
+    margin: .25em 0;
+    width: 100%;
+}
+
+.emby-button > .material-symbols-outlined {
+    margin: 0 0.5rem;
+}
+
+.readOnlyContent {
+    margin: .5em auto 1em;
+}
+
+@media (min-width: 50em) {
+    .readOnlyContent, form {
+        max-width: 54em;
+    }
+}
+
+/** animatedPage */
+
+.mainAnimatedPage {
+    bottom: 0;
+    contain: layout style size;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0
+}
+
+.standalonePage {
+    padding-top: 4.5em;
+}
+
+@-webkit-keyframes view-fadeout {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        opacity: 0
+    }
+}
+
+@keyframes view-fadeout {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        opacity: 0
+    }
+}
+
+@-webkit-keyframes view-fadein {
+    0% {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
+}
+
+@keyframes view-fadein {
+    0% {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
+}
+
+@-webkit-keyframes view-slideleft {
+    0% {
+        -webkit-transform: translate3d(100%,0,0);
+        transform: translate3d(100%,0,0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@keyframes view-slideleft {
+    0% {
+        -webkit-transform: translate3d(100%,0,0);
+        transform: translate3d(100%,0,0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@-webkit-keyframes view-slideleft-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(-100%,0,0);
+        transform: translate3d(-100%,0,0)
+    }
+}
+
+@keyframes view-slideleft-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(-100%,0,0);
+        transform: translate3d(-100%,0,0)
+    }
+}
+
+@-webkit-keyframes view-slideright {
+    0% {
+        -webkit-transform: translate3d(-100%,0,0);
+        transform: translate3d(-100%,0,0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@keyframes view-slideright {
+    0% {
+        -webkit-transform: translate3d(-100%,0,0);
+        transform: translate3d(-100%,0,0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@-webkit-keyframes view-slideright-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(100%,0,0);
+        transform: translate3d(100%,0,0)
+    }
+}
+
+@keyframes view-slideright-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(100%,0,0);
+        transform: translate3d(100%,0,0)
+    }
+}
+
+/** animated icon */
+
+@keyframes rotate-slow {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(1080deg); /* 3 full rotations clockwise */
+    }
+}
+
+@keyframes continuous-rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg); /* One full rotation clockwise */
+    }
+}
+
+.material-symbols-outlined {
+    display: inline-block;
+    /* Ensure the icon is centered on its axis for rotation */
+    transform-origin: center;
+}
+
+.animate-on-load {
+    animation: rotate-slow 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-on-hover:hover {
+    animation: rotate-slow 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-continuous {
+    pointer-events: none;
+    animation: continuous-rotate 1s linear infinite;
+    /* Overrides the hover animation */
+    animation-play-state: running !important;
+}
 
 /** Jellyfin Loading Spinner **/
 
@@ -216,9 +588,8 @@ h2 {
 /**
 * HACK: Even though the intention is to have the current .mdl-spinner__layer-N
 * at `opacity: 1`, we set it to `opacity: 0.99` instead since this forces Chrome
-* to do proper subpixel rendering for the elements being animated. This is
-* especially visible in Chrome 39 on Ubuntu 14.04. See:
-*
+* to do proper subpixel rendering for the elements being animated.
+* This is especially visible in Chrome 39 on Ubuntu 14.04. See:
 * - https://github.com/Polymer/paper-spinner/issues/9
 * - https://code.google.com/p/chromium/issues/detail?id=436255
 */
@@ -339,9 +710,9 @@ h2 {
     border-color: inherit;
 }
 
-.mdl-spinner__circle-clipper .mdl-spinner__circle {
-    width: 200%;
-}
+    .mdl-spinner__circle-clipper .mdl-spinner__circle {
+        width: 200%;
+    }
 
 .mdl-spinner__circleLeft {
     border-right-color: transparent !important;

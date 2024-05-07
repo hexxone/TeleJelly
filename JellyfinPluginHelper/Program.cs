@@ -1,5 +1,6 @@
 #region
 
+using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -47,6 +48,8 @@ if (args.Length != 3)
     return;
 }
 
+// TODO make nuget package with automatic build target??
+// TODO use MinVer.Lib instead: https://github.com/adamralph/minver/issues/1006
 
 var version = args[0];
 var solutionDir = args[1];
@@ -65,7 +68,7 @@ static async Task Main(string version, string solutionDir, string dllPath)
     Console.WriteLine("JPH - Using dll path:  " + dllPath);
     Console.WriteLine("JPH - Using meta path: " + metaPath);
 
-    var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+    var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 
     UpdateMeta(metaPath, version, timestamp);
 
@@ -103,7 +106,7 @@ static string FixVersionString(string versionStr)
 
     versionStr = versionStr.Replace("-alpha.0", "");
     var parts = versionStr.Split('.');
-    parts[2] = (int.Parse(parts[2]) - 1).ToString();
+    parts[2] = (int.Parse(parts[2], CultureInfo.InvariantCulture) - 1).ToString(CultureInfo.InvariantCulture);
     return string.Join(".", parts);
 }
 
@@ -126,12 +129,14 @@ static async Task AddManifestVersion(string manifestUrl, string manifestTargetPa
 
     using var webClient = new HttpClient();
     var manifestJson = await webClient.GetStringAsync(manifestUrl);
-    var manifest = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(manifestJson);
+
+    var manifest = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(manifestJson)
+                   ?? throw new Exception("Failed to deserialize manifest.");
+
     manifest[0]["versions"] = new List<Dictionary<string, object>> { manifestVersion };
 
     var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
     File.WriteAllText(manifestTargetPath, json);
-
     Console.WriteLine("JPH - Successfully updated manifest.json.");
 }
 

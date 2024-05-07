@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
+using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-
-// TODO [assembly:CLSCompliant(true)]
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
 /// <summary>
-///     The SSO plugin class.
+///     Main SSO plugin class.
 /// </summary>
 public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
 {
@@ -24,6 +24,9 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     {
         ApplicationPaths = applicationPaths;
         Instance = this;
+
+        var cacheOptions = new MemoryCacheOptions() { ExpirationScanFrequency = TimeSpan.FromMinutes(1) };
+        MemoryCache = new MemoryCache(cacheOptions);
     }
 
     /// <summary>
@@ -37,6 +40,11 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     public new IApplicationPaths ApplicationPaths { get; }
 
     /// <summary>
+    ///     Gets the In-memory cache for the Plugin html pages.
+    /// </summary>
+    public IMemoryCache MemoryCache { get; }
+
+    /// <summary>
     ///     Gets the name of the SSO plugin.
     /// </summary>
     public override string Name => Constants.PluginName;
@@ -47,21 +55,13 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     public override Guid Id => Constants.Id;
 
     /// <summary>
-    ///     Gets the Resource-Info for the Telegram Auth Page.
-    ///     has replaceable params:
-    ///     - {{SERVER_URL}} = Jellyfin base Url
-    ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
-    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
-    /// </summary>
-    public PluginPageInfo TelegramLoginPage => new() { Name = "login", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.html" };
-
-    /// <summary>
     ///     Returns the available internal web pages of this plugin.
     /// </summary>
     /// <returns>A list of internal webpages in this application.</returns>
     public IEnumerable<PluginPageInfo> GetPages()
     {
-        return new PluginPageInfo[] {
+        return new PluginPageInfo[]
+        {
             new() { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.html" },
             new() { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.js" },
             new() { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.css" }
@@ -71,14 +71,19 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <summary>
     ///     Gets the always available list of extra files for Telegram SSO.
     ///     e.g. Fonts and CSS.
+    ///     has replaceable params:
+    ///     - {{SERVER_URL}} = Jellyfin base Url
+    ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
+    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
     /// </summary>
     /// <returns>A list of internal webpages in this application.</returns>
-    public IEnumerable<PluginPageInfo> GetExtraFiles()
+    public IEnumerable<ExtraPageInfo> GetExtraFiles()
     {
-        return new PluginPageInfo[]
+        return new ExtraPageInfo[]
         {
-            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.css" },
-            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.js" },
+            new() { Name = "index", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.html", NeedsReplacement = true },
+            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.css", NeedsReplacement = true },
+            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.js", NeedsReplacement = true },
             new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.material_icons.woff2" },
             new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.TeleJellyLogo.jpg" },
         };

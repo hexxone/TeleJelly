@@ -1,30 +1,19 @@
-﻿const loadingSpinner = {
-    // depends on https://github.com/jellyfin/jellyfin-web/blob/master/src/components/loading/loading.scss
-
+// animates rotation on loading
+const loadingSpinner = {
     loader: undefined,
-
-    createLoader: () => {
-        const elem = document.createElement('div');
-        elem.setAttribute('dir', 'ltr');
-        elem.classList.add('docspinner');
-        elem.classList.add('mdl-spinner');
-
-        elem.innerHTML = '<div class="mdl-spinner__layer mdl-spinner__layer-1"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-2"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-3"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-4"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div>';
-
-        document.body.appendChild(elem);
-        return elem;
-    },
 
     show: () => {
         if (!loadingSpinner.loader) {
-            loadingSpinner.loader = loadingSpinner.createLoader();
+            loadingSpinner.loader = document.getElementById("ssoSyncIcon");
         }
-        loadingSpinner.loader.classList.add('mdlSpinnerActive');
+        if (loadingSpinner.loader) {
+            loadingSpinner.loader.classList.add('animate-continuous');
+        }
     },
 
     hide: () => {
         if (loadingSpinner.loader) {
-            loadingSpinner.loader.classList.remove('mdlSpinnerActive');
+            loadingSpinner.loader.classList.remove('animate-continuous');
         }
     }
 };
@@ -33,7 +22,6 @@
 // get data from login widget
 function onTelegramAuth(user) {
     loadingSpinner.show();
-    console.debug("Logging in as User", user);
     teleJellyAuthenticate(user);
 }
 
@@ -67,10 +55,10 @@ function showError(message) {
 }
 
 function setCredentialsAndRedirect(resultData) {
-    if (resultData === undefined) {
+    if (!resultData) {
         console.warn(
             "Error parsing Result Data: ",
-            resultDataString
+            resultData
         );
         return;
     }
