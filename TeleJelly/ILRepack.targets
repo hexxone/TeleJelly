@@ -2,14 +2,14 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <!-- ILRepack -->
     <Target Name="ILRepacker" AfterTargets="Build">
-        <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    " />
+        <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    "/>
         <ItemGroup>
-            <InputAssemblies Include="$(TargetPath)" />
+            <InputAssemblies Include="$(TargetPath)"/>
             <!-- Telegram.Bot requires Newtonsoft.Json, ILogger requires Logging.Abstractions -->
             <InputAssemblies Include="@(ReferencePathWithRefAssemblies)"
                              Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions'"/>
         </ItemGroup>
-    
+
         <ILRepack
             Parallel="true"
             DebugInfo="true"

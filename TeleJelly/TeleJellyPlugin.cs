@@ -15,6 +15,17 @@ namespace Jellyfin.Plugin.TeleJelly;
 public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
 {
     /// <summary>
+    ///     Gets the always available list of extra files for Telegram SSO.
+    ///     e.g. Fonts and CSS.
+    ///     has replaceable params:
+    ///     - {{SERVER_URL}} = Jellyfin base Url
+    ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
+    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
+    /// </summary>
+    /// <returns>A list of internal webpages in this application.</returns>
+    public static readonly ExtraPageInfo[] LoginFiles = { new() { Name = "index", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.html", NeedsReplacement = true }, new() { Name = "login.css", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.css", NeedsReplacement = true }, new() { Name = "login.js", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.js", NeedsReplacement = true }, new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.material_icons.woff2" }, new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.TeleJellyLogo.jpg" }, };
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
     /// </summary>
     /// <param name="applicationPaths">Internal Jellyfin interface for the ApplicationPath.</param>
@@ -60,32 +71,6 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <returns>A list of internal webpages in this application.</returns>
     public IEnumerable<PluginPageInfo> GetPages()
     {
-        return new PluginPageInfo[]
-        {
-            new() { Name = Name, EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.html" },
-            new() { Name = Name + ".js", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.js" },
-            new() { Name = Name + ".css", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Config.config.css" }
-        };
-    }
-
-    /// <summary>
-    ///     Gets the always available list of extra files for Telegram SSO.
-    ///     e.g. Fonts and CSS.
-    ///     has replaceable params:
-    ///     - {{SERVER_URL}} = Jellyfin base Url
-    ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
-    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
-    /// </summary>
-    /// <returns>A list of internal webpages in this application.</returns>
-    public IEnumerable<ExtraPageInfo> GetExtraFiles()
-    {
-        return new ExtraPageInfo[]
-        {
-            new() { Name = "index", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.html", NeedsReplacement = true },
-            new() { Name = "login.css", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.css", NeedsReplacement = true },
-            new() { Name = "login.js", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.login.js", NeedsReplacement = true },
-            new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.material_icons.woff2" },
-            new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{GetType().Namespace}.Assets.Login.TeleJellyLogo.jpg" },
-        };
+        return new PluginPageInfo[] { new() { Name = Name, EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Config.config.html" }, new() { Name = Name + ".js", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Config.config.js" }, new() { Name = Name + ".css", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Config.config.css" } };
     }
 }

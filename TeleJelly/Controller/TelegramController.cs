@@ -75,7 +75,7 @@ public class TelegramController : ControllerBase
     ///     1. User will click on "Login with Telegram"
     ///     2. a Telegram.org popup opens, asking for login and bot permission
     ///     3. when confirmed by user -> will get redirected to "Confirm" method.
-    ///     TODO: cache should be cleared when custom CSS changes
+    ///     TODO: cache should be cleared when custom CSS changes.
     /// </summary>
     /// <param name="fileName">to search and return.</param>
     /// <returns>Stream of file.</returns>
@@ -92,7 +92,7 @@ public class TelegramController : ControllerBase
             lowerFilename = "index";
         }
 
-        var view = _instance.GetExtraFiles().FirstOrDefault(extra => extra.Name == lowerFilename);
+        var view = TeleJellyPlugin.LoginFiles.FirstOrDefault(extra => extra.Name == lowerFilename);
         if (view == null)
         {
             return NotFound($"Resource not found: '{lowerFilename}'");

@@ -18,9 +18,9 @@
     width: 100%;
 }
 
-    .emby-textarea::-moz-focus-inner {
-        border: 0;
-    }
+.emby-textarea::-moz-focus-inner {
+    border: 0;
+}
 
 .textareaLabel {
     display: inline-block;
@@ -44,15 +44,15 @@
     padding-top: 0.5em;
 }
 
-    .sso-role-mapping-container + .sso-role-mapping-container,
-    .sso-bordered-list + .sso-bordered-list {
-        margin-top: 1em;
-    }
+.sso-role-mapping-container + .sso-role-mapping-container,
+.sso-bordered-list + .sso-bordered-list {
+    margin-top: 1em;
+}
 
-    .sso-role-mapping-container .sso-folder-list {
-        padding-bottom: 0.25em;
-        padding-left: 1em;
-    }
+.sso-role-mapping-container .sso-folder-list {
+    padding-bottom: 0.25em;
+    padding-left: 1em;
+}
 
 .sso-role-mapping-input-label {
     padding-left: 0.5em;
@@ -106,16 +106,16 @@ code {
     height: 20px;
 }
 
-    .eye-icon::before {
-        content: '';
-        position: absolute;
-        background-color: currentColor;
-        border-radius: 50%;
-        width: 8px;
-        height: 8px;
-        left: 5px;
-        top: 5px;
-    }
+.eye-icon::before {
+    content: '';
+    position: absolute;
+    background-color: currentColor;
+    border-radius: 50%;
+    width: 8px;
+    height: 8px;
+    left: 5px;
+    top: 5px;
+}
 
 /* Slash to represent "hide" */
 .eye-slash {
@@ -131,20 +131,20 @@ code {
     color: #000; /* Eye icon hover color */
 }
 
-    /* Tooltip */
-    .toggle-eye:hover::after {
-        content: "Show / Hide Token";
-        visibility: visible;
-        position: absolute;
-        width: 120px;
-        background-color: black;
-        color: white;
-        text-align: center;
-        border-radius: 5px;
-        padding: 5px;
-        bottom: 110%;
-        left: 50%;
-        transform: translateX(-90%);
-        font-size: 12px;
-        z-index: 999999;
-    }
+/* Tooltip */
+.toggle-eye:hover::after {
+    content: "Show / Hide Token";
+    visibility: visible;
+    position: absolute;
+    width: 120px;
+    background-color: black;
+    color: white;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-90%);
+    font-size: 12px;
+    z-index: 999999;
+}
