@@ -38,7 +38,7 @@ const string GitProject = "TeleJelly";
 const string GitManifestBranch = "dist";
 const string GitManifestPath = "manifest.json";
 
-const string TargetAbi = "10.8.0.0";
+const string TargetAbi = "10.9.0.0";
 const string ChangeMessage = "Automatic Release by Github Actions: ";
 
 if (args.Length != 3)
@@ -145,7 +145,7 @@ static void UpdateMeta(string metaPath, string version, string timestamp)
     Console.WriteLine("JPH - Updating meta.json.");
 
     // Read the existing meta.json
-    string metaJson = File.ReadAllText(metaPath);
+    var metaJson = File.ReadAllText(metaPath);
     var meta = JsonSerializer.Deserialize<Dictionary<string, object>>(metaJson);
 
     if (meta == null)
@@ -155,12 +155,13 @@ static void UpdateMeta(string metaPath, string version, string timestamp)
     }
 
     // Update the fields
+    meta["targetAbi"] = TargetAbi;
     meta["timestamp"] = timestamp;
     meta["version"] = FixVersionString(version);
     meta["changelog"] = $"{ChangeMessage} https://github.com/{GitUser}/{GitProject}/releases/tag/{version}";
 
     // Serialize and write back to meta.json
-    string updatedMetaJson = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });
+    var updatedMetaJson = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });
     File.WriteAllText(metaPath, updatedMetaJson);
 
     Console.WriteLine("JPH - Successfully updated meta.json.");

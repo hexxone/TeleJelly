@@ -160,7 +160,7 @@ public class TelegramHelper
             AppVersion = GetType().Assembly.GetName().Version?.ToString() ?? "0.0.0.1",
             DeviceId = request.Headers[HeaderNames.UserAgent].ToString(),
             DeviceName = "TelegramBrowserSSO",
-            RemoteEndPoint = request.HttpContext.GetNormalizedRemoteIp().ToString(),
+            RemoteEndPoint = request.HttpContext.GetNormalizedRemoteIP().ToString(),
             UserId = user.Id,
             Username = user.Username
         };
@@ -181,13 +181,13 @@ public class TelegramHelper
         Debug.Assert(fields != null, nameof(fields) + " != null");
 
         if (!fields.ContainsKey(Field.Id) ||
-            !fields.TryGetValue(Field.AuthDate, out string? authDate) ||
-            !fields.TryGetValue(Field.Hash, out string? hash))
+            !fields.TryGetValue(Field.AuthDate, out var authDate) ||
+            !fields.TryGetValue(Field.Hash, out var hash))
         {
             return new TelegramAuthResult { ErrorMessage = "Data has missing fields." };
         }
 
-        if (!long.TryParse(authDate, out long timestamp))
+        if (!long.TryParse(authDate, out var timestamp))
         {
             return new TelegramAuthResult { ErrorMessage = "Invalid AuthDate Format." };
         }
