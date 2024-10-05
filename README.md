@@ -136,20 +136,42 @@ _Note: Video & Screenshots are taken with [my custom css theme](https://gist.git
 
 ![Config Page 1](./screenshots/02.png)
 
-## Development
-
-1. Clone Repo
-2. Make sure to install "[JellyFin Server](https://repo.jellyfin.org/releases/server/windows/stable/)" for debugging on Windows. Keep the default path.
-3. Open Solution file, restore packages
-4. Build the Plugin in Release mode
-5. Select to run "HttpsReverseProxy" AND "jellyfin" (server) at the same time.
-6. The plugin gets copied to the server and the browser opens automatically.
-
 ## Dependencies
 
 - [Telegram.Bot](https://github.com/TelegramBots/telegram.bot) library for validating bot token & determining bot username
 - [ILRepack](https://github.com/gluck/il-repack) for packing all dependency dlls into one single plugin dll
 - [MinVer](https://github.com/adamralph/minver) for automated Release-versioning via git tags
+
+## Development / Contributing
+
+### Tools
+
+- [git](https://git-scm.com/downloads)
+- [Visual Studio](https://visualstudio.microsoft.com/de/downloads/) or Rider IDE
+- [.NET6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) for Jellyfin <= 10.8
+- [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) for Jellyfin >= 10.9
+- [JellyFin Server](https://repo.jellyfin.org/?path=/server/windows) for debugging on Windows. Keep the default path.
+
+### Getting Started
+
+1. Run `git clone https://github.com/hexxone/TeleJelly.git`
+2. Open `TeleJelly.sln` file with VS or Rider, restore Nuget packages
+3. Build `TeleJelly` Plugin in Release mode
+4. First run `HttpsReverseProxy` AND then `jellyfin` (server) at the same time.
+5. The plugin gets copied to the server and the browser opens automatically.
+
+### Making changes
+
+When implementing a new feature, please name your commit messages in a meaningful way and refer to git best practices.
+
+The plugin uses "MinVer" and git-tags for semantic versioning.
+
+Most of the Versions (meta.json and manifest.json) get incremented automatically on release build,
+**but** there are some places which have to be done manually - for example in the `config.html`.
+
+When targeting an updated version of Jellyfin, remember to set the correct `TargetAbi` version in `JellyfinPluginHelper`!
+
+Feel free to open Pull-Requests for useful additions and fixes you made, but if you disregard these guidelines, I will disregard your PR.
 
 ## Licensing
 

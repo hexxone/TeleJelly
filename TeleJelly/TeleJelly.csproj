@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
-    <AssemblyVersion>1.0.6.0</AssemblyVersion>
-    <FileVersion>1.0.6.0</FileVersion>
-    <Version>1.0.6.0</Version>
+    <AssemblyVersion>1.0.8.0</AssemblyVersion>
+    <FileVersion>1.0.8.0</FileVersion>
+    <Version>1.0.8.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <MSBuildArgs>/property:GenerateFullPaths=true /consoleloggerparameters:NoSummary</MSBuildArgs>
@@ -28,25 +28,28 @@
     <Product>TeleJelly</Product>
     <Nullable>enable</Nullable>
     <DebugType>embedded</DebugType>
+    <LangVersion>12</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App"/>
-    <PackageReference Include="Jellyfin.Controller" Version="10.8.13"/>
-    <PackageReference Include="Jellyfin.Model" Version="10.8.13"/>
+    <PackageReference Include="Jellyfin.Controller" Version="10.9.11"/>
+    <PackageReference Include="Jellyfin.Model" Version="10.9.11"/>
     <PackageReference Include="Telegram.Bot" Version="19.0.0"/>
-    <PackageReference Include="MinVer" Version="5.0.0">
+    <PackageReference Include="MinVer" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.31">
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.34.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All"/>
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.376" PrivateAssets="All"/>
     <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All"/>
-    <PackageReference Include="WebMarkupMin.Core" Version="2.16.0"/>
+    <PackageReference Include="WebMarkupMin.Core" Version="2.17.0"/>
   </ItemGroup>
 
   <ItemGroup>

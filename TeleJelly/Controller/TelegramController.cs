@@ -28,7 +28,7 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Route("sso/{Controller}")]
 public class TelegramController : ControllerBase
 {
-    private static readonly string[] _entryPoints = { "index.html", "login", "login.html" };
+    private static readonly string[] _entryPoints = ["index.html", "login", "login.html"];
 
     // private readonly ILogger _logger;
     private readonly TeleJellyPlugin _instance;
