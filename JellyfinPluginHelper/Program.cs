@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
+using JellyfinPluginHelper;
 
 #endregion
 
@@ -110,32 +111,40 @@ static string FixVersionString(string versionStr)
     return string.Join(".", parts);
 }
 
-static Dictionary<string, object> MakeManifestVersion(string checksum, string sourceUrl, string version, string timestamp)
+static PluginVersion MakeManifestVersion(string checksum, string sourceUrl, string version, string timestamp)
 {
-    return new Dictionary<string, object>
+    return new PluginVersion
     {
-        ["targetAbi"] = TargetAbi,
-        ["checksum"] = checksum,
-        ["sourceUrl"] = sourceUrl,
-        ["timestamp"] = timestamp,
-        ["version"] = FixVersionString(version),
-        ["changelog"] = $"{ChangeMessage} https://github.com/{GitUser}/{GitProject}/releases/tag/{version}"
+        TargetAbi = TargetAbi,
+        Checksum = checksum,
+        SourceUrl = sourceUrl,
+        Timestamp = timestamp,
+        Version = FixVersionString(version),
+        Changelog = $"{ChangeMessage} https://github.com/{GitUser}/{GitProject}/releases/tag/{version}"
     };
 }
 
-static async Task AddManifestVersion(string manifestUrl, string manifestTargetPath, Dictionary<string, object> manifestVersion)
+static async Task AddManifestVersion(string manifestUrl, string manifestTargetPath, PluginVersion manifestVersion)
 {
     Console.WriteLine("JPH - Downloading and updating manifest.json.");
 
     using var webClient = new HttpClient();
     var manifestJson = await webClient.GetStringAsync(manifestUrl);
 
-    var manifest = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(manifestJson)
-                   ?? throw new Exception("Failed to deserialize manifest.");
+    var pluginManifests = JsonSerializer.Deserialize<List<PluginManifest>>(manifestJson)
+                          ?? throw new Exception("Failed to deserialize manifest.");
 
-    manifest[0]["versions"] = new List<Dictionary<string, object>> { manifestVersion };
+    if (!pluginManifests.Any())
+    {
+        Console.WriteLine("JPH - Failed: manifest.json seems to be empty.");
+        return;
+    }
 
-    var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+    var pluginManifest = pluginManifests[0];
+    pluginManifest.Versions ??= new List<PluginVersion>();
+    pluginManifest.Versions.Add(manifestVersion);
+
+    var json = JsonSerializer.Serialize(pluginManifests, new JsonSerializerOptions { WriteIndented = true });
     File.WriteAllText(manifestTargetPath, json);
     Console.WriteLine("JPH - Successfully updated manifest.json.");
 }
