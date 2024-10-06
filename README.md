@@ -29,6 +29,16 @@ Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plug
 
 Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plugin-template).
 
+## Contents
+
+- [Usage](#usage)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Known issues](#known-issues)
+- [Demo Video](#demo-video)
+- [Screenshots](#screenshots)
+- [Making Changes](#making-changes)
+
 ## Usage
 
 1. User clicks the `Sign in with Telegram` Disclaimer Link on the Jellyfin Login Page
@@ -38,7 +48,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - On Success -> Authenticate & redirect User to Jellyfin Dashboard
     - On Failure -> Show Error Message (e.g. Invalid Data, not Whitelisted)
 
-## Features
+### Features
 
 - SSO Login page (at `/sso/Telegram`)
     - styled similar to the regular login page
@@ -49,7 +59,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - if data is invalid -> show error message
     - if data is valid -> takes the Jellyfin Auth Response and authenticates the user
     - loading animation
-    - supports Custom CSS
+    - supports custom CSS
 
 - Config page (reachable via Jellyfin Plugin Page)
     - requires setting the Telegram Bot Token
@@ -59,7 +69,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
         - Grants access to all OR specific Libraries for non-Administrators.
         - _Note: A user needs to be Admin OR part of at least ONE Group to Log-in._
 
-## Requirements
+### Requirements
 
 1. A Telegram Username is mandatory for all users who wish to use this Login method.
 2. A valid, public SSL certificate is needed for the Login Widget to work (e.g. LetsEncrypt).
@@ -103,6 +113,10 @@ Don't trust the downloads?
 E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 
 ## Known issues
+
+- This Login-method is intended for Desktop/Browser usage. It has not been tested to be working with official Jellyfin Apps.
+  If you encounter problems, try signing in on a "real" browser instead and use the `Quick Connect` feature when possible.
+  Besides that, there is very little you or I can do.
 
 - The `Sign in with Telegram` button will sometimes get hidden by Browser Plugins like "I don't like Cookies" or "UBlock Origin".
   Try disabling these on your Jellyfin domain and inform your users.
@@ -148,13 +162,7 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
 </details>
 
-## Dependencies
-
-- [Telegram.Bot](https://github.com/TelegramBots/telegram.bot) library for validating bot token & determining bot username
-- [ILRepack](https://github.com/gluck/il-repack) for packing all dependency dlls into one single plugin dll
-- [MinVer](https://github.com/adamralph/minver) for automated Release-versioning via git tags
-
-## Development / Contributing
+## Making Changes
 
 ### Tools
 
@@ -164,6 +172,12 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 - [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) for Jellyfin >= 10.9
 - [JellyFin Server](https://repo.jellyfin.org/?path=/server/windows) for debugging on Windows. Keep the default path.
 
+### Dependencies
+
+- [Telegram.Bot](https://github.com/TelegramBots/telegram.bot) library for validating bot token & determining bot username
+- [ILRepack](https://github.com/gluck/il-repack) for packing all dependency dlls into one single plugin dll
+- [MinVer](https://github.com/adamralph/minver) for automated Release-versioning via git tags
+
 ### Getting Started
 
 1. Run `git clone https://github.com/hexxone/TeleJelly.git`
@@ -172,7 +186,7 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 4. First run `HttpsReverseProxy` AND then `jellyfin` (server) at the same time.
 5. The plugin gets copied to the server and the browser opens automatically.
 
-### Making changes
+### Contributing
 
 When implementing a new feature, please name your commit messages in a meaningful way and refer to git best practices.
 
@@ -183,7 +197,7 @@ Most of the Versions (meta.json and manifest.json) get incremented automatically
 
 When targeting an updated version of Jellyfin, remember to set the correct `TargetAbi` version in `JellyfinPluginHelper`!
 
-Feel free to open Pull-Requests for useful additions and fixes you made, but if you disregard these guidelines, I will disregard your PR.
+> Feel free to open a new Pull-Requests for useful additions and fixes.
 
 ## Licensing
 
