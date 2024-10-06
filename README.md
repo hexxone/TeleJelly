@@ -86,7 +86,7 @@ You can choose between 3 options below.
 Don't trust the downloads?
 
 1. `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
-2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) / [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see Tools section below)
 3. run `publish.ps1`
 4. put `./publish/` files into `config/plugins/TeleJelly` folder
 5. restart jellyfin
@@ -120,21 +120,33 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 
 _Note: Video & Screenshots are taken with [my custom css theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied. The Logo is AI-generated._
 
-<video src='./screenshots/demo.mp4' width=600></video>
+https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
 ## Screenshots
 
-### Login Disclaimer
+<details>
+
+<summary>Login Disclaimer</summary>
 
 ![Login Disclaimer](./screenshots/00.png)
 
-### Login Page
+</details>
+
+<details>
+
+<summary>Login Page</summary>
 
 ![Login Page](./screenshots/01.png)
 
-### Config Page
+</details>
+
+<details>
+
+<summary>Config Page</summary>
 
 ![Config Page 1](./screenshots/02.png)
+
+</details>
 
 ## Dependencies
 
