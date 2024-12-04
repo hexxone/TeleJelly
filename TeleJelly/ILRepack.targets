@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <!-- ILRepack -->
-    <Target Name="ILRepacker" AfterTargets="Build">
+    <Target Name="ILRepacker" AfterTargets="Build" Condition="$(Configuration) == 'Release'">
         <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    "/>
+
         <ItemGroup>
             <InputAssemblies Include="$(TargetPath)"/>
             <!-- Telegram.Bot requires Newtonsoft.Json, ILogger requires Logging.Abstractions -->
@@ -20,6 +20,9 @@
             TargetKind="Dll"
             OutputFile="$(OutputPath)\$(AssemblyName).dll"
         />
+
+        <!-- Cleanup -->
+        <Delete Files="@(InputAssemblies)"
+                Condition="'%(Filename)' != '$(AssemblyName)'"/>
     </Target>
-    <!-- /ILRepack -->
 </Project>

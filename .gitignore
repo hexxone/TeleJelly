@@ -2,7 +2,7 @@ bin/
 obj/
 .vs/
 .idea/
-artifacts
 publish/
-*.zip
+letsencrypt/
 manifest.json
+.env

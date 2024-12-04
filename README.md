@@ -79,17 +79,17 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 
 You can choose between 3 options below.
 
-### Option 1: Plugin Repository (easy way)
+### Option 1: Plugin Repository (easiest way)
 
 1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json>
 2. install `TeleJelly` from the Plugin catalogue
-3. restart jellyfin
+3. restart jellyfin server
 
 ### Option 2: Download manually
 
-1. Download the 'latest' [Release](https://github.com/hexxone/TeleJelly/releases)
-2. Unzip files into `config/plugins/TeleJelly` folder (create it if non-existing)
-3. restart jellyfin
+1. Download the [Latest Release](https://github.com/hexxone/TeleJelly/releases/latest) (TeleJelly_vX.X.X.zip)
+2. Extract files into `config/plugins/TeleJelly` folder (create it if non-existing)
+3. restart jellyfin server
 
 ### Option 3: Compile by yourself
 
@@ -97,15 +97,15 @@ Don't trust the downloads?
 
 1. `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
 2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) / [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see Tools section below)
-3. run `publish.ps1`
-4. put `./publish/` files into `config/plugins/TeleJelly` folder
-5. restart jellyfin
+3. run command `dotnet publish TeleJelly -c Release`
+4. copy files from `./publish/` folder into `config/plugins/TeleJelly` (create it if non-existing)
+5. restart jellyfin server
 
 ## Configuration
 
 1. Make a new Bot & get the Token via [@Botfather](https://t.me/BotFather)
 2. Make sure to use the `/setdomain` command to link your jellyfin domain (needs valid SSL cert).
-3. Go to the Plugin configuration page and fill in the Bot-Token.
+3. Go to the TeleJelly plugin configuration page and fill in the Bot-Token.
 4. Add yourself into the "Administrators" list for full access, or create an Administrator Group.
 5. Now you should be able to log in via Telegram by visiting `jelly.fin/sso/Telegram`.
 6. You may also include this link in the Login "Branding" via Markdown or HTML.
@@ -170,7 +170,7 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 - [Visual Studio](https://visualstudio.microsoft.com/de/downloads/) or Rider IDE
 - [.NET6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) for Jellyfin <= 10.8
 - [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) for Jellyfin >= 10.9
-- [JellyFin Server](https://repo.jellyfin.org/?path=/server/windows) for debugging on Windows. Keep the default path.
+- [Docker](https://www.docker.com/products/docker-desktop/) for local testing
 
 ### Dependencies
 
@@ -181,10 +181,9 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 ### Getting Started
 
 1. Run `git clone https://github.com/hexxone/TeleJelly.git`
-2. Open `TeleJelly.sln` file with VS or Rider, restore Nuget packages
-3. Build `TeleJelly` Plugin in Release mode
-4. First run `HttpsReverseProxy` AND then `jellyfin` (server) at the same time.
-5. The plugin gets copied to the server and the browser opens automatically.
+2. Open `TeleJelly.sln` file with Visual Studio or Rider IDE, restore Nuget packages
+3. Choose to run `TeleJelly` Plugin with Docker
+4. Everything should build and the browser opens automatically.
 
 ### Contributing
 

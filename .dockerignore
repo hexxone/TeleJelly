@@ -1,0 +1,14 @@
+﻿.git
+.github
+.idea
+.vs
+.vscode
+publish/
+letsencrypt/
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+**/*.userosscache
+**/*.dbmdl
+**/*.jfm

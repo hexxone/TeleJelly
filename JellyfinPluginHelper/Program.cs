@@ -57,6 +57,7 @@ var solutionDir = args[1];
 var dllPath = args[2];
 
 await Main(version, solutionDir, dllPath);
+return;
 
 static async Task Main(string version, string solutionDir, string dllPath)
 {

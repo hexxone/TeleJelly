@@ -59,7 +59,7 @@ public class TeleJellyConfigController : ControllerBase
             // sometimes the api is reeeeaaally slow...
             using var ct = new CancellationTokenSource(TimeSpan.FromMilliseconds(10000));
 
-            var botInfo = await botClient.GetMeAsync(ct.Token);
+            var botInfo = await botClient.GetMe(ct.Token);
 
             return Ok(new ValidateBotTokenResponse { Ok = true, BotUsername = botInfo.Username! });
         }
