@@ -5,8 +5,8 @@ networks:
         driver: bridge
 
 volumes:
-    jellyfin-config:
-    jellyfin-cache:
+#    jellyfin-config:
+#    jellyfin-cache:
     jellyfin-media:
 
 services:
@@ -35,8 +35,9 @@ services:
             context: .
             dockerfile: Dockerfile
         volumes:
-            - jellyfin-config:/config
-            - jellyfin-cache:/cache
+            # Comment in Config below if you want to keep it persistent.
+            #- jellyfin-config:/config
+            #- jellyfin-cache:/cache
             - jellyfin-media:/media
         networks:
             - jellyfin-network

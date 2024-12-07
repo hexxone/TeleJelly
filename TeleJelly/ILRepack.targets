@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <Target Name="ILRepacker" AfterTargets="Build" Condition="$(Configuration) == 'Release'">
+    <Target Name="ILRepacker" AfterTargets="Build"> <!--  Condition="$(Configuration) == 'Release'" -->
         <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    "/>
+
+        <PropertyGroup>
+            <!-- Use PublishDir if it's set (publish), otherwise use TargetDir (regular build) -->
+            <FinalOutputPath Condition="'$(PublishDir)' != ''">$(PublishDir)</FinalOutputPath>
+            <FinalOutputPath Condition="'$(PublishDir)' == ''">$(TargetDir)</FinalOutputPath>
+        </PropertyGroup>
 
         <ItemGroup>
             <InputAssemblies Include="$(TargetPath)"/>
-            <!-- Telegram.Bot requires Newtonsoft.Json, ILogger requires Logging.Abstractions -->
             <InputAssemblies Include="@(ReferencePathWithRefAssemblies)"
-                             Condition="'%(filename)' == 'Newtonsoft.Json' Or '%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions'"/>
+                             Condition="'%(filename)' == 'Newtonsoft.Json' Or
+                                      '%(filename)' == 'Telegram.Bot' Or
+                                      '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions' Or
+                                      '%(filename)' == 'Microsoft.Extensions.Options'"/>
         </ItemGroup>
+
+        <Message Text="Output will be written to: $(FinalOutputPath)" Importance="high"/>
+        <Message Text="Input assemblies: @(InputAssemblies)" Importance="high"/>
 
         <ILRepack
             Parallel="true"
@@ -18,11 +29,7 @@
             Verbose="false"
             InputAssemblies="@(InputAssemblies)"
             TargetKind="Dll"
-            OutputFile="$(OutputPath)\$(AssemblyName).dll"
+            OutputFile="$(FinalOutputPath)/$(TargetFileName)"
         />
-
-        <!-- Cleanup -->
-        <Delete Files="@(InputAssemblies)"
-                Condition="'%(Filename)' != '$(AssemblyName)'"/>
     </Target>
 </Project>

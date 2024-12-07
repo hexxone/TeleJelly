@@ -1,15 +1,18 @@
 ﻿<component name="ProjectRunConfigurationManager">
-    <configuration default="false" name="Docker Test" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
-        <deployment type="docker-compose.yml">
-            <settings>
-                <option name="envFilePath" value=".env"/>
-                <option name="removeVolumesOnComposeDown" value="true"/>
-                <option name="commandLineOptions" value="--build"/>
-                <option name="sourceFilePath" value="docker-compose.yml"/>
-                <option name="upDetach" value="false"/>
-            </settings>
-        </deployment>
-        <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false"/>
-        <method v="2"/>
-    </configuration>
+  <configuration default="false" name="Docker Test" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
+    <deployment type="docker-compose.yml">
+      <settings>
+        <option name="envFilePath" value=".env" />
+        <option name="removeImagesOnComposeDown" value="ALL" />
+        <option name="removeVolumesOnComposeDown" value="true" />
+        <option name="commandLineOptions" value="--build" />
+        <option name="sourceFilePath" value="docker-compose.yml" />
+        <option name="upForceRecreate" value="true" />
+      </settings>
+    </deployment>
+    <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />
+    <method v="2">
+      <option name="LaunchBrowser.Before.Run" url="https://jellyfin.localhost:8443/web/#/wizardstart.html" />
+    </method>
+  </configuration>
 </component>

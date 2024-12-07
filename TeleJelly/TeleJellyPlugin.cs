@@ -5,7 +5,6 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
@@ -43,8 +42,8 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
         ApplicationPaths = applicationPaths;
         Instance = this;
 
-        var cacheOptions = new MemoryCacheOptions() { ExpirationScanFrequency = TimeSpan.FromMinutes(1) };
-        MemoryCache = new MemoryCache(cacheOptions);
+        // var cacheOptions = new MemoryCacheOptions() { ExpirationScanFrequency = TimeSpan.FromMinutes(1) };
+        // MemoryCache = new MemoryCache(cacheOptions);
     }
 
     /// <summary>
@@ -56,11 +55,6 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     ///     Gets the Runtime Jellyfin Application Path provider.
     /// </summary>
     public new IApplicationPaths ApplicationPaths { get; }
-
-    /// <summary>
-    ///     Gets the In-memory cache for the Plugin html pages.
-    /// </summary>
-    public IMemoryCache MemoryCache { get; }
 
     /// <summary>
     ///     Gets the name of the SSO plugin.

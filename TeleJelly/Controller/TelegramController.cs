@@ -15,7 +15,6 @@ using MediaBrowser.Model.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Jellyfin.Plugin.TeleJelly.Controller;
 
@@ -114,12 +113,14 @@ public class TelegramController : ControllerBase
 
         var botUsername = _instance.Configuration.BotUsername;
         var serverUrl = Request.GetRequestBase(_instance.Configuration);
-        var cacheKey = $"{serverUrl}/sso/Telegram/{lowerFilename}/{botUsername}";
-        if (_instance.MemoryCache.Get<string>(cacheKey) is { } foundEntry)
-        {
-            // serving from cache spares us opening the stream, reading it & replacing it.
-            return Content(foundEntry, mimeType);
-        }
+
+        // TODO fix cache DLL missing ? bruh
+        // var cacheKey = $"{serverUrl}/sso/Telegram/{lowerFilename}/{botUsername}";
+        // if (_instance.MemoryCache.Get<string>(cacheKey) is { } foundEntry)
+        // {
+        //     // serving from cache spares us opening the stream, reading it & replacing it.
+        //     return Content(foundEntry, mimeType);
+        // }
 
         var textStream = GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
         if (textStream == null)
@@ -135,12 +136,12 @@ public class TelegramController : ControllerBase
             .Replace("{{TELEGRAM_BOT_NAME}}", botUsername)
             .Replace("/*{{CUSTOM_CSS}}*/", _brandingOptions.CustomCss ?? string.Empty);
 
-        var cacheEntryOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(TimeSpan.FromMinutes(5))
-            .SetAbsoluteExpiration(TimeSpan.FromMinutes(60))
-            .SetPriority(CacheItemPriority.Low);
-
-        _instance.MemoryCache.Set(cacheKey, replaced, cacheEntryOptions);
+        // var cacheEntryOptions = new MemoryCacheEntryOptions()
+        //     .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+        //     .SetAbsoluteExpiration(TimeSpan.FromMinutes(60))
+        //     .SetPriority(CacheItemPriority.Low);
+        //
+        // _instance.MemoryCache.Set(cacheKey, replaced, cacheEntryOptions);
 
         return Content(replaced, mimeType);
     }

@@ -7,10 +7,4 @@
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
-
-    <!-- Specify assemblies that should not be internalized -->
-    <ItemGroup>
-        <DoNotInternalizeAssemblies Include="Jellyfin.*"/>
-        <DoNotInternalizeAssemblies Include="MediaBrowser.*"/>
-    </ItemGroup>
 </Project>
