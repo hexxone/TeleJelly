@@ -51,12 +51,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="..\README.md">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
         <EmbeddedResource Include="Assets\*"/>
         <EmbeddedResource Include="Assets\**\*"/>
+        <None Include="..\..\README.md">
+            <Link>README.md</Link>
+        </None>
+        <None Include="..\..\LICENSE">
+            <Link>LICENSE</Link>
+        </None>
     </ItemGroup>
 
     <Target Name="VersionTarget" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">

@@ -182,8 +182,9 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
 1. Run `git clone https://github.com/hexxone/TeleJelly.git`
 2. Open `TeleJelly.sln` file with Visual Studio or Rider IDE, restore Nuget packages
-3. Choose to run `TeleJelly` Plugin with Docker
-4. Everything should build and the browser opens automatically.
+3. Copy `example.env`-file to `.env` and fill out the variables
+4. Choose to run Profile `Docker Test` 
+5. Everything should build and the browser opens automatically.
 
 ### Contributing
 
