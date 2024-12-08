@@ -13,7 +13,7 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>
     ///     Gets or sets a value Used for validating user login Data hashes.
     /// </summary>
-    public string BotToken { get; set; } = "12345678:xxxxxxxxxxxxxxx";
+    public string BotToken { get; set; } = Constants.DefaultBotToken;
 
     /// <summary>
     ///     Gets or sets a value indicating the value Used for the Telegram Login widget...

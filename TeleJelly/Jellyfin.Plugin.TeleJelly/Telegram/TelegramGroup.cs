@@ -28,4 +28,9 @@ public class TelegramGroup
     ///     Gets or sets the Users that are allowed for the given group.
     /// </summary>
     public List<string> UserNames { get; set; } = new();
+
+    /// <summary>
+    ///     Gets or sets the Group-Id which is linked to this TeleJelly group.
+    /// </summary>
+    public long? LinkedTelegramGroupId { get; set; }
 }

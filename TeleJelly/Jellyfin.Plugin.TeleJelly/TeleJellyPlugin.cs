@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using Microsoft.Extensions.Primitives;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
@@ -13,6 +15,11 @@ namespace Jellyfin.Plugin.TeleJelly;
 /// </summary>
 public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
 {
+    private CancellationTokenSource _configChangeTokenSource = new();
+
+    public IChangeToken ConfigurationChangeToken => new CancellationChangeToken(_configChangeTokenSource.Token);
+
+
     /// <summary>
     ///     Gets the always available list of extra files for Telegram SSO.
     ///     e.g. Fonts and CSS.
@@ -78,5 +85,20 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
             new PluginPageInfo { Name = Name + ".js", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Config.config.js" },
             new PluginPageInfo { Name = Name + ".css", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Config.config.css" }
         ];
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name="configuration"></param>
+    public override void UpdateConfiguration(BasePluginConfiguration configuration)
+    {
+        base.UpdateConfiguration(configuration);
+
+        // Signal configuration change
+        var oldSource = _configChangeTokenSource;
+        _configChangeTokenSource = new CancellationTokenSource();
+        oldSource.Cancel();
+        oldSource.Dispose();
     }
 }

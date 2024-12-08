@@ -34,4 +34,9 @@ public static class Constants
     ///     Gets which ExtraFile to use as default, if the Telegram User has not set one.
     /// </summary>
     public static string DefaultUserImageExtraFile => "TeleJellyLogo.jpg";
+
+    /// <summary>
+    ///     Gets the default placeholder Bot Token.
+    /// </summary>
+    public static string DefaultBotToken => "12345678:xxxxxxxxxxxxxxx";
 }
