@@ -1,4 +1,5 @@
 using System;
+using Jellyfin.Plugin.TeleJelly.Classes;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
@@ -39,4 +40,23 @@ public static class Constants
     ///     Gets the default placeholder Bot Token.
     /// </summary>
     public static string DefaultBotToken => "12345678:xxxxxxxxxxxxxxx";
+
+
+    /// <summary>
+    ///     Gets the always available list of extra files for Telegram SSO.
+    ///     e.g. Fonts and CSS.
+    ///     has replaceable params:
+    ///     - {{SERVER_URL}} = Jellyfin base Url
+    ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
+    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
+    /// </summary>
+    /// <returns>A list of internal webpages in this application.</returns>
+    public static readonly ExtraPageInfo[] LoginFiles =
+    [
+        new() { Name = "index", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.html", NeedsReplacement = true },
+        new() { Name = "login.css", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.css", NeedsReplacement = true },
+        new() { Name = "login.js", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.js", NeedsReplacement = true },
+        new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.material_icons.woff2" },
+        new() { Name = DefaultUserImageExtraFile, EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.TeleJellyLogo.jpg" }
+    ];
 }

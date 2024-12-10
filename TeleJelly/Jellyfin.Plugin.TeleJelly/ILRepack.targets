@@ -14,8 +14,10 @@
             <InputAssemblies Include="@(ReferencePathWithRefAssemblies)"
                              Condition="'%(filename)' == 'Newtonsoft.Json' Or
                                       '%(filename)' == 'Telegram.Bot' Or
-                                      '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions' Or
                                       '%(filename)' == 'Microsoft.Extensions.Options'"/>
+            <!--
+                                      '%(filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions' Or
+            -->
         </ItemGroup>
 
         <Message Text="Output will be written to: $(FinalOutputPath)" Importance="high"/>

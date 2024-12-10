@@ -3,7 +3,6 @@ using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes;
-using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Branding;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,17 +26,11 @@ public class TeleJellyConfigController : ControllerBase
     /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyConfigController"/> class.
     /// </summary>
-    /// <param name="configurationManager">Manages the Jellyfin config.</param>
-    public TeleJellyConfigController(IConfigurationManager configurationManager)
+    public TeleJellyConfigController(TeleJellyPlugin plugin, BrandingOptions brandingOptions)
     {
-        if (TeleJellyPlugin.Instance == null)
-        {
-            throw new Exception("Plugin not initialized before Controller initialization.");
-        }
+        _pluginConfiguration = plugin.Configuration;
 
-        _pluginConfiguration = TeleJellyPlugin.Instance.Configuration;
-
-        _brandingOptions = configurationManager.GetConfiguration<BrandingOptions>("branding");
+        _brandingOptions = brandingOptions; // configurationManager.GetConfiguration<BrandingOptions>("branding");
     }
 
     /// <summary>

@@ -24,7 +24,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram;
 /// <summary>
 ///     Telegram to Jellyfin interaction Helper class.
 /// </summary>
-public class TelegramHelper
+public class TelegramLoginService
 {
     /// <summary>
     ///     How old (in seconds) can authorization attempts be to be considered valid (compared to the auth_date field).
@@ -45,13 +45,13 @@ public class TelegramHelper
     private readonly HMACSHA256 _hmac;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="TelegramHelper" /> class.
+    ///     Initializes a new instance of the <see cref="TelegramLoginService" /> class.
     /// </summary>
     /// <param name="instance">of the Plugin.</param>
     /// <param name="sessionManager">for manual sign-in.</param>
     /// <param name="userManager">for getting and creating users.</param>
     /// <param name="cryptoProvider">for hashing passwords.</param>
-    internal TelegramHelper(TeleJellyPlugin instance, ISessionManager sessionManager, IUserManager userManager, ICryptoProvider cryptoProvider)
+    internal TelegramLoginService(TeleJellyPlugin instance, ISessionManager sessionManager, IUserManager userManager, ICryptoProvider cryptoProvider)
     {
         _instance = instance;
         _config = instance.Configuration;
@@ -320,7 +320,7 @@ public class TelegramHelper
             throw new ArgumentNullException(nameof(user), "User is null.");
         }
 
-        var view = TeleJellyPlugin.LoginFiles.FirstOrDefault(extra => extra.Name == Constants.DefaultUserImageExtraFile);
+        var view = Constants.LoginFiles.FirstOrDefault(extra => extra.Name == Constants.DefaultUserImageExtraFile);
         if (view == null)
         {
             // _logger.LogError("Failed to get DefaultUserImageExtraFile {Resource}", Constants.DefaultUserImageExtraFile);

@@ -12,10 +12,9 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram;
 /// </summary>
 public class TelegramBackgroundService : IHostedService, IDisposable
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly TeleJellyPlugin _plugin;
     private readonly ILogger<TelegramBackgroundService> _logger;
 
-    private IDisposable? _configChangeRegistration;
     private string _currentToken = string.Empty;
 
     private TelegramBotService? _botService;
@@ -23,11 +22,11 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     /// <summary>
     ///
     /// </summary>
-    /// <param name="serviceProvider"></param>
+    /// <param name="plugin"></param>
     /// <param name="logger"></param>
-    public TelegramBackgroundService(IServiceProvider serviceProvider, ILogger<TelegramBackgroundService> logger)
+    public TelegramBackgroundService(TeleJellyPlugin plugin, ILogger<TelegramBackgroundService> logger)
     {
-        _serviceProvider = serviceProvider;
+        _plugin = plugin;
         _logger = logger;
     }
 
@@ -38,17 +37,13 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     /// <returns></returns>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        // Get plugin instance from DI
-        var plugin = _serviceProvider.GetRequiredService<TeleJellyPlugin>();
-
         // Subscribe to configuration changes
-        _configChangeRegistration = plugin.ConfigurationChangeToken.RegisterChangeCallback(
-            _ => OnConfigurationChanged(), null);
+        _plugin.OnConfigChange += _configHookOnOnConfigChange;
 
         // Initial configuration
-        ConfigureBot(plugin.Configuration);
+        ConfigureBot(_plugin.Configuration);
 
-        _logger.LogInformation("Telegram bot service started");
+        _logger.LogInformation("Telegram background service started");
 
         return Task.CompletedTask;
     }
@@ -60,26 +55,22 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     /// <returns></returns>
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _configChangeRegistration?.Dispose();
+        _plugin.OnConfigChange -= _configHookOnOnConfigChange;
+
         DisposeBotService();
 
-        _logger.LogInformation("Telegram bot service stopped");
+        _logger.LogInformation("Telegram background service stopped");
 
         return Task.CompletedTask;
     }
 
-    private void OnConfigurationChanged()
+    private void _configHookOnOnConfigChange(PluginConfiguration configuration)
     {
-        var plugin = _serviceProvider.GetRequiredService<TeleJellyPlugin>();
-        ConfigureBot(plugin.Configuration);
-
-        // Re-register for next change
-        _configChangeRegistration?.Dispose();
-        _configChangeRegistration = plugin.ConfigurationChangeToken.RegisterChangeCallback(
-            _ => OnConfigurationChanged(), null);
+        ConfigureBot(configuration);
 
         _logger.LogInformation("Telegram bot configuration changed");
     }
+
 
     private void ConfigureBot(PluginConfiguration config)
     {
@@ -87,11 +78,14 @@ public class TelegramBackgroundService : IHostedService, IDisposable
 
         // Don't reconfigure if token hasn't changed
         if (token == _currentToken)
+        {
             return;
+        }
 
         // Check if token is valid
         if (string.IsNullOrWhiteSpace(token) || token.Equals(Constants.DefaultBotToken))
         {
+            _logger.LogInformation("Bot token is empty or default. Will not configure bot service.");
             DisposeBotService();
             return;
         }
@@ -119,10 +113,10 @@ public class TelegramBackgroundService : IHostedService, IDisposable
         {
             _botService.Dispose();
             _botService = null;
+            _logger.LogInformation("Telegram bot service disposed");
         }
-        _currentToken = string.Empty;
 
-        _logger.LogInformation("Telegram bot service disposed");
+        _currentToken = string.Empty;
     }
 
     /// <summary>
@@ -130,7 +124,6 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _configChangeRegistration?.Dispose();
         DisposeBotService();
         GC.SuppressFinalize(this);
     }

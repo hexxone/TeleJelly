@@ -17,8 +17,9 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
     /// <param name="applicationHost"></param>
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
-        // Register plugin as singleton so it can be injected
-        // serviceCollection.AddSingleton<TeleJellyPlugin>();
+        // Register config hook globally
+        serviceCollection.AddSingleton<TeleJellyPlugin>();
+
         // Register background service
         serviceCollection.AddHostedService<TelegramBackgroundService>();
     }

@@ -35,8 +35,8 @@
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
-        <PackageReference Include="Jellyfin.Controller" Version="10.10.3" />
-        <PackageReference Include="Jellyfin.Model" Version="10.10.3" />
+        <PackageReference Include="Jellyfin.Controller" Version="10.10.3"/>
+        <PackageReference Include="Jellyfin.Model" Version="10.10.3"/>
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" PrivateAssets="All"/>
         <PackageReference Include="Telegram.Bot" Version="22.2.0" PrivateAssets="All"/>
         <PackageReference Include="MinVer" Version="6.0.0">

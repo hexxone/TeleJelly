@@ -15,28 +15,16 @@ namespace Jellyfin.Plugin.TeleJelly;
 /// </summary>
 public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
 {
-    private CancellationTokenSource _configChangeTokenSource = new();
-
-    public IChangeToken ConfigurationChangeToken => new CancellationChangeToken(_configChangeTokenSource.Token);
-
+    /// <summary>
+    ///
+    /// </summary>
+    public delegate void ConfigChangeHook(PluginConfiguration configuration);
 
     /// <summary>
-    ///     Gets the always available list of extra files for Telegram SSO.
-    ///     e.g. Fonts and CSS.
-    ///     has replaceable params:
-    ///     - {{SERVER_URL}} = Jellyfin base Url
-    ///     - {{JELLYFIN_DEFAULT_LOGIN}} = Fallback Login url
-    ///     - {{TELEGRAM_BOT_NAME}} = Bot Username.
+    ///
     /// </summary>
-    /// <returns>A list of internal webpages in this application.</returns>
-    public static readonly ExtraPageInfo[] LoginFiles =
-    [
-        new() { Name = "index", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.html", NeedsReplacement = true },
-        new() { Name = "login.css", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.css", NeedsReplacement = true },
-        new() { Name = "login.js", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.js", NeedsReplacement = true },
-        new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.material_icons.woff2" },
-        new() { Name = Constants.DefaultUserImageExtraFile, EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.TeleJellyLogo.jpg" }
-    ];
+    public event ConfigChangeHook? OnConfigChange;
+
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
@@ -47,16 +35,10 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
         : base(applicationPaths, xmlSerializer)
     {
         ApplicationPaths = applicationPaths;
-        Instance = this;
 
         // var cacheOptions = new MemoryCacheOptions() { ExpirationScanFrequency = TimeSpan.FromMinutes(1) };
         // MemoryCache = new MemoryCache(cacheOptions);
     }
-
-    /// <summary>
-    ///     Gets the instance of the SSO plugin.
-    /// </summary>
-    public static TeleJellyPlugin? Instance { get; private set; }
 
     /// <summary>
     ///     Gets the Runtime Jellyfin Application Path provider.
@@ -96,9 +78,13 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
         base.UpdateConfiguration(configuration);
 
         // Signal configuration change
-        var oldSource = _configChangeTokenSource;
-        _configChangeTokenSource = new CancellationTokenSource();
-        oldSource.Cancel();
-        oldSource.Dispose();
+        if (configuration is PluginConfiguration pluginConfiguration)
+        {
+            OnConfigChange?.Invoke(pluginConfiguration);
+        }
+        else
+        {
+            Console.WriteLine("WARNING: BasePluginConfiguration is not a PluginConfiguration. Config will be ignored.");
+        }
     }
 }

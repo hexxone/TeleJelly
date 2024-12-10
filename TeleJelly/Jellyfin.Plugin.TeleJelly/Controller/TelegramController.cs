@@ -32,7 +32,7 @@ public class TelegramController : ControllerBase
     // private readonly ILogger _logger;
     private readonly TeleJellyPlugin _instance;
 
-    private readonly TelegramHelper _telegramHelper;
+    private readonly TelegramLoginService _telegramLoginService;
 
     private readonly BrandingOptions _brandingOptions;
 
@@ -45,21 +45,15 @@ public class TelegramController : ControllerBase
     /// <param name="configurationManager">Instance of the <see cref="IConfigurationManager" /> interface.</param>
     /// <exception cref="Exception">if plugin was not properly initialized before usage.</exception>
     public TelegramController(
+        TeleJellyPlugin instance,
         ISessionManager sessionManager,
         IUserManager userManager,
         ICryptoProvider cryptoProvider,
         IConfigurationManager configurationManager)
     {
-        // _logger = logger;
+        _instance = instance;
 
-        if (TeleJellyPlugin.Instance == null)
-        {
-            throw new Exception("Plugin not initialized before Controller initialization.");
-        }
-
-        _instance = TeleJellyPlugin.Instance;
-
-        _telegramHelper = new TelegramHelper(_instance, sessionManager, userManager, cryptoProvider);
+        _telegramLoginService = new TelegramLoginService(instance, sessionManager, userManager, cryptoProvider);
 
         // stolen from https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Controllers/BrandingController.cs
         _brandingOptions = configurationManager.GetConfiguration<BrandingOptions>("branding");
@@ -91,7 +85,7 @@ public class TelegramController : ControllerBase
             lowerFilename = "index";
         }
 
-        var view = TeleJellyPlugin.LoginFiles.FirstOrDefault(extra => extra.Name == lowerFilename);
+        var view = Constants.LoginFiles.FirstOrDefault(extra => extra.Name == lowerFilename);
         if (view == null)
         {
             return NotFound($"Resource not found: '{lowerFilename}'");
@@ -170,15 +164,15 @@ public class TelegramController : ControllerBase
 
         try
         {
-            var telegramAuth = _telegramHelper.CheckTelegramAuthorizationImpl(authData);
+            var telegramAuth = _telegramLoginService.CheckTelegramAuthorizationImpl(authData);
             if (!telegramAuth.Ok)
             {
                 return Unauthorized(new SsoAuthenticationResult { ServerAddress = requestBase, ErrorMessage = telegramAuth.ErrorMessage });
             }
 
-            var user = await _telegramHelper.GetOrCreateJellyUser(authData);
+            var user = await _telegramLoginService.GetOrCreateJellyUser(authData);
 
-            var authResult = await _telegramHelper.DoJellyUserAuth(Request, user);
+            var authResult = await _telegramLoginService.DoJellyUserAuth(Request, user);
 
             return Ok(new SsoAuthenticationResult { ServerAddress = requestBase, Ok = true, AuthenticatedUser = authResult });
         }

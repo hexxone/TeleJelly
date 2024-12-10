@@ -49,7 +49,7 @@ public class TelegramBotService : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to Start Telegram Bot: {Msg}",  ex.Message);
+            _logger.LogError(ex, "Failed to Start Telegram Bot: {Msg}", ex.Message);
         }
     }
 
@@ -67,14 +67,17 @@ public class TelegramBotService : IDisposable
                 var groupId = member.Chat.Id;
 
                 var jellyfinGroup = _config.TelegramGroups.Find(g => g.LinkedTelegramGroupId == groupId);
-                if (jellyfinGroup == null) return;
+                if (jellyfinGroup == null)
+                {
+                    return;
+                }
 
                 if (string.IsNullOrEmpty(user.Username))
                 {
                     await botClient.SendMessage(
-                        chatId: groupId,
-                        text: $"Warning: User {user.FirstName} {user.LastName} does not have a Telegram username set. " +
-                              "They need to set a username to use TeleJelly SSO login.",
+                        groupId,
+                        $"Warning: User {user.FirstName} {user.LastName} does not have a Telegram username set. " +
+                        "They need to set a username to use TeleJelly SSO login.",
                         cancellationToken: cancellationToken);
 
                     _logger.LogInformation("User Id '{UserId}' has caused a Group ChatMember event but has no Telegram username set.", user.Id);
@@ -88,8 +91,8 @@ public class TelegramBotService : IDisposable
                     {
                         jellyfinGroup.UserNames.Add(user.Username);
                         await botClient.SendMessage(
-                            chatId: groupId,
-                            text: $"Added @{user.Username} to TeleJelly whitelist",
+                            groupId,
+                            $"Added @{user.Username} to TeleJelly whitelist",
                             cancellationToken: cancellationToken);
 
                         _logger.LogInformation("Added @{UserName} to TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
@@ -102,8 +105,8 @@ public class TelegramBotService : IDisposable
                     if (jellyfinGroup.UserNames.Remove(user.Username))
                     {
                         await botClient.SendMessage(
-                            chatId: groupId,
-                            text: $"Removed @{user.Username} from TeleJelly whitelist",
+                            groupId,
+                            $"Removed @{user.Username} from TeleJelly whitelist",
                             cancellationToken: cancellationToken);
 
                         _logger.LogInformation("Removed @{UserName} from TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
@@ -121,8 +124,8 @@ public class TelegramBotService : IDisposable
                 if (!isAdmin)
                 {
                     await botClient.SendMessage(
-                        chatId: message.Chat.Id,
-                        text: "You are not an administrator.",
+                        message.Chat.Id,
+                        "You are not an administrator.",
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -133,8 +136,8 @@ public class TelegramBotService : IDisposable
                     if (parts.Length != 2)
                     {
                         await botClient.SendMessage(
-                            chatId: message.Chat.Id,
-                            text: "Usage: /link <telejelly_group_name>",
+                            message.Chat.Id,
+                            "Usage: /link <telejelly_group_name>",
                             cancellationToken: cancellationToken);
                         return;
                     }
@@ -145,16 +148,16 @@ public class TelegramBotService : IDisposable
                     if (group == null)
                     {
                         await botClient.SendMessage(
-                            chatId: message.Chat.Id,
-                            text: $"TeleJelly group '{groupName}' not found",
+                            message.Chat.Id,
+                            $"TeleJelly group '{groupName}' not found",
                             cancellationToken: cancellationToken);
                         return;
                     }
 
                     group.LinkedTelegramGroupId = message.Chat.Id;
                     await botClient.SendMessage(
-                        chatId: message.Chat.Id,
-                        text: $"Linked this Telegram group to TeleJelly group '{groupName}'",
+                        message.Chat.Id,
+                        $"Linked this Telegram group to TeleJelly group '{groupName}'",
                         cancellationToken: cancellationToken);
                 }
                 else if (message.Text == "/unlink")
@@ -164,8 +167,8 @@ public class TelegramBotService : IDisposable
                     {
                         group.LinkedTelegramGroupId = null;
                         await botClient.SendMessage(
-                            chatId: message.Chat.Id,
-                            text: $"Unlinked this Telegram group from TeleJelly group '{group.GroupName}'",
+                            message.Chat.Id,
+                            $"Unlinked this Telegram group from TeleJelly group '{group.GroupName}'",
                             cancellationToken: cancellationToken);
                     }
                 }
@@ -180,16 +183,16 @@ public class TelegramBotService : IDisposable
                     if (missingUsernames.Any())
                     {
                         await botClient.SendMessage(
-                            chatId: message.Chat.Id,
-                            text: "The following members need to set a username to use TeleJelly SSO:\n" +
-                                  string.Join("\n", missingUsernames),
+                            message.Chat.Id,
+                            "The following members need to set a username to use TeleJelly SSO:\n" +
+                            string.Join("\n", missingUsernames),
                             cancellationToken: cancellationToken);
                     }
                     else
                     {
                         await botClient.SendMessage(
-                            chatId: message.Chat.Id,
-                            text: "All members have usernames set",
+                            message.Chat.Id,
+                            "All members have usernames set",
                             cancellationToken: cancellationToken);
                     }
                 }
@@ -200,8 +203,8 @@ public class TelegramBotService : IDisposable
                     {
                         var users = string.Join("\n", group.UserNames.Select(u => $"@{u}"));
                         await botClient.SendMessage(
-                            chatId: message.Chat.Id,
-                            text: $"Users in whitelist for group '{group.GroupName}':\n{users}",
+                            message.Chat.Id,
+                            $"Users in whitelist for group '{group.GroupName}':\n{users}",
                             cancellationToken: cancellationToken);
                     }
                 }
