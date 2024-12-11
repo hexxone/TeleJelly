@@ -1,5 +1,6 @@
 const tgConfigPage = {
     pluginUniqueId: "4b71013d-00ba-470c-9e4d-0c451a435328",
+
     loadConfiguration: (page) => {
         ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then(
             (config) => {
@@ -10,28 +11,37 @@ const tgConfigPage = {
         const folderContainer = page.querySelector("#EnabledFolders");
         tgConfigPage.populateFolders(folderContainer);
     },
-    populateConfiguration: (page, config) => {
 
+    populateConfiguration: (page, config) => {
         if (config.BotToken) {
-            // Validate the token once initially
             tgTokenHelper.validateToken(config.BotToken);
         }
 
-        // set basic config values
+        // Set basic config values
         page.querySelector("#TgBotToken").value = config.BotToken || tgTokenHelper.currentToken;
         page.querySelector("#TgBotUsername").innerHTML = config.BotUsername || tgTokenHelper.currentUserName;
         page.querySelector("#TgAdministrators").value = config.AdminUserNames?.join("\r\n") || "";
+        page.querySelector("#ForcedUrlScheme").value = config.ForcedUrlScheme || "none";
 
-        page.querySelector("#ForceUrlScheme").checked = config.ForceUrlScheme || false;
-        page.querySelector("#ForcedUrlSchemeHolder").style.display = config.ForceUrlScheme ? "block" : "none";
-        page.querySelector("#ForcedUrlScheme").value = config.ForcedUrlScheme || "https";
+        // Populate group list
+        const groupList = page.querySelector("#groupList");
+        groupList.innerHTML = ''; // Clear existing groups
 
-        // Add groups selection Options
-        page.querySelectorAll("#selectGroup option").forEach((e) => e.remove());
         config.TelegramGroups?.forEach((group) => {
-            page.querySelector("#selectGroup").appendChild(new Option(group.GroupName, group.GroupName));
+            const groupItem = document.createElement('div');
+            groupItem.className = 'group-item';
+            groupItem.setAttribute('data-group-name', group.GroupName);
+            groupItem.textContent = group.GroupName;
+            groupItem.addEventListener('click', () => tgConfigPage.selectGroup(page, group.GroupName));
+            groupList.appendChild(groupItem);
         });
+
+        // If we had a selected group, try to reselect it
+        if (tgConfigPage.currentGroup) {
+            tgConfigPage.selectGroup(page, tgConfigPage.currentGroup);
+        }
     },
+
     populateEnabledFolders: (folderList, container) => {
         container.querySelectorAll(".folder-checkbox").forEach((e) => {
             e.checked = folderList.includes(e.getAttribute("data-id"));
@@ -86,6 +96,126 @@ const tgConfigPage = {
             container.appendChild(e);
         });
     },
+
+    saveConfig: (page) => {
+        return new Promise((resolve) => {
+            window.ApiClient.getPluginConfiguration(
+                tgConfigPage.pluginUniqueId
+            ).then((config) => {
+                // apply basic config
+                config.BotToken = tgTokenHelper.currentToken;
+                config.BotUsername = tgTokenHelper.currentUserName;
+                config.AdminUserNames = tgConfigPage.parseTextList(page.querySelector("#TgAdministrators"));
+                config.ForcedUrlScheme = page.querySelector("#ForcedUrlScheme").value || "none";
+
+                // save it
+                window.ApiClient.updatePluginConfiguration(
+                    tgConfigPage.pluginUniqueId,
+                    config
+                ).then(function (result) {
+                    window.Dashboard.processPluginConfigurationUpdateResult(result);
+                    tgConfigPage.loadConfiguration(page);
+                    resolve();
+                });
+            });
+        });
+    },
+
+    selectGroup: (page, groupName) => {
+        tgConfigPage.currentGroup = groupName;
+
+        // Update selected state
+        page.querySelectorAll('.group-item').forEach(item => {
+            item.classList.toggle('selected', item.getAttribute('data-group-name') === groupName);
+        });
+
+        // Load group data
+        ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
+            const groupData = config.TelegramGroups?.find(group => group.GroupName === groupName);
+            if (groupData) {
+                page.querySelector("#EnableAllFolders").checked = groupData.EnableAllFolders;
+                tgConfigPage.populateEnabledFolders(groupData.EnabledFolders || [], page.querySelector("#EnabledFolders"));
+                page.querySelector("#LinkedTelegramGroupId").innerHTML = groupData.LinkedTelegramGroupId ?? "None";
+                page.querySelector("#UserNames").value = groupData.UserNames.join("\r\n");
+            }
+        });
+    },
+
+
+    addGroup: (page) => {
+        const newGroupName = page.querySelector("#TgGroupName").value.trim();
+        if (!newGroupName) {
+            window.Dashboard.alert('Please enter a group name');
+            return;
+        }
+
+        ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
+            if (!config.TelegramGroups) {
+                config.TelegramGroups = [];
+            }
+
+            // Check if group already exists
+            if (config.TelegramGroups.some(g => g.GroupName === newGroupName)) {
+                window.Dashboard.alert('A group with this name already exists');
+                return;
+            }
+
+            // Add new group
+            config.TelegramGroups.push({
+                GroupName: newGroupName,
+                EnableAllFolders: false,
+                EnabledFolders: [],
+                LinkedTelegramGroupId: null,
+                UserNames: [],
+            });
+
+            ApiClient.updatePluginConfiguration(
+                tgConfigPage.pluginUniqueId,
+                config
+            ).then(function (result) {
+                window.Dashboard.processPluginConfigurationUpdateResult(result);
+                tgConfigPage.loadConfiguration(page);
+                tgConfigPage.selectGroup(page, newGroupName);
+                page.querySelector("#TgGroupName").value = ''; // Clear input after adding
+            });
+        });
+    },
+
+    saveGroupConfig: (page) => {
+        if (!tgConfigPage.currentGroup) {
+            window.Dashboard.alert('Please select a group to save changes');
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
+                const groupIndex = config.TelegramGroups?.findIndex(g => g.GroupName === tgConfigPage.currentGroup);
+                if (groupIndex === -1) {
+                    window.Dashboard.alert('Selected group not found');
+                    return;
+                }
+
+                // Update group data
+                config.TelegramGroups[groupIndex] = {
+                    ...config.TelegramGroups[groupIndex],
+                    GroupName: tgConfigPage.currentGroup,
+                    EnableAllFolders: page.querySelector("#EnableAllFolders").checked,
+                    EnabledFolders: tgConfigPage.serializeEnabledFolders(page),
+                    UserNames: tgConfigPage.parseTextList(page.querySelector("#UserNames"))
+                };
+
+                ApiClient.updatePluginConfiguration(
+                    tgConfigPage.pluginUniqueId,
+                    config
+                ).then(function (result) {
+                    window.Dashboard.processPluginConfigurationUpdateResult(result);
+                    window.Dashboard.alert('Group settings saved successfully');
+                    resolve();
+                });
+            });
+        });
+    },
+
     parseTextList: (element) => {
         // element is a textarea input element
         // Return the parsed text list
@@ -94,113 +224,41 @@ const tgConfigPage = {
             .map((e) => e.trim())
             .filter((e) => e);
     },
-    loadGroup: (page, targetGroup) => {
-        window.ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then(
-            (config) => {
-                // get group data to show
-                const groupData = config.TelegramGroups?.find((group) => {
-                    return group.GroupName === targetGroup;
-                }) || console.error("Group not found: " + targetGroup);
 
-                page.querySelector("#TgGroupName").value = targetGroup;
-                page.querySelector("#EnableAllFolders").checked = groupData.EnableAllFolders;
-                tgConfigPage.populateEnabledFolders(groupData.EnabledFolders || [], page.querySelector("#EnabledFolders"));
-                page.querySelector("#UserNames").value = groupData.UserNames.join("\r\n");
-
-                window.Dashboard.alert("Group Settings loaded.");
-            }
-        );
-    },
-    deleteGroup: (page, targetGroup) => {
-        if (targetGroup?.trim() === "" ||
-            !window.confirm(`Are you sure you want to delete the Group ${targetGroup}?`)) {
+    deleteGroup: (page) => {
+        if (!tgConfigPage.currentGroup) {
+            window.Dashboard.alert('Please select a group to delete');
             return Promise.resolve();
         }
+
+        if (!confirm(`Are you sure you want to delete the group "${tgConfigPage.currentGroup}"?`)) {
+            return Promise.resolve();
+        }
+
         return new Promise((resolve) => {
-            window.ApiClient.getPluginConfiguration(
-                tgConfigPage.pluginUniqueId
-            ).then((config) => {
+            ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
+                config.TelegramGroups = config.TelegramGroups?.filter(
+                    group => group.GroupName !== tgConfigPage.currentGroup
+                ) || [];
 
-                config.TelegramGroups = config.TelegramGroups?.filter((group) => {
-                    return group.GroupName !== targetGroup;
-                }) || [];
-
-                window.ApiClient.updatePluginConfiguration(
+                ApiClient.updatePluginConfiguration(
                     tgConfigPage.pluginUniqueId,
                     config
                 ).then(function (result) {
                     window.Dashboard.processPluginConfigurationUpdateResult(result);
+                    tgConfigPage.currentGroup = null;
                     tgConfigPage.loadConfiguration(page);
-
+                    // Clear the form
+                    page.querySelector("#EnableAllFolders").checked = false;
+                    page.querySelector("#UserNames").value = '';
+                    page.querySelectorAll('.folder-checkbox').forEach(cb => cb.checked = false);
+                    page.querySelector("#LinkedTelegramGroupId").innerHTML = "None";
                     resolve();
                 });
             });
         });
     },
-    saveConfig: (page) => {
-        return new Promise((resolve) => {
-            window.ApiClient.getPluginConfiguration(
-                tgConfigPage.pluginUniqueId
-            ).then((config) => {
-                // apply config
-                config.BotToken = tgTokenHelper.currentToken;
-                config.BotUsername = tgTokenHelper.currentUserName;
-                config.AdminUserNames = tgConfigPage.parseTextList(page.querySelector("#TgAdministrators"));
-                config.ForceUrlScheme = page.querySelector("#ForceUrlScheme").checked || false;
-                config.ForcedUrlScheme = page.querySelector("#ForcedUrlScheme").value || "";
 
-                // save it
-                window.ApiClient.updatePluginConfiguration(
-                    tgConfigPage.pluginUniqueId,
-                    config
-                ).then(function (result) {
-                    window.Dashboard.processPluginConfigurationUpdateResult(result);
-                    tgConfigPage.loadConfiguration(page);
-                    resolve();
-                });
-            });
-        });
-    },
-    saveGroup: (page, targetGroup) => {
-        return new Promise((resolve) => {
-            window.ApiClient.getPluginConfiguration(
-                tgConfigPage.pluginUniqueId
-            ).then((config) => {
-                // create groups if null
-                if (!config.TelegramGroups) {
-                    config.TelegramGroups = [];
-                }
-                // get old data to overwrite
-                const groupData = config.TelegramGroups.find((group) => {
-                    return group.GroupName === targetGroup;
-                }) || {};
-                // remove old data
-                config.TelegramGroups = config.TelegramGroups.filter((group) => {
-                    return group.GroupName !== targetGroup;
-                }) || [];
-
-                groupData.GroupName = page.querySelector("#TgGroupName").value.trim();
-                groupData.EnableAllFolders = page.querySelector("#EnableAllFolders").checked === true;
-                groupData.EnabledFolders = tgConfigPage.serializeEnabledFolders(page);
-                groupData.UserNames = tgConfigPage.parseTextList(page.querySelector("#UserNames"));
-                // (re-) add data
-                config.TelegramGroups.push(groupData);
-
-                // save it
-                window.ApiClient.updatePluginConfiguration(
-                    tgConfigPage.pluginUniqueId,
-                    config
-                ).then(function (result) {
-                    window.Dashboard.processPluginConfigurationUpdateResult(result);
-                    tgConfigPage.loadConfiguration(page);
-                    tgConfigPage.loadGroup(page, targetGroup);
-
-                    page.querySelector("#selectGroup").value = targetGroup;
-                    resolve();
-                });
-            });
-        });
-    },
     addTextAreaStyle: (view) => {
         const style = document.createElement("link");
         style.rel = "stylesheet";
@@ -266,86 +324,29 @@ export default function (view) {
     tgConfigPage.addTextAreaStyle(view);
     tgConfigPage.loadConfiguration(view);
 
-    view.querySelector("#SaveConfig").addEventListener("click", (e) => {
-        tgConfigPage.saveConfig(view);
+    // Basic configuration event
+    view.querySelector("#SaveConfig").addEventListener("click", async (e) => {
         e.preventDefault();
-        return false;
+        await tgConfigPage.saveConfig(view);
     });
 
-    view.querySelector("#LoadGroup").addEventListener("click", (e) => {
-        const targetGroup = view.querySelector("#selectGroup").value;
-        tgConfigPage.loadGroup(view, targetGroup);
+    // Group management events
+    view.querySelector("#AddGroup").addEventListener("click", (e) => {
         e.preventDefault();
-        return false;
+        tgConfigPage.addGroup(view);
+    });
+
+    view.querySelector("#SaveGroupConfig").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.saveGroupConfig(view);
     });
 
     view.querySelector("#DeleteGroup").addEventListener("click", (e) => {
-        const targetGroup = view.querySelector("#selectGroup").value;
-        tgConfigPage.deleteGroup(view, targetGroup);
         e.preventDefault();
-        return false;
+        tgConfigPage.deleteGroup(view);
     });
 
-    view.querySelector("#SaveGroup").addEventListener("click", (e) => {
-        const targetGroup = view.querySelector("#TgGroupName").value;
-        tgConfigPage.saveGroup(view, targetGroup);
-        e.preventDefault();
-        return false;
-    });
-
-    const loginUrl = window.ApiClient.getUrl("/sso/Telegram");
-    const brandingWidget = `
-<form action="${loginUrl}">
-<button is="emby-button" style="display: flex;" class="block emby-button raised button-submit">
-Sign in with Telegram
-<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" style="max-height:4.20em;">
-    <defs>
-        <linearGradient gradientUnits="userSpaceOnUse" x2="120" y1="240" x1="120" id="linear-gradient">
-            <stop stop-color="#1d93d2" offset="0"></stop>
-            <stop stop-color="#38b0e3" offset="1"></stop>
-        </linearGradient>
-    </defs>
-    <title>Telegram_logo</title>
-    <circle fill="url(#linear-gradient)" r="120" cy="120" cx="120"></circle>
-    <path fill="#fff" d="M81.486,130.178,52.2,120.636s-3.5-1.42-2.373-4.64c.232-.664.7-1.229,2.1-2.2,6.489-4.523,120.106-45.36,120.106-45.36s3.208-1.081,5.1-.362a2.766,2.766,0,0,1,1.885,2.055,9.357,9.357,0,0,1,.254,2.585c-.009.752-.1,1.449-.169,2.542-.692,11.165-21.4,94.493-21.4,94.493s-1.239,4.876-5.678,5.043A8.13,8.13,0,0,1,146.1,172.5c-8.711-7.493-38.819-27.727-45.472-32.177a1.27,1.27,0,0,1-.546-.9c-.093-.469.417-1.05.417-1.05s52.426-46.6,53.821-51.492c.108-.379-.3-.566-.848-.4-3.482,1.281-63.844,39.4-70.506,43.607A3.21,3.21,0,0,1,81.486,130.178Z"></path>
-</svg>
-</button>
-</form>`;
-
-    view.querySelector("#sso-telegram-login").href = loginUrl;
-    view.querySelector("#exampleBranding").innerHTML = brandingWidget;
-    view.querySelector("#exampleBrandingCode").innerHTML = brandingWidget.replace(/>/g, "&gt;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-    view.querySelector("#setBrandingButton").addEventListener("click", (clickEvent) => {
-        clickEvent.preventDefault();
-        // show alert "are you sure" -> n -> cancel
-        if (!confirm("Are you sure? This will override your existing Branding!")) {
-            return;
-        }
-        // send get request to /api/TeleJellyConfig/SetLoginDisclaimer
-        window.ApiClient.ajax(
-            {
-                url: window.ApiClient.getUrl("/api/TeleJellyConfig/SetLoginDisclaimer"),
-                type: "POST",
-                dataType: "json"
-            })
-            .then(data => {
-                // show popup message if OK or Error
-                if (data === "true" || data === true) {
-                    window.Dashboard.alert("Successfully updated Login Disclaimer.");
-                    const setButton = view.querySelector("#setBrandingButton");
-                    setButton.disabled = true;
-                    setButton.classList.add("raised");
-                } else {
-                    console.error(data);
-                    window.Dashboard.alert("ERROR: Failed to update Login Disclaimer.");
-                }
-            })
-            .catch(error => {
-                window.Dashboard.alert("ERROR: Failed to update Login Disclaimer.");
-            });
-    });
-
-    // Event listener for input changes with debounce
+    // Bot token validation
     let debounce;
     const inputElement = view.querySelector("#TgBotToken");
     inputElement.addEventListener("input", function () {

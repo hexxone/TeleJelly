@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Model.Plugins;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram;
@@ -38,7 +38,7 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     public Task StartAsync(CancellationToken cancellationToken)
     {
         // Subscribe to configuration changes
-        _plugin.OnConfigChange += _configHookOnOnConfigChange;
+        _plugin.ConfigurationChanged += _configHookOnOnConfigChange;
 
         // Initial configuration
         ConfigureBot(_plugin.Configuration);
@@ -55,7 +55,7 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     /// <returns></returns>
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _plugin.OnConfigChange -= _configHookOnOnConfigChange;
+        _plugin.ConfigurationChanged -= _configHookOnOnConfigChange;
 
         DisposeBotService();
 
@@ -64,12 +64,19 @@ public class TelegramBackgroundService : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    private void _configHookOnOnConfigChange(PluginConfiguration configuration)
+    private void _configHookOnOnConfigChange(object? sender, BasePluginConfiguration baseConfig)
     {
-        ConfigureBot(configuration);
+        if (baseConfig is PluginConfiguration configuration)
+        {
+            ConfigureBot(configuration);
 
-        _logger.LogInformation("Telegram bot configuration changed");
-    }
+            _logger.LogInformation("Telegram bot configuration changed");
+        }
+        else
+        {
+            _logger.LogError("BasePluginConfiguration is not of Type PluginConfiguration. Ignoring.");
+        }
+}
 
 
     private void ConfigureBot(PluginConfiguration config)

@@ -32,16 +32,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public int MaxSessionCount { get; set; } = -1;
 
     /// <summary>
-    ///     Gets or sets a value indicating whether we should force a Specific protocol Scheme on externally returned URLS ("ForcedUrlScheme").
-    ///     This is probably useful if your jellyfin is running behind a Reverse Proxy which does "SSL-stripping" (like Traefik).
-    /// </summary>
-    public bool ForceUrlScheme { get; set; } = true;
-
-    /// <summary>
     ///     Gets or sets the externally forced URL Scheme.
-    ///     Only gets used when "ForceUrlScheme" is true.
+    ///  !!! IMPORTANT !!!
+    ///     Only gets used when either "http" or "https".
+    ///     All other values will be ignored (e.g. empty "", or "None")
     /// </summary>
-    public string ForcedUrlScheme { get; set; } = "https";
+    public string ForcedUrlScheme { get; set; } = "none";
 
     /// <summary>
     ///     Gets or sets List of allowed Telegram user-names for login.

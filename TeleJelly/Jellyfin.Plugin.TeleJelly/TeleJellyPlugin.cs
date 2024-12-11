@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using Microsoft.Extensions.Primitives;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
@@ -15,16 +12,6 @@ namespace Jellyfin.Plugin.TeleJelly;
 /// </summary>
 public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
 {
-    /// <summary>
-    ///
-    /// </summary>
-    public delegate void ConfigChangeHook(PluginConfiguration configuration);
-
-    /// <summary>
-    ///
-    /// </summary>
-    public event ConfigChangeHook? OnConfigChange;
-
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
@@ -77,14 +64,5 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     {
         base.UpdateConfiguration(configuration);
 
-        // Signal configuration change
-        if (configuration is PluginConfiguration pluginConfiguration)
-        {
-            OnConfigChange?.Invoke(pluginConfiguration);
-        }
-        else
-        {
-            Console.WriteLine("WARNING: BasePluginConfiguration is not a PluginConfiguration. Config will be ignored.");
-        }
     }
 }
