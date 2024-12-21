@@ -127,16 +127,16 @@ const tgConfigPage = {
 
     updateGroupEditingState: (page) => {
         const hasSelectedGroup = !!tgConfigPage.currentGroup;
+        const enableAllChecked = page.querySelector("#EnableAllFolders")?.checked || false;
 
         // Elements to toggle
         const userNamesList = page.querySelector("#UserNames");
         const enableAllFolders = page.querySelector("#EnableAllFolders");
         const folderList = page.querySelector("#EnabledFolders");
         const delGroupBtn = page.querySelector("#DeleteGroup");
-        const folderCheckboxes = page.querySelectorAll('.folder-checkbox');
 
-        // Disable/enable elements
-        [userNamesList, enableAllFolders, delGroupBtn, ...folderCheckboxes].forEach(element => {
+        // Disable/enable elements based on both group selection AND EnableAllFolders state
+        [userNamesList, enableAllFolders, delGroupBtn].forEach(element => {
             if (element) {
                 element.disabled = !hasSelectedGroup;
                 element.title = hasSelectedGroup ? "" : "Please select or create a group first";
@@ -147,7 +147,8 @@ const tgConfigPage = {
         if (folderList) {
             const checkboxes = folderList.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
-                checkbox.disabled = !hasSelectedGroup;
+                // Disable if either no group is selected OR EnableAll is checked
+                checkbox.disabled = !hasSelectedGroup || enableAllChecked;
                 checkbox.parentElement.title = hasSelectedGroup ? "" : "Please select or create a group first";
             });
         }
@@ -483,6 +484,7 @@ export default function (view) {
             }
         });
         tgConfigPage.updateGroupData(view);
+        tgConfigPage.updateGroupEditingState(view);
     });
 
     view.querySelector("#AddGroup").addEventListener("click", (e) => {
