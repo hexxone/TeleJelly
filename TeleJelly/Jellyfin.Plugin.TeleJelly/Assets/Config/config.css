@@ -38,6 +38,7 @@
     outline: none !important;
     padding: 0.35em 0.25em;
     width: 100%;
+    max-width: 85vw;
 }
 
 .emby-textarea::-moz-focus-inner {
@@ -100,11 +101,13 @@ code {
     flex-direction: column;
 }
 
-.bot-token-input {
-    display: grid;
-    grid-template-columns: minmax(200px, 2fr) minmax(50px, 0.5fr) minmax(200px, 2fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
+@media (min-width: 600px) {
+    .bot-token-input {
+        display: grid;
+        grid-template-columns: minmax(200px, 2fr) minmax(50px, 0.5fr) minmax(200px, 2fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
 }
 
 /* -------- Group Config --------*/
@@ -113,11 +116,18 @@ code {
     margin-bottom: 2em;
 }
 
-.grid-3-columns {
-    display: grid;
-    grid-template-columns: minmax(200px, 2fr) minmax(200px, 2fr) minmax(200px, 2fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
+@media (max-width: 700px) {
+    .group-column {
+        margin-top: 2rem;
+    }
+}
+@media (min-width: 700px) {
+    .grid-3-columns {
+        display: grid;
+        grid-template-columns: minmax(200px, 2fr) minmax(200px, 2fr) minmax(200px, 2fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
 }
 
 .group-column {

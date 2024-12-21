@@ -1,15 +1,21 @@
 const tgConfigPage = {
     pluginUniqueId: "4b71013d-00ba-470c-9e4d-0c451a435328",
 
+    // Track modified groups separately from loaded config
+    modifiedGroups: new Map(),
+    currentGroup: null,
+
+
+    /** ======== ======== GENERAL CONFIG ======== ======== */
+
+
     loadConfiguration: (page) => {
         ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then(
             (config) => {
                 tgConfigPage.populateConfiguration(page, config);
+                tgConfigPage.populateGroups(page, config);
             }
         );
-
-        const folderContainer = page.querySelector("#EnabledFolders");
-        tgConfigPage.populateFolders(folderContainer);
     },
 
     populateConfiguration: (page, config) => {
@@ -22,12 +28,19 @@ const tgConfigPage = {
         page.querySelector("#TgBotUsername").innerHTML = config.BotUsername || tgTokenHelper.currentUserName;
         page.querySelector("#TgAdministrators").value = config.AdminUserNames?.join("\r\n") || "";
         page.querySelector("#ForcedUrlScheme").value = config.ForcedUrlScheme || "none";
+    },
 
+
+    populateGroups: (page, config) => {
         // Populate group list
         const groupList = page.querySelector("#groupList");
         groupList.innerHTML = ''; // Clear existing groups
 
+        console.debug("Populating groups (cleared)");
+
         config.TelegramGroups?.forEach((group) => {
+            console.debug(`Populating Group ${group}`);
+
             const groupItem = document.createElement('div');
             groupItem.className = 'group-item';
             groupItem.setAttribute('data-group-name', group.GroupName);
@@ -39,63 +52,11 @@ const tgConfigPage = {
         // If we had a selected group, try to reselect it
         if (tgConfigPage.currentGroup) {
             tgConfigPage.selectGroup(page, tgConfigPage.currentGroup);
+        } else {
+            tgConfigPage.updateGroupEditingState(page);
         }
     },
 
-    populateEnabledFolders: (folderList, container) => {
-        container.querySelectorAll(".folder-checkbox").forEach((e) => {
-            e.checked = folderList.includes(e.getAttribute("data-id"));
-        });
-    },
-    serializeEnabledFolders: (container) => {
-        return [...container.querySelectorAll(".folder-checkbox")]
-            .filter((e) => e.checked)
-            .map((e) => {
-                return e.getAttribute("data-id");
-            });
-    },
-    populateFolders: (container) => {
-        return window.ApiClient.getJSON(
-            window.ApiClient.getUrl("Library/MediaFolders", {
-                IsHidden: false
-            })
-        ).then((folders) => {
-            tgConfigPage.populateFolderElements(container, folders);
-        });
-    },
-    /*
-    container: html element
-    folders.Items: array of objects, with .Id & .Name
-    */
-    populateFolderElements: (container, folders) => {
-        container
-            .querySelectorAll(".emby-checkbox-label")
-            .forEach((e) => e.remove());
-
-        const checkboxes = folders.Items.map((folder) => {
-            const out = document.createElement("label");
-            out.innerHTML = `
-                <input
-                    is="emby-checkbox"
-                    class="folder-checkbox chkFolder"
-                    data-id="${folder.Id}"
-                    type="checkbox"
-                />
-                <span>${folder.Name}</span>
-            `;
-            return out;
-        });
-
-        if (checkboxes.length === 0 && container.children.length === 0) {
-            const missing = document.createElement("label");
-            missing.innerHTML = "<span>No Media Libraries configured.</span>";
-            checkboxes.push(missing);
-        }
-
-        checkboxes.forEach((e) => {
-            container.appendChild(e);
-        });
-    },
 
     saveConfig: (page) => {
         return new Promise((resolve) => {
@@ -121,25 +82,8 @@ const tgConfigPage = {
         });
     },
 
-    selectGroup: (page, groupName) => {
-        tgConfigPage.currentGroup = groupName;
 
-        // Update selected state
-        page.querySelectorAll('.group-item').forEach(item => {
-            item.classList.toggle('selected', item.getAttribute('data-group-name') === groupName);
-        });
-
-        // Load group data
-        ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
-            const groupData = config.TelegramGroups?.find(group => group.GroupName === groupName);
-            if (groupData) {
-                page.querySelector("#EnableAllFolders").checked = groupData.EnableAllFolders;
-                tgConfigPage.populateEnabledFolders(groupData.EnabledFolders || [], page.querySelector("#EnabledFolders"));
-                page.querySelector("#LinkedTelegramGroupId").innerHTML = groupData.LinkedTelegramGroupId ?? "None";
-                page.querySelector("#UserNames").value = groupData.UserNames.join("\r\n");
-            }
-        });
-    },
+    /** ======== ======== GROUP CONFIG ======== ======== */
 
 
     addGroup: (page) => {
@@ -174,55 +118,112 @@ const tgConfigPage = {
                 config
             ).then(function (result) {
                 window.Dashboard.processPluginConfigurationUpdateResult(result);
-                tgConfigPage.loadConfiguration(page);
-                tgConfigPage.selectGroup(page, newGroupName);
+                tgConfigPage.currentGroup = newGroupName;
+                tgConfigPage.populateGroups(page, config);
                 page.querySelector("#TgGroupName").value = ''; // Clear input after adding
             });
         });
     },
 
-    saveGroupConfig: (page) => {
-        if (!tgConfigPage.currentGroup) {
-            window.Dashboard.alert('Please select a group to save changes');
-            return Promise.resolve();
+    updateGroupEditingState: (page) => {
+        const hasSelectedGroup = !!tgConfigPage.currentGroup;
+
+        // Elements to toggle
+        const userNamesList = page.querySelector("#UserNames");
+        const enableAllFolders = page.querySelector("#EnableAllFolders");
+        const folderList = page.querySelector("#EnabledFolders");
+        const delGroupBtn = page.querySelector("#DeleteGroup");
+        const folderCheckboxes = page.querySelectorAll('.folder-checkbox');
+
+        // Disable/enable elements
+        [userNamesList, enableAllFolders, delGroupBtn, ...folderCheckboxes].forEach(element => {
+            if (element) {
+                element.disabled = !hasSelectedGroup;
+                element.title = hasSelectedGroup ? "" : "Please select or create a group first";
+            }
+        });
+
+        // Handle folder list checkboxes
+        if (folderList) {
+            const checkboxes = folderList.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.disabled = !hasSelectedGroup;
+                checkbox.parentElement.title = hasSelectedGroup ? "" : "Please select or create a group first";
+            });
         }
 
-        return new Promise((resolve) => {
-            ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
-                const groupIndex = config.TelegramGroups?.findIndex(g => g.GroupName === tgConfigPage.currentGroup);
-                if (groupIndex === -1) {
-                    window.Dashboard.alert('Selected group not found');
-                    return;
-                }
-
-                // Update group data
-                config.TelegramGroups[groupIndex] = {
-                    ...config.TelegramGroups[groupIndex],
-                    GroupName: tgConfigPage.currentGroup,
-                    EnableAllFolders: page.querySelector("#EnableAllFolders").checked,
-                    EnabledFolders: tgConfigPage.serializeEnabledFolders(page),
-                    UserNames: tgConfigPage.parseTextList(page.querySelector("#UserNames"))
-                };
-
-                ApiClient.updatePluginConfiguration(
-                    tgConfigPage.pluginUniqueId,
-                    config
-                ).then(function (result) {
-                    window.Dashboard.processPluginConfigurationUpdateResult(result);
-                    window.Dashboard.alert('Group settings saved successfully');
-                    resolve();
-                });
-            });
-        });
+        // Visual feedback
+        if (userNamesList) {
+            userNamesList.style.opacity = hasSelectedGroup ? "1" : "0.6";
+        }
+        if (folderList) {
+            folderList.style.opacity = hasSelectedGroup ? "1" : "0.6";
+        }
     },
 
-    parseTextList: (element) => {
-        // element is a textarea input element
-        // Return the parsed text list
-        return element.value
-            .split("\n")
-            .map((e) => e.trim())
-            .filter((e) => e);
+    // Track changes to currently selected group
+    updateGroupData: (page) => {
+        if (!tgConfigPage.currentGroup) return;
+
+        console.debug("Updating group data.");
+
+        const groupData = {
+            GroupName: tgConfigPage.currentGroup,
+            EnableAllFolders: page.querySelector("#EnableAllFolders").checked,
+            EnabledFolders: tgConfigPage.serializeEnabledFolders(page),
+            UserNames: tgConfigPage.parseTextList(page.querySelector("#UserNames")),
+        };
+
+        tgConfigPage.modifiedGroups.set(tgConfigPage.currentGroup, groupData);
+    },
+
+    selectGroup: (page, groupName) => {
+        tgConfigPage.currentGroup = groupName;
+
+        console.debug(`Selecting group: ${groupName}.`);
+
+        // Update selected state in UI
+        page.querySelectorAll('.group-item').forEach(item => {
+            item.classList.toggle('selected', item.getAttribute('data-group-name') === groupName);
+        });
+
+        // Load group data - first check modified groups, then fall back to config
+        let groupData = tgConfigPage.modifiedGroups.get(groupName);
+
+        if (!groupData) {
+            ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
+                groupData = config.TelegramGroups?.find(group => group.GroupName === groupName);
+                if (groupData) {
+                    tgConfigPage.populateGroupData(page, groupData);
+                }
+            });
+        } else {
+            tgConfigPage.populateGroupData(page, groupData);
+        }
+
+        tgConfigPage.updateGroupEditingState(page);
+    },
+
+    populateGroupData: (page, groupData) => {
+        if (groupData) {
+            // First populate folders
+            tgConfigPage.populateEnabledFolders(groupData.EnabledFolders || [], page.querySelector("#EnabledFolders"));
+
+            // Then update their disabled state based on EnableAllFolders
+            const folderCheckboxes = page.querySelectorAll('.folder-checkbox');
+            folderCheckboxes.forEach(cb => {
+                cb.disabled = groupData.EnableAllFolders;
+                if (groupData.EnableAllFolders) {
+                    cb.checked = true;
+                }
+            });
+
+            const enableAllCheckbox = page.querySelector("#EnableAllFolders");
+            enableAllCheckbox.checked = groupData.EnableAllFolders;
+
+            page.querySelector("#LinkedTelegramGroupId").innerHTML = groupData.LinkedTelegramGroupId ?? "None";
+            page.querySelector("#UserNames").value = groupData.UserNames.join("\r\n");
+        }
     },
 
     deleteGroup: (page) => {
@@ -247,7 +248,8 @@ const tgConfigPage = {
                 ).then(function (result) {
                     window.Dashboard.processPluginConfigurationUpdateResult(result);
                     tgConfigPage.currentGroup = null;
-                    tgConfigPage.loadConfiguration(page);
+                    // remove group & disable inputs
+                    tgConfigPage.populateGroups(page, config);
                     // Clear the form
                     page.querySelector("#EnableAllFolders").checked = false;
                     page.querySelector("#UserNames").value = '';
@@ -259,11 +261,133 @@ const tgConfigPage = {
         });
     },
 
+    saveGroupConfig: (page) => {
+        // Ensure current group changes are tracked before saving
+        tgConfigPage.updateGroupData(page);
+
+        return new Promise((resolve) => {
+            ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
+                if (!config.TelegramGroups) {
+                    config.TelegramGroups = [];
+                }
+
+                // Update all modified groups
+                for (let [groupName, groupData] of tgConfigPage.modifiedGroups) {
+                    const groupIndex = config.TelegramGroups.findIndex(g => g.GroupName === groupName);
+                    if (groupIndex !== -1) {
+                        // keep non-overridden values.
+                        config.TelegramGroups[groupIndex] = {
+                            ...config.TelegramGroups[groupIndex],
+                            ...groupData
+                        };
+                    }
+                }
+
+                ApiClient.updatePluginConfiguration(
+                    tgConfigPage.pluginUniqueId,
+                    config
+                ).then(function (result) {
+                    window.Dashboard.processPluginConfigurationUpdateResult(result);
+                    // Clear modified groups after successful save
+                    tgConfigPage.modifiedGroups.clear();
+                    resolve();
+                });
+            });
+        });
+    },
+
+
+    /** ======== ======== LIBRARY CONFIG ======== ======== */
+
+    populateFolders: (container) => {
+
+        const folderContainer = container.querySelector("#EnabledFolders");
+
+        return window.ApiClient.getJSON(
+            window.ApiClient.getUrl("Library/MediaFolders", {
+                IsHidden: false
+            })
+        ).then((folders) => {
+            tgConfigPage.populateFolderElements(folderContainer, folders);
+        });
+    },
+
+    populateEnabledFolders: (folderList, container) => {
+        container.querySelectorAll(".folder-checkbox").forEach((e) => {
+            e.checked = folderList.includes(e.getAttribute("data-id"));
+        });
+    },
+
+    serializeEnabledFolders: (container) => {
+        return [...container.querySelectorAll(".folder-checkbox")]
+            .filter((e) => e.checked)
+            .map((e) => {
+                return e.getAttribute("data-id");
+            });
+    },
+
+
+    /*
+    container: html element
+    folders.Items: array of objects, with .Id & .Name
+    */
+    populateFolderElements: (container, folders) => {
+        container
+            .querySelectorAll(".emby-checkbox-label")
+            .forEach((e) => e.remove());
+
+        const checkboxes = folders.Items.map((folder) => {
+            const out = document.createElement("label");
+            out.innerHTML = `
+                <input
+                    is="emby-checkbox"
+                    class="folder-checkbox chkFolder"
+                    data-id="${folder.Id}"
+                    type="checkbox"
+                />
+                <span>${folder.Name}</span>
+            `;
+            return out;
+        });
+
+        if (checkboxes.length === 0 && container.children.length === 0) {
+            const missing = document.createElement("label");
+            missing.innerHTML = "<span>No Media Libraries configured.</span>";
+            checkboxes.push(missing);
+        }
+
+        checkboxes.forEach((e) => {
+            container.appendChild(e);
+        });
+    },
+
+
+    /** ======== ======== UTILS ======== ======== */
+
+
+    parseTextList: (element) => {
+        // element is a textarea input element
+        // Return the parsed text list
+        return element.value
+            .split("\n")
+            .map((e) => e.trim())
+            .filter((e) => e);
+    },
+
     addTextAreaStyle: (view) => {
         const style = document.createElement("link");
         style.rel = "stylesheet";
         style.href = window.ApiClient.getUrl("web/configurationpage") + "?name=TeleJelly.css";
         view.appendChild(style);
+    },
+
+    toggleTokenFunction: (e) => {
+        const x = document.getElementById("TgBotToken");
+        if (x.type === "password") {
+            x.type = "text";
+        } else {
+            x.type = "password";
+        }
     }
 };
 
@@ -323,6 +447,25 @@ export default function (view) {
 
     tgConfigPage.addTextAreaStyle(view);
     tgConfigPage.loadConfiguration(view);
+    tgConfigPage.populateFolders(view).then(() => {
+        const inputs = [
+            "#EnableAllFolders",
+            "#UserNames",
+            ".folder-checkbox"
+        ];
+
+        inputs.forEach(selector => {
+            const elements = view.querySelectorAll(selector);
+            elements.forEach(element => {
+                element.addEventListener('change', () => tgConfigPage.updateGroupData(view));
+            });
+        });
+    });
+
+    view.querySelector("#show-hide-token").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.toggleTokenFunction(e);
+    });
 
     // Basic configuration event
     view.querySelector("#SaveConfig").addEventListener("click", async (e) => {
@@ -331,6 +474,17 @@ export default function (view) {
     });
 
     // Group management events
+    view.querySelector("#EnableAllFolders").addEventListener("change", (e) => {
+        const checkboxes = view.querySelectorAll('.folder-checkbox');
+        checkboxes.forEach(cb => {
+            cb.disabled = e.target.checked;
+            if (e.target.checked) {
+                cb.checked = true;
+            }
+        });
+        tgConfigPage.updateGroupData(view);
+    });
+
     view.querySelector("#AddGroup").addEventListener("click", (e) => {
         e.preventDefault();
         tgConfigPage.addGroup(view);

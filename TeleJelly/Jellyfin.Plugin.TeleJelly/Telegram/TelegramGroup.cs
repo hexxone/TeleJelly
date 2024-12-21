@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Xml.Serialization;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram;
@@ -12,6 +13,7 @@ public class TelegramGroup
     /// <summary>
     ///     Gets or sets the unique name for the virtual group.
     /// </summary>
+    [MaxLength(32)]
     public string GroupName { get; set; } = "SampleText";
 
     /// <summary>
