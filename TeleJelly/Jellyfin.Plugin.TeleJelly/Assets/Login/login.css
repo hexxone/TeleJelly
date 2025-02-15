@@ -1,3 +1,7 @@
+:root {
+    --spin-animation-time: 5332ms;
+}
+
 @font-face {
     font-family: "Material Symbols Outlined";
     font-style: normal;
@@ -478,21 +482,22 @@ h2 {
 }
 
 .animate-on-load {
-    animation: rotate-slow 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: rotate-slow 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .animate-on-hover:hover {
-    animation: rotate-slow 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: rotate-slow 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .animate-continuous {
     pointer-events: none;
-    animation: continuous-rotate 1s linear infinite;
+    animation: continuous-rotate .7s linear infinite;
     /* Overrides the hover animation */
     animation-play-state: running !important;
 }
 
 /** Jellyfin Loading Spinner **/
+
 
 .mdl-spinner {
     position: relative;
@@ -503,7 +508,7 @@ h2 {
 
 .mdlSpinnerActive {
     display: inline-block;
-    animation: mdl-spinner__container-rotate 1568.23529412ms linear infinite;
+    animation: mdl-spinner__container-rotate 1s linear infinite;
 }
 
 @keyframes mdl-spinner__container-rotate {
@@ -524,7 +529,7 @@ h2 {
 }
 
 .mdlSpinnerActive .mdl-spinner__layer-1 {
-    animation: mdl-spinner__fill-unfill-rotate 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-1-fade-in-out 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-1-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
 }
 
 .mdl-spinner__layer-2 {
@@ -532,7 +537,7 @@ h2 {
 }
 
 .mdlSpinnerActive .mdl-spinner__layer-2 {
-    animation: mdl-spinner__fill-unfill-rotate 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-2-fade-in-out 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-2-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
 }
 
 .mdl-spinner__layer-3 {
@@ -540,7 +545,7 @@ h2 {
 }
 
 .mdlSpinnerActive .mdl-spinner__layer-3 {
-    animation: mdl-spinner__fill-unfill-rotate 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-3-fade-in-out 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-3-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
 }
 
 .mdl-spinner__layer-4 {
@@ -548,7 +553,7 @@ h2 {
 }
 
 .mdlSpinnerActive .mdl-spinner__layer-4 {
-    animation: mdl-spinner__fill-unfill-rotate 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-4-fade-in-out 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-4-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
 }
 
 @keyframes mdl-spinner__fill-unfill-rotate {

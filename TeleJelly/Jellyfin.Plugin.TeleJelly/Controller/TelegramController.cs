@@ -39,6 +39,7 @@ public class TelegramController : ControllerBase
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramController" /> class.
     /// </summary>
+    /// <param name="instance">for getting the configuration</param>
     /// <param name="sessionManager">for manually logging in users.</param>
     /// <param name="userManager">for getting and creating users.</param>
     /// <param name="cryptoProvider">for hashing passwords.</param>

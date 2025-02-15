@@ -21,11 +21,13 @@
 
 <h1 align="center">TeleJelly Plugin</h1>
 
-A Plugin for logging into [Jellyfin](https://jellyfin.org/) using the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
+A Plugin for logging into [Jellyfin](https://jellyfin.org/) using
+the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
 
 Allows for simple Group creation/editing/deleting in order to manage Admins/Users/Library-access.
 
-Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plugin-ldapauth) and [jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso).
+Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plugin-ldapauth)
+and [jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso).
 
 Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plugin-template).
 
@@ -96,7 +98,8 @@ You can choose between 3 options below.
 Don't trust the downloads?
 
 1. `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
-2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) / [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see Tools section below)
+2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) 
+or [.NET8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see Tools section below)
 3. run command `dotnet publish TeleJelly -c Release`
 4. copy files from `./publish/` folder into `config/plugins/TeleJelly` (create it if non-existing)
 5. restart jellyfin server
@@ -114,15 +117,15 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 
 ## Known issues
 
-- This Login-method is intended for Desktop/Browser usage. It has not been tested to be working with official Jellyfin Apps.
-  If you encounter problems, try signing in on a "real" browser instead and use the `Quick Connect` feature when possible.
-  Besides that, there is very little you or I can do.
+- This Login-method is intended for Desktop/Browser usage. It has not been tested to be working with official Jellyfin
+  Apps. If you encounter problems, try signing in on a "real" browser instead and use the `Quick Connect` feature when
+  possible. Besides that, there is very little you, or I can do.
 
-- The `Sign in with Telegram` button will sometimes get hidden by Browser Plugins like "I don't like Cookies" or "UBlock Origin".
-  Try disabling these on your Jellyfin domain and inform your users.
+- The `Sign in with Telegram` button will sometimes get hidden by Browser Plugins like "I don't like Cookies" or "UBlock
+  Origin". Try disabling these on your Jellyfin domain and inform your users.
 
-- If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to private.
-  In this case, the plugin will fall back to its default icon.
+- If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to
+  private. In this case, the plugin will fall back to its default icon.
 
 - If a User were to change/sell his Username, a random person would possibly be able to use this Service.
   However, having Names over ID's is much more convenient for Management.
@@ -132,7 +135,9 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 
 ## Demo Video
 
-_Note: Video & Screenshots are taken with [my custom css theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied. The Logo is AI-generated._
+_Note: Video & Screenshots are taken
+with [my custom css theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied. 
+The Logo is AI-generated._
 
 https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
@@ -174,7 +179,7 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
 ### Dependencies
 
-- [Telegram.Bot](https://github.com/TelegramBots/telegram.bot) library for validating bot token & determining bot username
+- [Telegram.Bot](https://github.com/TelegramBots/telegram.bot) telegram bot api interaction
 - [ILRepack](https://github.com/gluck/il-repack) for packing all dependency dlls into one single plugin dll
 - [MinVer](https://github.com/adamralph/minver) for automated Release-versioning via git tags
 
@@ -183,8 +188,10 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 1. Run `git clone https://github.com/hexxone/TeleJelly.git`
 2. Open `TeleJelly.sln` file with Visual Studio or Rider IDE, restore Nuget packages
 3. Copy `example.env`-file to `.env` and fill out the variables
-4. Choose to run Profile `Docker Test` 
-5. Everything should build and the browser opens automatically.
+4. Choose to run Profile `Docker Test`
+5. Afterward Jellyfin with TeleJelly should be reachable under: <https://jellyfin.localhost:8443/>
+
+> Note: the "invalid" SSL certificate warning is normal. You can however easily get a "real" one working with traefik.
 
 ### Contributing
 
@@ -195,20 +202,23 @@ The plugin uses "MinVer" and git-tags for semantic versioning.
 Most of the Versions (meta.json and manifest.json) get incremented automatically on release build,
 **but** there are some places which have to be done manually - for example in the `config.html`.
 
-When targeting an updated version of Jellyfin, remember to set the correct `TargetAbi` version in `JellyfinPluginHelper`!
+When incrementing the version of Jellyfin, remember to set the correct `TargetAbi` version in `JellyfinPluginHelper`!
 
 > Feel free to open a new Pull-Requests for useful additions and fixes.
 
 ## Licensing
 
-Licensing is a complex topic. This repository features a GPLv3 license template that can be used to provide a good default license for your plugin.
-You may alter this if you like, but if you do a permissive license must be chosen.
+Licensing is a complex topic. This repository features a GPLv3 license template that can be used to provide a good
+default license for your plugin. You may alter this if you like, but if you do a permissive license must be chosen.
 
-Due to how plugins in Jellyfin work, when your plugin is compiled into a binary, it will link against the various Jellyfin binary NuGet packages.
-These packages are licensed under the GPLv3. Thus, due to the nature and restrictions of the GPL, the binary plugin you get will also be licensed under the GPLv3.
+Due to how plugins in Jellyfin work, when your plugin is compiled into a binary, it will link against the various
+Jellyfin binary NuGet packages. These packages are licensed under the GPLv3. Thus, due to the nature and restrictions 
+of the GPL, the binary plugin you get will also be licensed under the GPLv3.
 
-If you accept the default GPLv3 license from this template, all will be good. If you however choose a different license, please keep this fact in mind,
-as it might not always be obvious that a, e.g. MIT-licensed plugin would become GPLv3 when compiled.
+If you accept the default GPLv3 license from this template, all will be good. If you however choose a different license,
+please keep this fact in mind, as it might not always be obvious that a, e.g. MIT-licensed plugin would become GPLv3 
+when compiled.
 
-Please note that this also means making "proprietary", source-unavailable, or otherwise "hidden" plugins for public consumption is not permitted.
-To build a Jellyfin plugin for distribution to others, it must be under the GPLv3 or a permissive open-source license that can be linked against the GPLv3.
+Please note that this also means making "proprietary", source-unavailable, or otherwise "hidden" plugins for public
+consumption is not permitted. To build a Jellyfin plugin for distribution to others, it must be under the GPLv3 or 
+a permissive open-source license that can be linked against the GPLv3.

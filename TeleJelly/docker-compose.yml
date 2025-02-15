@@ -5,8 +5,8 @@ networks:
         driver: bridge
 
 volumes:
-#    jellyfin-config:
-#    jellyfin-cache:
+    # jellyfin-config:
+    # jellyfin-cache:
     jellyfin-media:
 
 services:

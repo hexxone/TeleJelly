@@ -12,7 +12,6 @@ namespace Jellyfin.Plugin.TeleJelly;
 /// </summary>
 public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
 {
-
     /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
     /// </summary>
@@ -64,5 +63,7 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     {
         base.UpdateConfiguration(configuration);
 
+        // TODO determine why this is not getting triggered?
+        ConfigurationChanged?.Invoke(this, configuration);
     }
 }

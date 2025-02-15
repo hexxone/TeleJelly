@@ -1,13 +1,13 @@
 {
-  "version": 1,
-  "isRoot": true,
-  "tools": {
-    "minver-cli": {
-      "version": "6.0.0",
-      "commands": [
-        "minver"
-      ],
-      "rollForward": false
+    "version": 1,
+    "isRoot": true,
+    "tools": {
+        "minver-cli": {
+            "version": "6.0.0",
+            "commands": [
+                "minver"
+            ],
+            "rollForward": false
+        }
     }
-  }
 }

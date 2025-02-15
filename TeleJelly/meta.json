@@ -1,13 +1,13 @@
 {
-  "guid": "4b71013d-00ba-470c-9e4d-0c451a435328",
-  "name": "TeleJelly",
-  "overview": "Log in to Jellyfin using Telegram",
-  "description": "Enables logging in to Jellyfin using the Telegram Login Widget as SSO provider. Allows for simple Group management. Having a Telegram Username is mandatory. A Telegram Bot is required to validate the Telegram login credentials. A valid, public domain SSL certificate is required for the Login Widget to work. This plug-in is free, open-source software. \u0027Production\u0027-usage is NOT recommended. I do not accept any responsibility for errors. Repo: https://github.com/hexxone/TeleJelly",
-  "owner": "hexxone",
-  "category": "Authentication",
-  "imageUrl": "https://github.com/hexxone/TeleJelly/blob/main/TeleJelly/thumb.jpg?raw=true",
-  "targetAbi": "10.9.0.0",
-  "timestamp": "2024-12-08T22:21:39Z",
-  "version": "1.0.8.7",
-  "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.9-alpha.0.7"
+    "guid": "4b71013d-00ba-470c-9e4d-0c451a435328",
+    "name": "TeleJelly",
+    "overview": "Log in to Jellyfin using Telegram",
+    "description": "Enables logging in to Jellyfin using the Telegram Login Widget as SSO provider. Allows for simple Group management. Having a Telegram Username is mandatory. A Telegram Bot is required to validate the Telegram login credentials. A valid, public domain SSL certificate is required for the Login Widget to work. This plug-in is free, open-source software. \u0027Production\u0027-usage is NOT recommended. I do not accept any responsibility for errors. Repo: https://github.com/hexxone/TeleJelly",
+    "owner": "hexxone",
+    "category": "Authentication",
+    "imageUrl": "https://github.com/hexxone/TeleJelly/blob/main/TeleJelly/thumb.jpg?raw=true",
+    "targetAbi": "10.9.0.0",
+    "timestamp": "2024-12-08T22:21:39Z",
+    "version": "1.0.8.7",
+    "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.9-alpha.0.7"
 }

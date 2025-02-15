@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
@@ -11,29 +11,40 @@ using Telegram.Bot.Types.Enums;
 namespace Jellyfin.Plugin.TeleJelly.Telegram;
 
 /// <summary>
-///
+///     The TeleJelly Telegram Bot service which runs in the background and listens for events and commands.
+///     Should get re-initialized when the botToken changes.
 /// </summary>
 public class TelegramBotService : IDisposable
 {
     private readonly ILogger _logger;
     private readonly TelegramBotClient _botClient;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly PluginConfiguration _config;
+    private readonly CommandBase[] _commands;
+
+    internal readonly PluginConfiguration _config;
+
+    private User? _botInfo;
+
 
     /// <summary>
-    ///
+    ///     Constructs a new instance of the BotService.
     /// </summary>
     /// <param name="botToken"></param>
     /// <param name="config"></param>
     /// <param name="logger"></param>
-    public TelegramBotService(string botToken, PluginConfiguration config, ILogger logger)
+    /// <param name="commands"></param>
+    internal TelegramBotService(string botToken, PluginConfiguration config, ILogger logger, CommandBase[] commands)
     {
         _botClient = new TelegramBotClient(botToken);
         _cancellationTokenSource = new CancellationTokenSource();
         _config = config;
         _logger = logger;
+        _commands = commands;
     }
 
+    /// <summary>
+    ///     Starts polling for bot messages.
+    /// </summary>
     public async Task StartAsync()
     {
         try
@@ -44,8 +55,8 @@ public class TelegramBotService : IDisposable
                 cancellationToken: _cancellationTokenSource.Token
             );
 
-            var me = await _botClient.GetMe();
-            _logger.LogInformation("Telegram Bot listening as @{UserName}", me.Username);
+            _botInfo = await _botClient.GetMe();
+            _logger.LogInformation("Telegram Bot listening as @{UserName}", _botInfo.Username);
         }
         catch (Exception ex)
         {
@@ -57,163 +68,179 @@ public class TelegramBotService : IDisposable
     {
         try
         {
+            if (_botInfo == null)
+            {
+                throw new Exception($"No bot info available in: {nameof(TelegramBotService)}.{nameof(HandleUpdateAsync)}");
+            }
+
             // Handle chat member updates
             if (update is { Type: UpdateType.ChatMember, ChatMember: not null })
             {
-                _logger.LogDebug("Bot received Update type: {Type}", update.Type);
-
-                var member = update.ChatMember;
-                var user = member.NewChatMember.User;
-                var groupId = member.Chat.Id;
-
-                var jellyfinGroup = _config.TelegramGroups.Find(g => g.LinkedTelegramGroupId == groupId);
-                if (jellyfinGroup == null)
-                {
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(user.Username))
-                {
-                    await botClient.SendMessage(
-                        groupId,
-                        $"Warning: User {user.FirstName} {user.LastName} does not have a Telegram username set. " +
-                        "They need to set a username to use TeleJelly SSO login.",
-                        cancellationToken: cancellationToken);
-
-                    _logger.LogInformation("User Id '{UserId}' has caused a Group ChatMember event but has no Telegram username set.", user.Id);
-                    return;
-                }
-
-                // User added to group
-                if (member.NewChatMember.Status == ChatMemberStatus.Member)
-                {
-                    if (!jellyfinGroup.UserNames.Contains(user.Username))
-                    {
-                        jellyfinGroup.UserNames.Add(user.Username);
-                        await botClient.SendMessage(
-                            groupId,
-                            $"Added @{user.Username} to TeleJelly whitelist",
-                            cancellationToken: cancellationToken);
-
-                        _logger.LogInformation("Added @{UserName} to TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
-                    }
-                }
-                // User removed from group
-                else if (member.NewChatMember.Status == ChatMemberStatus.Left ||
-                         member.NewChatMember.Status == ChatMemberStatus.Kicked)
-                {
-                    if (jellyfinGroup.UserNames.Remove(user.Username))
-                    {
-                        await botClient.SendMessage(
-                            groupId,
-                            $"Removed @{user.Username} from TeleJelly whitelist",
-                            cancellationToken: cancellationToken);
-
-                        _logger.LogInformation("Removed @{UserName} from TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
-                    }
-                }
+                await HandleChatMemberUpdate(update, cancellationToken);
             }
             // Handle commands
             else if (update is { Type: UpdateType.Message, Message.Text: not null })
             {
-                _logger.LogDebug("Bot received Update type: {UpdateType} from UserId: '{FromId}' text: '{MsgText}'", update.Type, update.Message.From?.Id, update.Message.Text);
-
-                var message = update.Message;
-                var isAdmin = message.From?.Username != null && _config.AdminUserNames.Contains(message.From.Username);
-
-                if (!isAdmin)
-                {
-                    await botClient.SendMessage(
-                        message.Chat.Id,
-                        "You are not an administrator.",
-                        cancellationToken: cancellationToken);
-                    return;
-                }
-
-                if (message.Text.StartsWith("/link"))
-                {
-                    var parts = message.Text.Split(' ');
-                    if (parts.Length != 2)
-                    {
-                        await botClient.SendMessage(
-                            message.Chat.Id,
-                            "Usage: /link <telejelly_group_name>",
-                            cancellationToken: cancellationToken);
-                        return;
-                    }
-
-                    var groupName = parts[1];
-                    var group = _config.TelegramGroups.Find(g => g.GroupName == groupName);
-
-                    if (group == null)
-                    {
-                        await botClient.SendMessage(
-                            message.Chat.Id,
-                            $"TeleJelly group '{groupName}' not found",
-                            cancellationToken: cancellationToken);
-                        return;
-                    }
-
-                    group.LinkedTelegramGroupId = message.Chat.Id;
-                    await botClient.SendMessage(
-                        message.Chat.Id,
-                        $"Linked this Telegram group to TeleJelly group '{groupName}'",
-                        cancellationToken: cancellationToken);
-                }
-                else if (message.Text == "/unlink")
-                {
-                    var group = _config.TelegramGroups.Find(g => g.LinkedTelegramGroupId == message.Chat.Id);
-                    if (group != null)
-                    {
-                        group.LinkedTelegramGroupId = null;
-                        await botClient.SendMessage(
-                            message.Chat.Id,
-                            $"Unlinked this Telegram group from TeleJelly group '{group.GroupName}'",
-                            cancellationToken: cancellationToken);
-                    }
-                }
-                else if (message.Text == "/check_usernames")
-                {
-                    var members = await botClient.GetChatAdministrators(message.Chat.Id, cancellationToken);
-                    var missingUsernames = members
-                        .Where(m => string.IsNullOrEmpty(m.User.Username))
-                        .Select(m => $"{m.User.FirstName} {m.User.LastName}")
-                        .ToArray();
-
-                    if (missingUsernames.Any())
-                    {
-                        await botClient.SendMessage(
-                            message.Chat.Id,
-                            "The following members need to set a username to use TeleJelly SSO:\n" +
-                            string.Join("\n", missingUsernames),
-                            cancellationToken: cancellationToken);
-                    }
-                    else
-                    {
-                        await botClient.SendMessage(
-                            message.Chat.Id,
-                            "All members have usernames set",
-                            cancellationToken: cancellationToken);
-                    }
-                }
-                else if (message.Text == "/whitelist")
-                {
-                    var group = _config.TelegramGroups.Find(g => g.LinkedTelegramGroupId == message.Chat.Id);
-                    if (group != null)
-                    {
-                        var users = string.Join("\n", group.UserNames.Select(u => $"@{u}"));
-                        await botClient.SendMessage(
-                            message.Chat.Id,
-                            $"Users in whitelist for group '{group.GroupName}':\n{users}",
-                            cancellationToken: cancellationToken);
-                    }
-                }
+                await HandleBotMessage(update, cancellationToken);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError("Error handling update: {ErrMsg}", ex.Message);
         }
+    }
+
+    private async Task HandleChatMemberUpdate(Update update, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Bot received Update type: {Type}", update.Type);
+
+        var member = update.ChatMember!;
+        var user = member.NewChatMember.User;
+        var groupId = member.Chat.Id;
+
+        var jellyfinGroup = _config.TelegramGroups.Find(g => g.LinkedTelegramGroupId == groupId);
+
+        if (string.IsNullOrEmpty(user.Username))
+        {
+            await _botClient.SendMessage(
+                groupId,
+                $"Warning: User {user.FirstName} {user.LastName} does not have a Telegram username set. " +
+                "They need to set a username to use TeleJelly SSO login.",
+                cancellationToken: cancellationToken);
+
+            _logger.LogInformation("User Id '{UserId}' has caused a Group ChatMember event but has no Telegram username set.", user.Id);
+            return;
+        }
+
+        // User added to group
+        if (member.NewChatMember.Status == ChatMemberStatus.Member)
+        {
+            if (jellyfinGroup == null)
+            {
+                // TODO if self, print "welcome" message / instructions - otherwise: maybe print message "group not linked" ?
+
+                return;
+            }
+
+            if (!jellyfinGroup.UserNames.Contains(user.Username))
+            {
+                jellyfinGroup.UserNames.Add(user.Username);
+                await _botClient.SendMessage(
+                    groupId,
+                    $"Added @{user.Username} to TeleJelly whitelist",
+                    cancellationToken: cancellationToken);
+
+                _logger.LogInformation("Added @{UserName} to TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
+            }
+        }
+        // User removed from group
+        else if (member.NewChatMember.Status is ChatMemberStatus.Left or ChatMemberStatus.Kicked)
+        {
+            if (jellyfinGroup == null)
+            {
+                return;
+            }
+
+            // TODO if self, remove group linking and maybe send info to administrators?
+
+            if (jellyfinGroup.UserNames.Remove(user.Username))
+            {
+                await _botClient.SendMessage(
+                    groupId,
+                    $"Removed @{user.Username} from TeleJelly whitelist",
+                    cancellationToken: cancellationToken);
+
+                _logger.LogInformation("Removed @{UserName} from TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
+            }
+        }
+    }
+
+    private async Task HandleBotMessage(Update update, CancellationToken cancellationToken)
+    {
+        if (_botInfo?.Username == null)
+        {
+            throw new Exception($"No bot info available in: {nameof(TelegramBotService)}.{nameof(HandleBotMessage)}");
+        }
+
+        var message = update.Message!;
+        if (!message.Text!.StartsWith('/'))
+        {
+            return; // Not a command, ignore
+        }
+
+        _logger.LogDebug("Bot received Update type: {UpdateType} from UserId: '{FromId}' text: '{MsgText}'", update.Type, message.From?.Id, message.Text);
+
+        var commandText = GetCommandText(message.Text, _botInfo.Username);
+        if (commandText == null)
+        {
+            return; // directed at different bot
+        }
+
+        // Find & Execute Bot command
+        await FindAndExecuteCommand(message, commandText, cancellationToken);
+    }
+
+    private async Task FindAndExecuteCommand(Message message, string commandText, CancellationToken cancellationToken)
+    {
+        var isAdmin = message.From?.Username != null && _config.AdminUserNames.Contains(message.From.Username);
+        var isProcessed = false;
+        foreach (var command in _commands)
+        {
+            if (!command.Command.Equals(commandText, StringComparison.CurrentCultureIgnoreCase))
+            {
+                continue;
+            }
+
+            if (command.NeedsAdmin && !isAdmin)
+            {
+                await _botClient.SendMessage(
+                    message.Chat.Id,
+                    "You are not an administrator.",
+                    cancellationToken: cancellationToken);
+                isProcessed = true;
+                break;
+            }
+
+            _logger.LogDebug("Executing command: {Command}", command.Command);
+            await command.Execute(_botClient, message, cancellationToken);
+            isProcessed = true;
+            break;
+        }
+
+        if (!isProcessed)
+        {
+            await _botClient.SendMessage(message.Chat.Id, "Unknown command.", cancellationToken: cancellationToken);
+        }
+    }
+
+    private static string? GetCommandText(string messageText, string botUsername)
+    {
+        // Strip "/" slash and get the first word as command
+        var commandText = messageText[1..];
+
+        // If contains spaces, get first word as command
+        var spaceIndex = commandText.IndexOf(' ');
+        if (spaceIndex > 0)
+        {
+            commandText = commandText[..spaceIndex];
+        }
+
+        // Handle directed bot commands (e.g. /command@botname)
+        // If command is directed at a different bot, ignore it
+        if (commandText.Contains('@'))
+        {
+            var parts = commandText.Split('@', 2);
+            var targetBotUsername = parts[1];
+
+            if (!string.Equals(targetBotUsername, botUsername, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            commandText = parts[0]; // Keep only the command part
+        }
+
+        return commandText;
     }
 
     private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)

@@ -19,8 +19,8 @@
                 <div class="sectionTitleContainer flex align-items-center">
                     <h2 class="sectionTitle">TeleJelly Configuration</h2>
                     <h3>Version: <b id="TeleJellyVersion">1.0.9.0</b></h3>
-                    <a href="https://github.com/hexxone/TeleJelly"
-                       class="button-link emby-button headerHelpButton"
+                    <a class="button-link emby-button headerHelpButton"
+                       href="https://github.com/hexxone/TeleJelly"
                        is="emby-linkbutton"
                        target="_blank">Github Repository</a>
                 </div>
@@ -40,7 +40,7 @@
                         <li>You must have a Telegram username to use this login method.</li>
                         <li>A Telegram Bot is required to validate the Telegram login.</li>
                         <li>A valid, public domain SSL certificate is required for the Login Widget to work.</li>
-                        <li>The Bot Token can be obtained from <a class="button-link emby-button" is="emby-linkbutton" href="https://t.me/Botfather">@BotFather</a>.</li>
+                        <li>The Bot Token can be obtained from <a class="button-link emby-button" href="https://t.me/Botfather" is="emby-linkbutton">@BotFather</a>.</li>
                         <li>Once you have chosen a bot, use the <i>/setdomain</i> command to link your jellyfin domain to the bot.</li>
                         <li>A Telegram User has to be Administrator OR part of at least one Group in order to login.</li>
                     </ul>
@@ -72,8 +72,8 @@
                         <textarea class="sso-line-list emby-textarea"
                                   id="TgAdministrators"
                                   is="emby-textarea"
-                                  onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
                                   maxlength="32"
+                                  onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
                                   type="text"></textarea>
                         <div class="fieldDescription">
                             A List of <strong>Telegram Usernames to grant Jellyfin Admin privileges</strong> when logging in, one per line
@@ -121,8 +121,8 @@
                                            id="TgGroupName"
                                            is="emby-input"
                                            maxlength="30"
-                                           placeholder="New group name"
                                            onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9_]/g, '')"
+                                           placeholder="New group name"
                                            type="text"/>
                                     <button class="button-submit emby-button"
                                             id="AddGroup"
@@ -132,7 +132,7 @@
                                     </button>
                                 </div>
 
-                                <div class="group-list" id="groupList">
+                                <div class="group-list" id="TgBotGroupList">
                                     <!-- Groups will be dynamically inserted here -->
                                 </div>
 
@@ -161,15 +161,16 @@
 
                             <!-- Usernames Column -->
                             <div class="group-column">
-                                <div class="column-header">Usernames</div>
+                                <div class="column-header">Telegram Settings</div>
                                 <label>
-                                    <span>Linked Telegram Group Id: </span><span id="LinkedTelegramGroupId">None</span>
+                                    <span>Linked Telegram Group: </span><span id="LinkedTelegramGroupId">None</span>
                                 </label>
+                                <p>Telegram Usernames:</p>
                                 <textarea class="username-list sso-line-list emby-textarea"
                                           id="UserNames"
                                           is="emby-textarea"
-                                          placeholder="Enter Telegram usernames, one per line"
-                                          onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"></textarea>
+                                          onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
+                                          placeholder="Enter Telegram usernames, one per line"></textarea>
                             </div>
                         </div>
 
@@ -189,6 +190,7 @@
                         <li>Enter all TG-Usernames which should be part of the Group.</li>
                         <li><strong>When finished editing, don't forget to click "Save"</strong></li>
                     </ol>
+                    <p>In order to link a Group to Telegram, you can use the <a href="TODO">/</a></p>
                 </fieldset>
 
 
@@ -196,7 +198,7 @@
                 <fieldset class="verticalSection">
                     <legend><h3>Branding Options</h3></legend>
                     <strong>
-                        <a class="button-link" id="sso-telegram-login" is="emby-linkbutton" target="_blank">
+                        <a class="button-link" id="SSOTelegramLoginUrl" is="emby-linkbutton" target="_blank">
                             Here is the link to the Telegram Login Page
                         </a>
                     </strong>
@@ -204,18 +206,11 @@
                     <p>You can share the link with your friends but also include it in the Login Page "Branding".</p>
                     <p>This way it can be way easier to find.</p>
                     <p>Here is an example (the stylesheet will differ on the actual Login page):</p>
-
-                    <div id="exampleBranding">Please enable JavaScript.</div>
+                    <div id="ExampleBranding">Please enable JavaScript.</div>
+                    <pre id="ExampleBrandingCode">Please enable JavaScript.</pre>
                     <p>
-                        To automatically set the Branding, you can press the following button.
-                        Notice, this will override and delete your existing Branding!
+                        To set the branding, you can copy above code and apply it here: <a href="https://t.me/TeleJelly">"General" Settings</a>
                     </p>
-                    <button class="raised button-submit block emby-button"
-                            id="setBrandingButton"
-                            is="emby-button"
-                            type="button">
-                        <span>Set Branding</span>
-                    </button>
                 </fieldset>
 
             </form>
