@@ -13,7 +13,10 @@ public class TelegramGroup
     /// <summary>
     ///     Gets or sets the unique name for the virtual group.
     /// </summary>
-    [MaxLength(32)]
+    [Required]
+    [StringLength(32, MinimumLength = 3, ErrorMessage = "String must be between 3 and 32 characters")]
+    [RegularExpression(@"^[a-zA-Z0-9_\-]+$",
+        ErrorMessage = "Only letters, numbers, underscore, and hyphen are allowed")]
     public string GroupName { get; set; } = "SampleText";
 
     /// <summary>
@@ -32,7 +35,7 @@ public class TelegramGroup
     public List<string> UserNames { get; set; } = new();
 
     /// <summary>
-    ///     Gets or sets the Group-Id which is linked to this TeleJelly group.
+    ///     Gets or set the optionally linked Telegram Chat and its related settings.
     /// </summary>
-    public long? LinkedTelegramGroupId { get; set; }
+    public TelegramGroupChat? TelegramGroupChat { get; set; }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
@@ -13,6 +14,11 @@ namespace Jellyfin.Plugin.TeleJelly;
 public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
 {
     /// <summary>
+    ///     Gets or sets the Plugin Singleton instance.
+    /// </summary>
+    public static TeleJellyPlugin? Instance { get; private set; }
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
     /// </summary>
     /// <param name="applicationPaths">Internal Jellyfin interface for the ApplicationPath.</param>
@@ -22,8 +28,7 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     {
         ApplicationPaths = applicationPaths;
 
-        // var cacheOptions = new MemoryCacheOptions() { ExpirationScanFrequency = TimeSpan.FromMinutes(1) };
-        // MemoryCache = new MemoryCache(cacheOptions);
+        Instance = this;
     }
 
     /// <summary>
@@ -55,15 +60,15 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
         ];
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="configuration"></param>
-    public override void UpdateConfiguration(BasePluginConfiguration configuration)
-    {
-        base.UpdateConfiguration(configuration);
+    // public override void UpdateConfiguration(BasePluginConfiguration configuration)
+    // {
+    //     base.UpdateConfiguration(configuration);
 
-        // TODO determine why this is not getting triggered?
-        ConfigurationChanged?.Invoke(this, configuration);
-    }
+    //     // determine why this is not getting triggered by base???
+    //     // ConfigurationChanged?.Invoke(this, configuration);
+    //
+    //     Debugger.Break();
+    //
+    //     Console.WriteLine("!!!!!!!!! TeleJellyPlugin.UpdateConfiguration EVENT TRIGGERED !!!!!!!!!");
+    // }
 }

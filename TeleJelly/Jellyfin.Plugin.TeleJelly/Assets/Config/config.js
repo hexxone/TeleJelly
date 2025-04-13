@@ -1,3 +1,18 @@
+function encodeToBase64UtF8(str) {
+    // First create a UTF-8 encoded Uint8Array from the string
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(str);
+
+    // Convert the Uint8Array to a Base64 string
+    // btoa only works with binary strings, so we need to convert the bytes first
+    let binaryString = '';
+    bytes.forEach(byte => {
+        binaryString += String.fromCharCode(byte);
+    });
+
+    return btoa(binaryString);
+}
+
 const tgConfigPage = {
     pluginUniqueId: "4b71013d-00ba-470c-9e4d-0c451a435328",
 
@@ -23,9 +38,11 @@ const tgConfigPage = {
             tgTokenHelper.validateToken(config.BotToken);
         }
 
+        const botUserName = config.BotUsername || tgTokenHelper.currentUserName;
+
         // Set basic config values
         page.querySelector("#TgBotToken").value = config.BotToken || tgTokenHelper.currentToken;
-        page.querySelector("#TgBotUsername").innerHTML = config.BotUsername || tgTokenHelper.currentUserName;
+        page.querySelector("#TgBotUsername").innerHTML = botUserName;
         page.querySelector("#TgAdministrators").value = config.AdminUserNames?.join("\r\n") || "";
         page.querySelector("#ForcedUrlScheme").value = config.ForcedUrlScheme || "none";
     },
@@ -93,6 +110,18 @@ const tgConfigPage = {
             return;
         }
 
+        // Validate length
+        if (newGroupName.length < 3 || newGroupName.length > 32) {
+            window.Dashboard.alert('Group name must be between 3 and 32 characters');
+            return;
+        }
+
+        // Validate allowed characters using regex
+        const validCharsRegex = /^[a-zA-Z0-9_\-]+$/;
+        if (!validCharsRegex.test(newGroupName)) {
+            window.Dashboard.alert('Group name can only contain letters, numbers, underscore, and hyphen');
+            return;
+        }
         ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
             if (!config.TelegramGroups) {
                 config.TelegramGroups = [];
@@ -183,6 +212,10 @@ const tgConfigPage = {
 
         console.debug(`Selecting group: ${groupName}.`);
 
+        // set Bot Link-Command Url
+        const encodedText = encodeToBase64UtF8(`link ${groupName}`);
+        page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${botUserName}?startgroup=${encodedText}`;
+
         // Update selected state in UI
         page.querySelectorAll('.group-item').forEach(item => {
             item.classList.toggle('selected', item.getAttribute('data-group-name') === groupName);
@@ -256,6 +289,7 @@ const tgConfigPage = {
                     page.querySelector("#UserNames").value = '';
                     page.querySelectorAll('.folder-checkbox').forEach(cb => cb.checked = false);
                     page.querySelector("#LinkedTelegramGroupId").innerHTML = "None";
+                    page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${tgTokenHelper.currentUserName}?startgroup`;
                     resolve();
                 });
             });
@@ -430,6 +464,16 @@ const tgTokenHelper = {
             nameElement.style.color = tokenElement.style.borderColor = "limegreen";
             tgTokenHelper.currentUserName = data.BotUsername;
             nameElement.innerHTML = `@${data.BotUsername}`;
+
+            // update Bot Link-Command Url
+            if(tgConfigPage.currentGroup) {
+                const encodedText = encodeToBase64UtF8(`link ${tgConfigPage.currentGroup}`);
+                page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${data.BotUsername}?startgroup=${encodedText}`;
+            }
+            else {
+                page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${data.BotUsername}?startgroup`;
+            }
+
             // enable save button
             const saveButton = document.getElementById("SaveConfig");
             saveButton.disabled = false;

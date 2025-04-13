@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.TeleJelly.Telegram;
 
 /// <summary>
-///     TODO
+///     The TeleJelly Background service which (re-)initializes Telegram the bot-service when the botToken changes.
 /// </summary>
 public class TelegramBackgroundService : IHostedService, IDisposable
 {
@@ -28,15 +28,14 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     /// <summary>
     ///     Creates a new instance of the TelegramBackgroundService
     /// </summary>
-    /// <param name="plugin">Used for getting configuration and listening on changes to it.</param>
     /// <param name="logger">Used for printing service status and events.</param>
     /// <param name="serviceProvider">Used for instantiating the Commands with Dependency Injection.</param>
-    public TelegramBackgroundService(TeleJellyPlugin plugin, ILogger<TelegramBackgroundService> logger, IServiceProvider serviceProvider)
+    public TelegramBackgroundService(ILogger<TelegramBackgroundService> logger, IServiceProvider serviceProvider)
     {
-        _plugin = plugin;
+        _plugin  = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");;
         _logger = logger;
 
-        _commands = plugin.GetType().Assembly.GetTypes()
+        _commands = _plugin.GetType().Assembly.GetTypes()
             .Where(t =>
                 t is { IsClass: true, IsAbstract: false } &&
                 t.IsAssignableTo(typeof(CommandBase)) &&
@@ -101,19 +100,26 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     {
         if (baseConfig is PluginConfiguration configuration)
         {
-            ConfigureBot(configuration);
+            _logger.LogInformation("Telegram bot configuration changed. Configuring...");
 
-            _logger.LogInformation("Telegram bot configuration changed");
+            ConfigureBot(configuration);
         }
         else
         {
-            _logger.LogError("BasePluginConfiguration is not of Type PluginConfiguration. Ignoring.");
+            _logger.LogError("BasePluginConfiguration is not of Type PluginConfiguration. Ignoring: {TypeName}", baseConfig.GetType().FullName);
         }
     }
 
 
     private void ConfigureBot(PluginConfiguration config)
     {
+        if (!config.EnableBotService)
+        {
+            DisposeBotService();
+            _logger.LogInformation("Telegram bot service deactivated.");
+            return;
+        }
+
         var token = config.BotToken.Trim();
 
         // Don't reconfigure if token hasn't changed
@@ -122,19 +128,18 @@ public class TelegramBackgroundService : IHostedService, IDisposable
             return;
         }
 
+        // Dispose old service if exists
+        DisposeBotService();
+
         // Check if token is valid
         if (string.IsNullOrWhiteSpace(token) || token.Equals(Constants.DefaultBotToken))
         {
             _logger.LogInformation("Bot token is empty or default. Will not configure bot service.");
-            DisposeBotService();
             return;
         }
 
         try
         {
-            // Dispose old service if exists
-            DisposeBotService();
-
             // Create and start new service
             _botService = new TelegramBotService(token, config, _logger, _commands);
             _botService.StartAsync().ConfigureAwait(false);

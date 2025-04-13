@@ -25,13 +25,32 @@ function onTelegramAuth(user) {
     teleJellyAuthenticate(user);
 }
 
+let deviceId;
+let deviceName;
+
 // send data to API Controller
 function teleJellyAuthenticate(user) {
+
+    // ======== _deviceId2 && deviceName ========
+
+    if (!deviceName) {
+        deviceName = getDeviceName();
+    }
+    if (!deviceId) {
+        deviceId = localStorage.getItem("_deviceId2");
+        if (!deviceId) {
+            deviceId = generateDeviceId2();
+            localStorage.setItem("_deviceId2", deviceId);
+        }
+    }
+
     fetch("{{SERVER_URL}}/sso/telegram/authenticate", {
         method: "POST",
         body: JSON.stringify(user),
         headers: {
-            "Content-type": "application/json; charset=UTF-8"
+            "Content-type": "application/json; charset=UTF-8",
+            "X-DeviceName": deviceName,
+            "X-DeviceId": deviceId
         }
     }).then((response) => response.json())
         .then((json) => teleJellyResponse(json));
@@ -104,14 +123,6 @@ function setCredentialsAndRedirect(resultData) {
     );
     localStorage.setItem("enableAutoLogin", "true");
 
-    // ======== _deviceId2 ========
-
-    var deviceId = localStorage.getItem("_deviceId2");
-    if (!deviceId) {
-        deviceId = generateDeviceId2();
-        localStorage.setItem("_deviceId2", deviceId);
-    }
-
     setTimeout(() => {
         window.location.replace("{{SERVER_URL}}");
     }, 200);
@@ -119,6 +130,78 @@ function setCredentialsAndRedirect(resultData) {
 
 function generateDeviceId2() {
     return btoa(
-        [navigator.userAgent, new Date().getTime()].join("|")
+        [navigator.userAgent, new Date().toISOString()].join("|")
     ).replace(/=/g, "1");
+}
+
+// Simplified code from: https://github.com/jellyfin/jellyfin-web/blob/master/src/scripts/browser.js
+function detectBrowser() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const browser = {};
+
+    // Basic platform detection
+    browser.ipad = /ipad/.test(userAgent);
+    browser.iphone = /iphone/.test(userAgent);
+    browser.android = /android/.test(userAgent);
+
+    // TV platforms
+    browser.tizen = userAgent.includes('tizen') || window.tizen != null;
+    browser.web0s = userAgent.includes('netcast') || userAgent.includes('web0s');
+    browser.operaTv = userAgent.includes('tv') && userAgent.includes('opr/');
+    browser.xboxOne = userAgent.includes('xbox');
+    browser.ps4 = userAgent.includes('playstation 4');
+
+    // Desktop browsers
+    const edgeRegex = /(edg|edge|edga|edgios)[ /]([\w.]+)/.test(userAgent);
+    browser.edgeChromium = /(edg|edga|edgios)[ /]([\w.]+)/.test(userAgent);
+    browser.edge = edgeRegex && !browser.edgeChromium;
+    browser.chrome = /chrome/.test(userAgent) && !edgeRegex;
+    browser.firefox = /firefox/.test(userAgent);
+    browser.opera = /opera/.test(userAgent) || /opr/.test(userAgent);
+    browser.safari = !browser.chrome && !browser.edgeChromium &&
+        !browser.edge && !browser.opera &&
+        userAgent.includes('webkit');
+
+    // iPad on iOS 13+ detection
+    if (!browser.ipad && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) {
+        browser.ipad = true;
+    }
+
+    return browser;
+};
+
+const BrowserName = {
+    tizen: 'Samsung Smart TV',
+    web0s: 'LG Smart TV',
+    operaTv: 'Opera TV',
+    xboxOne: 'Xbox One',
+    ps4: 'Sony PS4',
+    chrome: 'Chrome',
+    edgeChromium: 'Edge Chromium',
+    edge: 'Edge',
+    firefox: 'Firefox',
+    opera: 'Opera',
+    safari: 'Safari'
+};
+
+function getDeviceName() {
+    const browser = detectBrowser();
+    var name = 'Web Browser - Telegram SSO'; // Default device name
+
+    for (const key in BrowserName) {
+        if (browser[key]) {
+            name = BrowserName[key];
+            break;
+        }
+    }
+
+    if (browser.ipad) {
+        name += ' iPad';
+    } else if (browser.iphone) {
+        name += ' iPhone';
+    } else if (browser.android) {
+        name += ' Android';
+    }
+
+    return name;
 }

@@ -39,7 +39,8 @@ internal abstract class CommandBase
     /// </summary>
     /// <param name="botClient">Telegram bot for sending messages etc.</param>
     /// <param name="message">Received Text message.</param>
+    /// <param name="isAdmin"></param>
     /// <param name="cancellationToken">Bot process lifetime token.</param>
     /// <returns></returns>
-    internal abstract Task Execute(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken);
+    internal abstract Task Execute(ITelegramBotClient botClient, Message message, bool isAdmin, CancellationToken cancellationToken);
 }

@@ -233,7 +233,6 @@ dotnet_diagnostic.CA1305.severity = error
 # disable warning CA1308: Normalize strings to uppercase
 dotnet_diagnostic.CA1308.severity = none
 
-# TODO: enable when false positives are fixed
 # disable warning CA1508: Avoid dead conditional code
 dotnet_diagnostic.CA1508.severity = suggestion
 

@@ -11,14 +11,22 @@ namespace Jellyfin.Plugin.TeleJelly;
 public class PluginConfiguration : BasePluginConfiguration
 {
     /// <summary>
-    ///     Gets or sets a value Used for validating user login Data hashes.
+    ///     Gets or sets the Token Used for validating Telegram login credentials and running the Bot.
     /// </summary>
     public string BotToken { get; set; } = Constants.DefaultBotToken;
 
     /// <summary>
-    ///     Gets or sets a value indicating the value Used for the Telegram Login widget...
+    ///     Gets or sets the Username of the Bot.
+    ///     Is used for the Telegram Login widget.
+    ///     Should get set automatically after a valid Bot Token was entered.
     /// </summary>
     public string BotUsername { get; set; } = "MyTelegramBot";
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the Telegram Bot Background Service should be running.
+    ///     In order to restart the Service, just disable it, Save, re-enable it and Save again.
+    /// </summary>
+    public bool EnableBotService { get; set; } = true;
 
     /// <summary>
     ///     Gets or sets a value indicating the List of users to grant admin permissions.

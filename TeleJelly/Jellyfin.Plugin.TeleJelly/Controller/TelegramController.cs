@@ -39,22 +39,20 @@ public class TelegramController : ControllerBase
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramController" /> class.
     /// </summary>
-    /// <param name="instance">for getting the configuration</param>
     /// <param name="sessionManager">for manually logging in users.</param>
     /// <param name="userManager">for getting and creating users.</param>
     /// <param name="cryptoProvider">for hashing passwords.</param>
     /// <param name="configurationManager">Instance of the <see cref="IConfigurationManager" /> interface.</param>
     /// <exception cref="Exception">if plugin was not properly initialized before usage.</exception>
     public TelegramController(
-        TeleJellyPlugin instance,
         ISessionManager sessionManager,
         IUserManager userManager,
         ICryptoProvider cryptoProvider,
         IConfigurationManager configurationManager)
     {
-        _instance = instance;
+        _instance = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
 
-        _telegramLoginService = new TelegramLoginService(instance, sessionManager, userManager, cryptoProvider);
+        _telegramLoginService = new TelegramLoginService(_instance, sessionManager, userManager, cryptoProvider);
 
         // stolen from https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Controllers/BrandingController.cs
         _brandingOptions = configurationManager.GetConfiguration<BrandingOptions>("branding");
@@ -69,7 +67,6 @@ public class TelegramController : ControllerBase
     ///     1. User will click on "Login with Telegram"
     ///     2. a Telegram.org popup opens, asking for login and bot permission
     ///     3. when confirmed by user -> will get redirected to "Confirm" method.
-    ///     TODO: cache should be cleared when custom CSS changes.
     /// </summary>
     /// <param name="fileName">to search and return.</param>
     /// <returns>Stream of file.</returns>
@@ -109,14 +106,6 @@ public class TelegramController : ControllerBase
         var botUsername = _instance.Configuration.BotUsername;
         var serverUrl = Request.GetRequestBase(_instance.Configuration);
 
-        // TODO fix cache DLL missing ? bruh
-        // var cacheKey = $"{serverUrl}/sso/Telegram/{lowerFilename}/{botUsername}";
-        // if (_instance.MemoryCache.Get<string>(cacheKey) is { } foundEntry)
-        // {
-        //     // serving from cache spares us opening the stream, reading it & replacing it.
-        //     return Content(foundEntry, mimeType);
-        // }
-
         var textStream = GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
         if (textStream == null)
         {
@@ -130,13 +119,6 @@ public class TelegramController : ControllerBase
             .Replace("{{SERVER_URL}}", serverUrl)
             .Replace("{{TELEGRAM_BOT_NAME}}", botUsername)
             .Replace("/*{{CUSTOM_CSS}}*/", _brandingOptions.CustomCss ?? string.Empty);
-
-        // var cacheEntryOptions = new MemoryCacheEntryOptions()
-        //     .SetSlidingExpiration(TimeSpan.FromMinutes(5))
-        //     .SetAbsoluteExpiration(TimeSpan.FromMinutes(60))
-        //     .SetPriority(CacheItemPriority.Low);
-        //
-        // _instance.MemoryCache.Set(cacheKey, replaced, cacheEntryOptions);
 
         return Content(replaced, mimeType);
     }

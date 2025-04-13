@@ -14,7 +14,7 @@ internal class CommandCheckUsernames(TelegramBotService telegramBotService) : Co
 
 
     internal override async Task Execute(ITelegramBotClient botClient,
-        Message message, CancellationToken cancellationToken)
+        Message message, bool isAdmin, CancellationToken cancellationToken)
     {
         var members = await botClient.GetChatAdministrators(message.Chat.Id, cancellationToken);
         var missingUsernames = members

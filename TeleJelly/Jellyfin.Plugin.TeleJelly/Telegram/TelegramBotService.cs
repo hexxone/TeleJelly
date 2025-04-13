@@ -16,14 +16,16 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram;
 /// </summary>
 public class TelegramBotService : IDisposable
 {
-    private readonly ILogger _logger;
     private readonly TelegramBotClient _botClient;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly CommandBase[] _commands;
 
+    internal readonly ILogger _logger;
     internal readonly PluginConfiguration _config;
 
     private User? _botInfo;
+
+    internal DateTime? _startTime;
 
 
     /// <summary>
@@ -57,6 +59,7 @@ public class TelegramBotService : IDisposable
 
             _botInfo = await _botClient.GetMe();
             _logger.LogInformation("Telegram Bot listening as @{UserName}", _botInfo.Username);
+            _startTime = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
@@ -98,7 +101,7 @@ public class TelegramBotService : IDisposable
         var user = member.NewChatMember.User;
         var groupId = member.Chat.Id;
 
-        var jellyfinGroup = _config.TelegramGroups.Find(g => g.LinkedTelegramGroupId == groupId);
+        var group = _config.TelegramGroups.Find(g => g.TelegramGroupChat?.TelegramChatId == groupId);
 
         if (string.IsNullOrEmpty(user.Username))
         {
@@ -115,42 +118,42 @@ public class TelegramBotService : IDisposable
         // User added to group
         if (member.NewChatMember.Status == ChatMemberStatus.Member)
         {
-            if (jellyfinGroup == null)
+            if (group == null)
             {
                 // TODO if self, print "welcome" message / instructions - otherwise: maybe print message "group not linked" ?
 
                 return;
             }
 
-            if (!jellyfinGroup.UserNames.Contains(user.Username))
+            if (!group.UserNames.Contains(user.Username))
             {
-                jellyfinGroup.UserNames.Add(user.Username);
+                group.UserNames.Add(user.Username);
                 await _botClient.SendMessage(
                     groupId,
                     $"Added @{user.Username} to TeleJelly whitelist",
                     cancellationToken: cancellationToken);
 
-                _logger.LogInformation("Added @{UserName} to TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
+                _logger.LogInformation("Added @{UserName} to TeleJelly group '{Group}'", user.Username, group.GroupName);
             }
         }
         // User removed from group
         else if (member.NewChatMember.Status is ChatMemberStatus.Left or ChatMemberStatus.Kicked)
         {
-            if (jellyfinGroup == null)
+            if (group == null)
             {
                 return;
             }
 
             // TODO if self, remove group linking and maybe send info to administrators?
 
-            if (jellyfinGroup.UserNames.Remove(user.Username))
+            if (group.UserNames.Remove(user.Username))
             {
                 await _botClient.SendMessage(
                     groupId,
                     $"Removed @{user.Username} from TeleJelly whitelist",
                     cancellationToken: cancellationToken);
 
-                _logger.LogInformation("Removed @{UserName} from TeleJelly group '{Group}'", user.Username, jellyfinGroup.GroupName);
+                _logger.LogInformation("Removed @{UserName} from TeleJelly group '{Group}'", user.Username, group.GroupName);
             }
         }
     }
@@ -202,7 +205,7 @@ public class TelegramBotService : IDisposable
             }
 
             _logger.LogDebug("Executing command: {Command}", command.Command);
-            await command.Execute(_botClient, message, cancellationToken);
+            await command.Execute(_botClient, message, isAdmin, cancellationToken);
             isProcessed = true;
             break;
         }
@@ -261,6 +264,7 @@ public class TelegramBotService : IDisposable
     /// </summary>
     public void Dispose()
     {
+        _startTime = null;
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
     }

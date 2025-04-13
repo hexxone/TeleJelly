@@ -120,8 +120,9 @@
                                     <input class="sso-text"
                                            id="TgGroupName"
                                            is="emby-input"
-                                           maxlength="30"
-                                           onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9_]/g, '')"
+                                           minlength="3"
+                                           maxlength="32"
+                                           onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9_\-]/g, '')"
                                            placeholder="New group name"
                                            type="text"/>
                                     <button class="button-submit emby-button"
@@ -190,7 +191,7 @@
                         <li>Enter all TG-Usernames which should be part of the Group.</li>
                         <li><strong>When finished editing, don't forget to click "Save"</strong></li>
                     </ol>
-                    <p>In order to link a Group to Telegram, you can use the <a href="TODO">/</a></p>
+                    <p>In order to link a Group to Telegram, you can use the <a id="BotLinkCommandUrl" href="TODO_BOT_LINK_COMMAND">/link command in Telegram</a></p>
                 </fieldset>
 
 
@@ -209,7 +210,8 @@
                     <div id="ExampleBranding">Please enable JavaScript.</div>
                     <pre id="ExampleBrandingCode">Please enable JavaScript.</pre>
                     <p>
-                        To set the branding, you can copy above code and apply it here: <a href="https://t.me/TeleJelly">"General" Settings</a>
+                        To set the branding, you can copy above code and apply it in the:
+                        <a id="GeneralSettingsTabUrl" href="{{SERVER_URL}}/web/index.html#/dashboard/settings">"General" Settings tab</a>.
                     </p>
                 </fieldset>
 

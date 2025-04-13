@@ -158,8 +158,8 @@ public class TelegramLoginService
         {
             App = Constants.PluginName,
             AppVersion = GetType().Assembly.GetName().Version?.ToString() ?? "0.0.0.1",
-            DeviceId = request.Headers[HeaderNames.UserAgent].ToString(),
-            DeviceName = "TelegramBrowserSSO",
+            DeviceName = GetDeviceName(request),
+            DeviceId =  GetDeviceId(request),
             RemoteEndPoint = request.HttpContext.GetNormalizedRemoteIP().ToString(),
             UserId = user.Id,
             Username = user.Username
@@ -169,6 +169,7 @@ public class TelegramLoginService
 
         return await _sessionManager.AuthenticateDirect(authRequest).ConfigureAwait(false);
     }
+
 
     /// <summary>
     ///     Verifies the given user credentials with given hash by Bot Token.
@@ -221,6 +222,38 @@ public class TelegramLoginService
             return hash[(i * 2) + 1] != 87 + (signature[i] & 0xF) + ((((signature[i] & 0xF) - 10) >> 31) & -39);
         }
     }
+
+
+    private static string GetDeviceName(HttpRequest request)
+    {
+        var deviceName = "Web Browser - Telegram SSO";
+        if (request.Headers.TryGetValue("X-DeviceName", out var deviceNameHeader) && !string.IsNullOrWhiteSpace(deviceNameHeader))
+        {
+            deviceName = deviceNameHeader!;
+        }
+
+        return deviceName;
+    }
+
+    private static string GetDeviceId(HttpRequest request)
+    {
+        string deviceId;
+        if (request.Headers.TryGetValue("X-DeviceId", out var deviceIdHeader) && !string.IsNullOrWhiteSpace(deviceIdHeader))
+        {
+            deviceId = deviceIdHeader!;
+        }
+        else if (request.Headers.TryGetValue(HeaderNames.UserAgent, out var userAgent) && !string.IsNullOrWhiteSpace(userAgent))
+        {
+            deviceId = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userAgent}|{DateTime.UtcNow}"));
+        }
+        else
+        {
+            deviceId = Convert.ToBase64String(Encoding.UTF8.GetBytes($"Unknown Browser|{DateTime.UtcNow}"));
+        }
+
+        return deviceId;
+    }
+
 
     /// <summary>
     ///     Small helper for finding the Value for a key, ignoring the CaSiNg Of ThE sTrInG.
@@ -327,7 +360,7 @@ public class TelegramLoginService
             return false;
         }
 
-        var stream = _instance.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
+        var stream = GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath);
         if (stream == null)
         {
             // _logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);

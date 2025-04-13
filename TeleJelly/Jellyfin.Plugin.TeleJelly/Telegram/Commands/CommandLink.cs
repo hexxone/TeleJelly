@@ -10,7 +10,7 @@ internal class CommandLink(TelegramBotService telegramBotService) : CommandBase(
     internal override string Command => "link";
     internal override bool NeedsAdmin => true;
 
-    internal override async Task Execute(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken)
+    internal override async Task Execute(ITelegramBotClient botClient, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
         var parts = message.Text!.Split(' ');
         if (parts.Length != 2)
@@ -19,6 +19,8 @@ internal class CommandLink(TelegramBotService telegramBotService) : CommandBase(
                 message.Chat.Id,
                 "Usage: /link <telejelly_group_name>",
                 cancellationToken: cancellationToken);
+
+            return;
         }
 
         var groupName = parts[1];
@@ -30,10 +32,15 @@ internal class CommandLink(TelegramBotService telegramBotService) : CommandBase(
                 message.Chat.Id,
                 $"TeleJelly group '{groupName}' not found",
                 cancellationToken: cancellationToken);
+
             return;
         }
 
-        group.LinkedTelegramGroupId = message.Chat.Id;
+        group.TelegramGroupChat = new TelegramGroupChat { TelegramChatId = message.Chat.Id, SyncUserNames = true, NotifyNewContent = true, };
+
+        // TODO test saving the config
+        TeleJellyPlugin.Instance!.SaveConfiguration(_telegramBotService._config);
+
         await botClient.SendMessage(
             message.Chat.Id,
             $"Linked this Telegram group to TeleJelly group '{groupName}'",
