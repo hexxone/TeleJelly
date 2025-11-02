@@ -97,7 +97,9 @@ public class TelegramBotService : IDisposable
                 var needsConfigSave = await HandleChatMemberUpdate(update, cancellationToken);
                 if (needsConfigSave)
                 {
-                    // TODO test saving the config
+                    // Manually test saving the config by:
+                    // 1. Triggering a ChatMemberUpdate event (e.g., by adding a user to a group).
+                    // 2. Verifying that the plugin's configuration file is updated with the new data.
                     TeleJellyPlugin.Instance!.SaveConfiguration(_config);
                 }
             }
@@ -146,8 +148,23 @@ public class TelegramBotService : IDisposable
         {
             if (telegramGroup == null)
             {
-                // TODO if own ID, print "welcome" message / instructions - otherwise: maybe print message "group not linked" ?
-
+                // TODO put / reuse message from Constants
+                if (user.Id == _botInfo?.Id)
+                {
+                    await _client.SendMessage(
+                        groupId,
+                        "Hello! I'm TeleJelly, your Jellyfin bot.\n" +
+                        "To link this group to a Jellyfin group, use the `/link` command followed by the Jellyfin group name.\n" +
+                        "For example: `/link MyJellyfinGroup`",
+                        cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    await _client.SendMessage(
+                        groupId,
+                        "This group is not linked to Jellyfin. Please ask an administrator to link this group using the `/link` command.",
+                        cancellationToken: cancellationToken);
+                }
                 return false;
             }
 
@@ -176,7 +193,17 @@ public class TelegramBotService : IDisposable
                 return false;
             }
 
-            // TODO if own ID, remove group linking and maybe send info to administrators?
+            if (user.Id == _botInfo?.Id)
+            {
+                _config.TelegramGroups.Remove(telegramGroup);
+                var adminMentions = string.Join(" ", _config.AdminUserNames.Select(admin => $"@{admin}"));
+                var message = $"The bot has been removed from the group '{telegramGroup.GroupName}' and the link has been removed.\n\n{adminMentions}";
+                await _client.SendMessage(
+                    groupId,
+                    message,
+                    cancellationToken: cancellationToken);
+                return true;
+            }
 
             if (telegramGroup.TelegramGroupChat!.SyncUserNames && telegramGroup.UserNames.Remove(user.Username))
             {

@@ -180,14 +180,14 @@
                                 <label>
                                     <span>Linked Telegram Group: </span><span id="LinkedTelegramGroupId">None</span>
                                 </label>
-                                <label>
-                                    <!-- TODO add label + jellyfin/empby styling for this input -->
-                                    <input type="checkbox" id="SyncUserNames" />
-                                </label>
-                                <label>
-                                    <!-- TODO add label + jellyfin/empby styling for this input -->
-                                    <input type="checkbox" id="NotifyNewContent" />
-                                </label>
+                                <div>
+                                    <input type="checkbox" is="emby-checkbox" id="SyncUserNames" />
+                                    <label for="SyncUserNames">Sync Usernames</label>
+                                </div>
+                                <div>
+                                    <input type="checkbox" is="emby-checkbox" id="NotifyNewContent" />
+                                    <label for="NotifyNewContent">Notify on New Content</label>
+                                </div>
                                 <p>Telegram Usernames:</p>
                                 <textarea class="username-list sso-line-list emby-textarea"
                                           id="UserNames"

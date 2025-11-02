@@ -194,6 +194,10 @@ const tgConfigPage = {
             EnableAllFolders: page.querySelector("#EnableAllFolders").checked,
             EnabledFolders: tgConfigPage.serializeEnabledFolders(page),
             UserNames: tgConfigPage.parseTextList(page.querySelector("#UserNames")),
+            TelegramGroupChat: {
+                SyncUserNames: page.querySelector("#SyncUserNames").checked,
+                NotifyNewContent: page.querySelector("#NotifyNewContent").checked,
+            }
         };
 
         tgConfigPage.modifiedGroups.set(tgConfigPage.currentGroup, groupData);
@@ -247,8 +251,10 @@ const tgConfigPage = {
             const enableAllCheckbox = page.querySelector("#EnableAllFolders");
             enableAllCheckbox.checked = groupData.EnableAllFolders;
 
-            page.querySelector("#LinkedTelegramGroupId").innerHTML = groupData.LinkedTelegramGroupId ?? "None";
+            page.querySelector("#LinkedTelegramGroupId").innerHTML = groupData.TelegramGroupChat?.TelegramChatId ?? "None";
             page.querySelector("#UserNames").value = groupData.UserNames.join("\r\n");
+            page.querySelector("#SyncUserNames").checked = groupData.TelegramGroupChat?.SyncUserNames ?? true;
+            page.querySelector("#NotifyNewContent").checked = groupData.TelegramGroupChat?.NotifyNewContent ?? true;
         }
     },
 
@@ -305,7 +311,12 @@ const tgConfigPage = {
                         // keep non-overridden values.
                         config.TelegramGroups[groupIndex] = {
                             ...config.TelegramGroups[groupIndex],
-                            ...groupData
+                            ...groupData,
+                            // hacky hack
+                            TelegramGroupChat: {
+                                ...config.TelegramGroups[groupIndex].TelegramGroupChat,
+                                ...groupData.TelegramGroupChat
+                            }
                         };
                     }
                 }

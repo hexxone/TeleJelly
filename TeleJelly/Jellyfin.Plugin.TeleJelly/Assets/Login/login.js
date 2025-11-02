@@ -18,7 +18,19 @@ const loadingSpinner = {
     }
 };
 
-// TODO on page loaded, check logged in ? -> redirect home
+// on page loaded, check logged in ? -> redirect home
+window.onload = function() {
+    const creds = localStorage.getItem("jellyfin_credentials");
+    if (creds) {
+        // TODO validate token valid duration
+        const parsedCreds = JSON.parse(creds);
+        if (parsedCreds && parsedCreds.Servers && parsedCreds.Servers.length > 0) {
+            // TODO fix this - what about if BaseUrl is set ? what if we only use /sso/teleGRAM (without login or with different casing)
+            const serverUrl = window.location.href.replace("/sso/Telegram/login", "");
+            window.location.replace(serverUrl);
+        }
+    }
+};
 
 // get data from login widget
 function onTelegramAuth(user) {

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -49,33 +50,81 @@ public class CommandRegister : ICommandBase
             if (isAdmin)
             {
                 var members = await botClient.GetChatAdministrators(message.Chat.Id, cancellationToken);
-                var missingUsernames = members
-                    .Where(m => string.IsNullOrEmpty(m.User.Username))
-                    .Select(m => $"{m.User.FirstName} {m.User.LastName}")
-                    .ToArray();
+                var addedUsers = new List<string>();
+                var existingUsers = new List<string>();
+                var missingUsernames = new List<string>();
 
-                // TODO instead, add all people with usernames to the group.
-                //  then print who got added, who is already on the list from these names and who doesnt have a name.
+                foreach (var member in members)
+                {
+                    if (string.IsNullOrEmpty(member.User.Username))
+                    {
+                        missingUsernames.Add($"{member.User.FirstName} {member.User.LastName}");
+                    }
+                    else if (linkedGroup.UserNames.Contains(member.User.Username))
+                    {
+                        existingUsers.Add(member.User.Username);
+                    }
+                    else
+                    {
+                        linkedGroup.UserNames.Add(member.User.Username);
+                        addedUsers.Add(member.User.Username);
+                    }
+                }
 
+                var response = "TeleJelly Registration Report:\n";
+                if (addedUsers.Any())
+                {
+                    TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
+                    response += $"\nNow Added Users:\n{string.Join("\n", addedUsers)}\n";
+                }
+                if (existingUsers.Any())
+                {
+                    response += $"\nExisting Users:\n{string.Join("\n", existingUsers)}\n";
+                }
                 if (missingUsernames.Any())
                 {
-                    await botClient.SendMessage(
-                        message.Chat.Id,
-                        "The following members need to set a username to use TeleJelly SSO:\n" +
-                        string.Join("\n", missingUsernames),
-                        cancellationToken: cancellationToken);
+                    response += $"\nUsers without a username:\n{string.Join("\n", missingUsernames)}\n";
                 }
-                else
-                {
-                    await botClient.SendMessage(
-                        message.Chat.Id,
-                        "All members have usernames set",
-                        cancellationToken: cancellationToken);
-                }
+
+                await botClient.SendMessage(
+                    message.Chat.Id,
+                    response,
+                    cancellationToken: cancellationToken);
             }
             else
             {
-                // TODO try to self-add the user.
+                var user = message.From;
+                if (user != null && !string.IsNullOrEmpty(user.Username))
+                {
+                    if (linkedGroup.UserNames.Contains(user.Username))
+                    {
+                        await botClient.SendMessage(
+                            message.Chat.Id,
+                            $"You are already added to the group, @{user.Username}.",
+                            cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        var baseUrl = telegramBotService._config.LoginBaseUrl;
+                        var serverUrl = baseUrl != null ? $"\nYou can now login here: {baseUrl}" : "";
+
+                        linkedGroup.UserNames.Add(user.Username);
+                        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
+                        await botClient.SendMessage(
+                            message.Chat.Id,
+                            $"Welcome @{user.Username}! You have been added to the TeleJelly group.{serverUrl}",
+                            cancellationToken: cancellationToken);
+                    }
+                }
+                else
+                {
+                    var userName = user != null ? $"{user.FirstName} {user.LastName}" : "user";
+                    await botClient.SendMessage(
+                        message.Chat.Id,
+                        $"Warning: User '{userName}' does not have a Telegram username set. " +
+                        "You need to set a username before using TeleJelly login.",
+                        cancellationToken: cancellationToken);
+                }
             }
         }
         else

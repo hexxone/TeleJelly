@@ -44,7 +44,9 @@ public class CommandUnlink : ICommandBase
         {
             group.TelegramGroupChat = null;
 
-            // TODO test saving the config
+            // Manually test saving the config by:
+            // 1. Unlinking a group using the `/unlink` command.
+            // 2. Verifying that the plugin's configuration file is updated to remove the group link.
             TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
 
             await botClient.SendMessage(

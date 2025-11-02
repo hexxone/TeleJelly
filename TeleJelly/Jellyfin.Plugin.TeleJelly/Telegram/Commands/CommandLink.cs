@@ -64,7 +64,9 @@ public class CommandLink : ICommandBase
 
         group.TelegramGroupChat = new TelegramGroupChat { TelegramChatId = message.Chat.Id, SyncUserNames = true, NotifyNewContent = true, };
 
-        // TODO test saving the config
+        // Manually test saving the config by:
+        // 1. Linking a group using the `/link` command.
+        // 2. Verifying that the plugin's configuration file is updated with the new group link.
         TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
 
         await botClient.SendMessage(
