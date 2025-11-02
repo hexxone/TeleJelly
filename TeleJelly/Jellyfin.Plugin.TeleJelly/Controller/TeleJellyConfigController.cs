@@ -3,8 +3,6 @@ using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes;
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Model.Branding;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,19 +19,6 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Authorize(Policy = "RequiresElevation")]
 public class TeleJellyConfigController : ControllerBase
 {
-    private readonly PluginConfiguration _pluginConfiguration;
-    private readonly BrandingOptions _brandingOptions;
-
-    /// <summary>
-    ///     Initializes a new instance of the <see cref="TeleJellyConfigController"/> class.
-    /// </summary>
-    public TeleJellyConfigController(TeleJellyPlugin plugin, IConfigurationManager configurationManager)
-    {
-        _pluginConfiguration = plugin.Configuration;
-
-        _brandingOptions = configurationManager.GetConfiguration<BrandingOptions>("branding");
-    }
-
     /// <summary>
     ///     Validates a Telegram Bot Token against the official API.
     /// </summary>
@@ -50,7 +35,7 @@ public class TeleJellyConfigController : ControllerBase
         {
             var botClient = new TelegramBotClient(request.Token);
 
-            // sometimes the api is reeeeaaally slow...
+            // sometimes the api is reeeeaaally slow... or just throttling requests ?
             using var ct = new CancellationTokenSource(TimeSpan.FromMilliseconds(10000));
 
             var botInfo = await botClient.GetMe(ct.Token);

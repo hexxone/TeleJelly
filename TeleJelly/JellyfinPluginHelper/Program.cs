@@ -39,8 +39,10 @@ const string GitProject = "TeleJelly";
 const string GitManifestBranch = "dist";
 const string GitManifestPath = "manifest.json";
 
-const string TargetAbi = "10.9.0.0";
-const string ChangeMessage = "Automatic Release by Github Actions: ";
+const string TargetAbi = "10.10.0.0"; // TODO get from installed nuget version?
+const string ChangelogPrefix = "Automatic Release by Github Actions: ";
+
+const string ManifestUrl = $"https://raw.githubusercontent.com/{GitUser}/{GitProject}/{GitManifestBranch}/{GitManifestPath}";
 
 if (args.Length != 3)
 {
@@ -78,14 +80,13 @@ static async Task Main(string version, string solutionDir, string dllPath)
     var zipPath = Path.Combine(solutionDir, zipFilename);
     var sourceUrl = $"https://github.com/{GitUser}/{GitProject}/releases/download/{version}/{zipFilename}";
 
-    MakeZip(zipPath, new[] { dllPath, metaPath });
+    MakeZip(zipPath, [dllPath, metaPath]);
 
     var checksum = Md5Sum(zipPath);
     var manifestVersion = MakeManifestVersion(checksum, sourceUrl, version, timestamp);
 
-    var manifestUrl = $"https://raw.githubusercontent.com/{GitUser}/{GitProject}/{GitManifestBranch}/{GitManifestPath}";
     var manifestTargetPath = Path.Combine(solutionDir, "manifest.json");
-    await AddManifestVersion(manifestUrl, manifestTargetPath, manifestVersion);
+    await AddManifestVersion(ManifestUrl, manifestTargetPath, manifestVersion);
 
     Console.WriteLine("JPH - Done.");
 }
@@ -121,7 +122,7 @@ static PluginVersion MakeManifestVersion(string checksum, string sourceUrl, stri
         SourceUrl = sourceUrl,
         Timestamp = timestamp,
         Version = FixVersionString(version),
-        Changelog = $"{ChangeMessage} https://github.com/{GitUser}/{GitProject}/releases/tag/{version}"
+        Changelog = $"{ChangelogPrefix} https://github.com/{GitUser}/{GitProject}/releases/tag/{version}"
     };
 }
 
@@ -142,7 +143,7 @@ static async Task AddManifestVersion(string manifestUrl, string manifestTargetPa
     }
 
     var pluginManifest = pluginManifests[0];
-    pluginManifest.Versions ??= new List<PluginVersion>();
+    pluginManifest.Versions ??= [];
     pluginManifest.Versions.Add(manifestVersion);
 
     var json = JsonSerializer.Serialize(pluginManifests, new JsonSerializerOptions { WriteIndented = true });
@@ -168,7 +169,7 @@ static void UpdateMeta(string metaPath, string version, string timestamp)
     meta["targetAbi"] = TargetAbi;
     meta["timestamp"] = timestamp;
     meta["version"] = FixVersionString(version);
-    meta["changelog"] = $"{ChangeMessage} https://github.com/{GitUser}/{GitProject}/releases/tag/{version}";
+    meta["changelog"] = $"{ChangelogPrefix} https://github.com/{GitUser}/{GitProject}/releases/tag/{version}";
 
     // Serialize and write back to meta.json
     var updatedMetaJson = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });

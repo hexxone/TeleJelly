@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,35 +10,50 @@ using Telegram.Bot.Types.Enums;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
-internal class CommandStart(TelegramBotService telegramBotService) : CommandBase(telegramBotService)
+/// <summary>
+///     Command for printing the info message and/or linking the bot initially.
+/// </summary>
+// ReSharper disable once UnusedType.Global
+public class CommandStart : ICommandBase
 {
-    internal override string Command => "start";
-    internal override bool NeedsAdmin => false;
 
-    internal override async Task Execute(ITelegramBotClient botClient, Message message, bool isAdmin, CancellationToken cancellationToken)
+    /// <summary>
+    ///     Gets what command to trigger on.
+    /// </summary>
+    public string Command => "start";
+
+    /// <summary>
+    ///     Gets a value indicating whether this command can only be run as Admin.
+    /// </summary>
+    public bool NeedsAdmin => false;
+
+    /// <summary>
+    ///     The action code to trigger for the Command.
+    /// </summary>
+    public async Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
+        var botClient = telegramBotService._client;
         switch (message.Chat.Type)
         {
             case ChatType.Group or ChatType.Supergroup:
-                await HandleGroupMessage(botClient, message, isAdmin, cancellationToken);
+                await HandleGroupMessage(telegramBotService, message, isAdmin, cancellationToken);
                 break;
 
             case ChatType.Private:
-                // IN PM -> Print info message
                 await botClient.SendMessage(
                     message.Chat.Id,
-                    "Welcome to TeleJelly! I can help you authenticate with your Jellyfin server using Telegram.\n\n" +
-                    "To get started, add me to a group and use the /link command to connect it to your Jellyfin server.\n\n" +
-                    "For more information, please check the TeleJelly documentation or contact your Jellyfin administrator.",
+                    Constants. PrivateAdminWelcomeMessage,
                     cancellationToken: cancellationToken);
                 break;
         }
     }
 
-    private async Task HandleGroupMessage(ITelegramBotClient botClient, Message message, bool isAdmin,
-        CancellationToken cancellationToken)
+    private async Task HandleGroupMessage(TelegramBotService telegramBotService,
+        Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        var linkedGroup = _telegramBotService._config.TelegramGroups.Find(g =>
+        var botClient = telegramBotService._client;
+
+        var linkedGroup = telegramBotService._config.TelegramGroups.FirstOrDefault(g =>
             g.TelegramGroupChat != null && g.TelegramGroupChat.TelegramChatId == message.Chat.Id);
 
         // 1. If Group already linked, print info message
@@ -53,45 +69,51 @@ internal class CommandStart(TelegramBotService telegramBotService) : CommandBase
         // 2. If Group unlinked and has startgroup parameter
         if (message.Text != null && message.Text.Contains(' '))
         {
-            var parameter = message.Text.Split(' ', 2)[1];
-            if (parameter.Length <= 64)
+            try
             {
-                try
-                {
-                    // Decode the base64 parameter
-                    var decodedBytes = Convert.FromBase64String(parameter);
-                    var decodedText = Encoding.UTF8.GetString(decodedBytes);
+                telegramBotService._logger.LogInformation("Processing start-group parameter: Chat={ChatId} Msg='{Msg}'", message.Chat.Id, message.Text);
 
-                    // Check if it matches the expected format "link <groupname>" and User is admin..
-                    if (decodedText.StartsWith("link ", StringComparison.OrdinalIgnoreCase) && isAdmin)
-                    {
-                        var groupName = decodedText.Substring(5); // Remove "link " prefix
-
-                        await TryLinkGroup(botClient, message.Chat.Id, groupName, cancellationToken);
-                        return;
-                    }
-                }
-                catch (Exception ex)
+                // fixes broken encoded input strings so they can be converted by C#
+                var parameter = message.Text.Split(' ', 2)[1];
+                int mod4 = parameter.Length % 4;
+                if (mod4 > 0)
                 {
-                    // Log error but don't expose it to users
-                    _telegramBotService._logger.LogError("Error processing start parameter: {Msg}", ex.Message);
+                    parameter += new string('=', 4 - mod4);
                 }
+
+                // Decode the base64 parameter
+                var decodedText = Encoding.UTF8.GetString(Convert.FromBase64String(parameter));
+
+                // Check if it matches the expected format "link <groupname>" and User is admin.
+                if (decodedText.StartsWith(Constants.LinkPrefix, StringComparison.OrdinalIgnoreCase) && isAdmin)
+                {
+                    var groupName = decodedText.Substring(Constants.LinkPrefix.Length);
+
+                    await TryLinkGroup(telegramBotService, message.Chat.Id, groupName, cancellationToken);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't expose it to users
+                telegramBotService._logger.LogError("Error processing start parameter: {Msg}", ex.Message);
             }
         }
 
         // 3. Else: Print info message for unlinked group
         await botClient.SendMessage(
             message.Chat.Id,
-            "Welcome to TeleJelly! This group is not linked to any TeleJelly group yet.\n\n" +
-            "An administrator can link this group using the /link command.",
+            Constants. GroupWelcomeMessage,
             cancellationToken: cancellationToken);
     }
 
-    private async Task TryLinkGroup(ITelegramBotClient botClient, long chatId,
-        string groupName, CancellationToken cancellationToken)
+    private async Task TryLinkGroup(TelegramBotService telegramBotService,
+        long chatId, string groupName, CancellationToken cancellationToken)
     {
+        var botClient = telegramBotService._client;
+
         // Find the group by name
-        var group = _telegramBotService._config.TelegramGroups.Find(g => g.GroupName == groupName);
+        var group = telegramBotService._config.TelegramGroups.FirstOrDefault(g => g.GroupName == groupName);
 
         if (group == null)
         {
@@ -105,7 +127,7 @@ internal class CommandStart(TelegramBotService telegramBotService) : CommandBase
         group.TelegramGroupChat = new TelegramGroupChat { TelegramChatId = chatId, SyncUserNames = true, NotifyNewContent = true };
 
         // Save the configuration
-        TeleJellyPlugin.Instance!.SaveConfiguration(_telegramBotService._config);
+        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
 
         await botClient.SendMessage(chatId,
             $"Successfully linked this Telegram group to TeleJelly group '{groupName}'.",

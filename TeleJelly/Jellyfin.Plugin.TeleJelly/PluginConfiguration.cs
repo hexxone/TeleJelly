@@ -8,8 +8,16 @@ namespace Jellyfin.Plugin.TeleJelly;
 /// <summary>
 ///     Customized Plugin Configuration.
 /// </summary>
+// ReSharper disable once ClassNeverInstantiated.Global
 public class PluginConfiguration : BasePluginConfiguration
 {
+    /// <summary>
+    ///     Gets or sets the Base-Domain and BaseURL which should be used to log-in on the Server.
+    ///     This needs to be the same domain as used for the @BotFather /setdomain command.
+    ///     Will mainly be used for telling your Telegram-users about this Server.
+    /// </summary>
+    public string? LoginBaseUrl { get; set; }
+
     /// <summary>
     ///     Gets or sets the Token Used for validating Telegram login credentials and running the Bot.
     /// </summary>
@@ -20,7 +28,7 @@ public class PluginConfiguration : BasePluginConfiguration
     ///     Is used for the Telegram Login widget.
     ///     Should get set automatically after a valid Bot Token was entered.
     /// </summary>
-    public string BotUsername { get; set; } = "MyTelegramBot";
+    public string BotUsername { get; set; } = "INVALID_BOT_TOKEN";
 
     /// <summary>
     ///     Gets or sets a value indicating whether the Telegram Bot Background Service should be running.
@@ -32,7 +40,7 @@ public class PluginConfiguration : BasePluginConfiguration
     ///     Gets or sets a value indicating the List of users to grant admin permissions.
     ///     Be careful! Usernames in Telegram can be sold, bought and changed easily.
     /// </summary>
-    public List<string> AdminUserNames { get; set; } = new();
+    public List<string> AdminUserNames { get; set; } = [];
 
     /// <summary>
     ///     Gets or sets a Hard Cap for Login Sessions for User with Telegram..
@@ -55,5 +63,5 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     [XmlArray("TelegramGroups")]
     [XmlArrayItem(typeof(TelegramGroup), ElementName = "TelegramGroups")]
-    public List<TelegramGroup> TelegramGroups { get; set; } = new();
+    public List<TelegramGroup> TelegramGroups { get; set; } = [];
 }

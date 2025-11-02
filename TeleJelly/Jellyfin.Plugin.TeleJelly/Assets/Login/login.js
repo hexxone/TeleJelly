@@ -18,6 +18,7 @@ const loadingSpinner = {
     }
 };
 
+// TODO on page loaded, check logged in ? -> redirect home
 
 // get data from login widget
 function onTelegramAuth(user) {

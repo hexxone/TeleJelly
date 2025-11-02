@@ -42,6 +42,21 @@ public static class Constants
     public static string DefaultBotToken => "12345678:xxxxxxxxxxxxxxx";
 
 
+    internal const string GroupWelcomeMessage =
+        "Welcome to TeleJelly! This group is not linked yet.\n\n" +
+        "An administrator can do this using the /link command.";
+
+    internal const string PrivateAdminWelcomeMessage =
+        "Welcome to TeleJelly! I can help you and your friends to authenticate with your Jellyfin server using Telegram.\n" +
+        "To get started, add me to a group and use the /link command to connect it to your TeleJelly group.\n" +
+        "For more information, please check the TeleJelly documentation.";
+
+    internal const string PrivateUserWelcomeMessage =
+        "Welcome to TeleJelly! Unfortunately you are not an Administrator.\n\n" +
+        "Please interact with me through a linked group.";
+
+    internal const string LinkPrefix = "l:";
+
     /// <summary>
     ///     Gets the always available list of extra files for Telegram SSO.
     ///     e.g. Fonts and CSS.

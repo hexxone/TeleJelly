@@ -1,17 +1,4 @@
-function encodeToBase64UtF8(str) {
-    // First create a UTF-8 encoded Uint8Array from the string
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(str);
-
-    // Convert the Uint8Array to a Base64 string
-    // btoa only works with binary strings, so we need to convert the bytes first
-    let binaryString = '';
-    bytes.forEach(byte => {
-        binaryString += String.fromCharCode(byte);
-    });
-
-    return btoa(binaryString);
-}
+const LinkPrefix = "l:";
 
 const tgConfigPage = {
     pluginUniqueId: "4b71013d-00ba-470c-9e4d-0c451a435328",
@@ -35,7 +22,7 @@ const tgConfigPage = {
 
     populateConfiguration: (page, config) => {
         if (config.BotToken) {
-            tgTokenHelper.validateToken(config.BotToken);
+            tgTokenHelper.validateToken(page, config.BotToken);
         }
 
         const botUserName = config.BotUsername || tgTokenHelper.currentUserName;
@@ -43,6 +30,7 @@ const tgConfigPage = {
         // Set basic config values
         page.querySelector("#TgBotToken").value = config.BotToken || tgTokenHelper.currentToken;
         page.querySelector("#TgBotUsername").innerHTML = botUserName;
+        page.querySelector("#LoginBaseUrl").value = config.LoginBaseUrl ?? '';
         page.querySelector("#TgAdministrators").value = config.AdminUserNames?.join("\r\n") || "";
         page.querySelector("#ForcedUrlScheme").value = config.ForcedUrlScheme || "none";
     },
@@ -80,9 +68,13 @@ const tgConfigPage = {
             window.ApiClient.getPluginConfiguration(
                 tgConfigPage.pluginUniqueId
             ).then((config) => {
+                const baseUrlValue = (page.querySelector("#LoginBaseUrl").value ?? "").trim();
+                const finalBaseUrl = baseUrlValue.length ? baseUrlValue : undefined;
+
                 // apply basic config
                 config.BotToken = tgTokenHelper.currentToken;
                 config.BotUsername = tgTokenHelper.currentUserName;
+                config.LoginBaseUrl = finalBaseUrl;
                 config.AdminUserNames = tgConfigPage.parseTextList(page.querySelector("#TgAdministrators"));
                 config.ForcedUrlScheme = page.querySelector("#ForcedUrlScheme").value || "none";
 
@@ -213,8 +205,8 @@ const tgConfigPage = {
         console.debug(`Selecting group: ${groupName}.`);
 
         // set Bot Link-Command Url
-        const encodedText = encodeToBase64UtF8(`link ${groupName}`);
-        page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${botUserName}?startgroup=${encodedText}`;
+        const encodedText = btoa(`${LinkPrefix}${groupName}`);
+        page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${tgTokenHelper.currentUserName}?startgroup=${encodedText}`;
 
         // Update selected state in UI
         page.querySelectorAll('.group-item').forEach(item => {
@@ -343,7 +335,7 @@ const tgConfigPage = {
                 IsHidden: false
             })
         ).then((folders) => {
-            tgConfigPage.populateFolderElements(folderContainer, folders);
+            tgConfigPage.populateFolderElements(folderContainer, folders.Items);
         });
     },
 
@@ -366,12 +358,12 @@ const tgConfigPage = {
     container: html element
     folders.Items: array of objects, with .Id & .Name
     */
-    populateFolderElements: (container, folders) => {
+    populateFolderElements: (container, folderItems) => {
         container
             .querySelectorAll(".emby-checkbox-label")
             .forEach((e) => e.remove());
 
-        const checkboxes = folders.Items.map((folder) => {
+        const checkboxes = folderItems.map((folder) => {
             const out = document.createElement("label");
             out.innerHTML = `
                 <input
@@ -417,11 +409,11 @@ const tgConfigPage = {
     },
 
     toggleTokenFunction: (e) => {
-        const x = document.getElementById("TgBotToken");
-        if (x.type === "password") {
-            x.type = "text";
+        const tokenField = document.getElementById("TgBotToken");
+        if (tokenField.type === "password") {
+            tokenField.type = "text";
         } else {
-            x.type = "password";
+            tokenField.type = "password";
         }
     }
 };
@@ -430,12 +422,12 @@ const tgConfigPage = {
 const tgTokenHelper = {
 
     currentToken: "12341234:xxxxxxxx",
-    currentUserName: "ExampleBot",
+    currentUserName: "INVALID_BOT_TOKEN",
 
     // Function to call the validation API
-    validateToken(token) {
+    validateToken(page, token) {
         // disable save button
-        const saveButton = document.getElementById("SaveConfig");
+        const saveButton = page.querySelector("#SaveConfig");
         saveButton.disabled = true;
         saveButton.classList.add("raised");
 
@@ -449,25 +441,25 @@ const tgTokenHelper = {
                 dataType: "json"
             })
             .then(data => {
-                tgTokenHelper.handleValidationResponse(data);
+                tgTokenHelper.handleValidationResponse(page, data);
             })
             .catch(error => {
-                tgTokenHelper.handleValidationResponse({ErrorMessage: error.message});
+                tgTokenHelper.handleValidationResponse(page, {ErrorMessage: error.message});
             });
     },
 
     // Function to handle the API response
-    handleValidationResponse(data) {
-        const tokenElement = document.getElementById("TgBotToken");
-        const nameElement = document.getElementById("TgBotUsername");
-        if (data.Ok) {
+    handleValidationResponse(page, data) {
+        const tokenElement = page.querySelector("#TgBotToken");
+        const nameElement = page.querySelector("#TgBotUsername");
+        if (data?.Ok) {
             nameElement.style.color = tokenElement.style.borderColor = "limegreen";
             tgTokenHelper.currentUserName = data.BotUsername;
             nameElement.innerHTML = `@${data.BotUsername}`;
 
             // update Bot Link-Command Url
             if(tgConfigPage.currentGroup) {
-                const encodedText = encodeToBase64UtF8(`link ${tgConfigPage.currentGroup}`);
+                const encodedText = btoa(`${LinkPrefix}${tgConfigPage.currentGroup}`);
                 page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${data.BotUsername}?startgroup=${encodedText}`;
             }
             else {
@@ -475,7 +467,7 @@ const tgTokenHelper = {
             }
 
             // enable save button
-            const saveButton = document.getElementById("SaveConfig");
+            const saveButton = page.querySelector("#SaveConfig");
             saveButton.disabled = false;
             saveButton.classList.remove("raised");
         } else {
@@ -510,6 +502,15 @@ export default function (view) {
     view.querySelector("#show-hide-token").addEventListener("click", (e) => {
         e.preventDefault();
         tgConfigPage.toggleTokenFunction(e);
+    });
+
+    // Trim LoginBaseUrl on change
+    view.querySelector("#LoginBaseUrl").addEventListener("change", (e) => {
+        const ref = view.querySelectorAll('#LoginBaseUrl');
+        const inputValue = ref?.value;
+        if(inputValue?.endsWith("/")) {
+            ref.value = inputValue.substring(0, inputValue.length - 1);
+        }
     });
 
     // Basic configuration event
@@ -549,9 +550,9 @@ export default function (view) {
     // Bot token validation
     let debounce;
     const inputElement = view.querySelector("#TgBotToken");
-    inputElement.addEventListener("input", function () {
+    inputElement.addEventListener("input",  () => {
         clearTimeout(debounce);
-        debounce = setTimeout(() => tgTokenHelper.validateToken(inputElement.value), 250);
+        debounce = setTimeout(() => tgTokenHelper.validateToken(view, inputElement.value), 250);
     });
 
     // login URL
@@ -561,7 +562,7 @@ export default function (view) {
     // Branding
     const brandingWidget = `
 <form action="${loginUrl}">
-<button is="emby-button" style="display: flex;" class="block emby-button raised button-submit">
+<button is="emby-button" style="display: flex; width: auto;" class="block emby-button raised button-submit">
 Sign in with Telegram
 <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" style="max-height:4.20em;">
     <defs>

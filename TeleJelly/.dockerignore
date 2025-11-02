@@ -1,4 +1,4 @@
-﻿.git
+﻿#.git # needed for MinVer tagging
 .github
 .idea
 .vs

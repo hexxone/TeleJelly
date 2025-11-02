@@ -4,23 +4,37 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Controller;
+using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using MediaBrowser.Controller;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
-internal class CommandStats(
-    TelegramBotService telegramBotService,
-    IServerApplicationHost serverApplicationHost) : CommandBase(telegramBotService)
+/// <summary>
+///     Command for printing the server infos.
+/// </summary>
+// ReSharper disable once UnusedType.Global
+public class CommandStats : ICommandBase
 {
-    internal override string Command => "stats";
-    internal override bool NeedsAdmin => true;
+    /// <summary>
+    ///     Gets what command to trigger on.
+    /// </summary>
+    public string Command => "stats";
 
-    internal override async Task Execute(ITelegramBotClient botClient, Message message, bool isAdmin, CancellationToken cancellationToken)
+    /// <summary>
+    ///     Gets a value indicating whether this command can only be run as Admin.
+    /// </summary>
+    public bool NeedsAdmin => true;
+
+    /// <summary>
+    ///     The action code to trigger for the Command.
+    /// </summary>
+    public async Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        // Generate stats message
-        var statsMessage = GetSystemStats();
+        var botClient = telegramBotService._client;
+
+        var statsMessage = GetSystemStatsMessage(telegramBotService, isAdmin);
 
         await botClient.SendMessage(
             message.Chat.Id,
@@ -28,15 +42,16 @@ internal class CommandStats(
             cancellationToken: cancellationToken);
     }
 
-    private string GetSystemStats()
+    private string GetSystemStatsMessage(TelegramBotService telegramBotService, bool isAdmin)
     {
+        var serverApplicationHost = telegramBotService._serviceProvider.GetRequiredService<IServerApplicationHost>();
         var process = Process.GetCurrentProcess();
 
         // Calculate bot uptime - handle nullable TimeSpan
         string botUptimeText;
-        if (_telegramBotService._startTime.HasValue)
+        if (telegramBotService._startTime.HasValue)
         {
-            var botUptime = DateTime.Now - _telegramBotService._startTime.Value;
+            var botUptime = DateTime.Now - telegramBotService._startTime.Value;
             botUptimeText = FormatTimeSpan(botUptime);
         }
         else
@@ -51,18 +66,22 @@ internal class CommandStats(
         var workingSet = process.WorkingSet64;
         var totalPhysicalMemory = GetTotalPhysicalMemory();
 
-        // Format message
+        // add Jellyfin Public-Url to Msg if set
+        var baseUrl = telegramBotService._config.LoginBaseUrl;
+        var serverUrl = baseUrl != null ? $"Server URL: {baseUrl}\n" : "";
+
         return $"📊 TeleJelly Stats 📊\n\n" +
                $"🖥️ Jellyfin Server\n" +
+               serverUrl +
                $"Server Name: {serverApplicationHost.Name}\n" +
                $"Version: {serverApplicationHost.ApplicationVersion}\n" +
                $"Uptime: {FormatTimeSpan(serverUptime)}\n" +
-               $"Process Memory: {FormatBytes(workingSet)}\n" +
-               $"System Memory: {FormatBytes(totalPhysicalMemory)}\n\n" +
+               (isAdmin ? $"Process Memory: {FormatBytes(workingSet)}\n" : "") +
+               (isAdmin ? $"System Memory: {FormatBytes(totalPhysicalMemory)}\n\n" : "") +
                $"🤖 Telegram Bot\n" +
                $"Uptime: {botUptimeText}\n\n" +
-               $"💾 Disk Space\n" +
-               GetDiskInfo();
+               (isAdmin ? $"💾 Disk Space\n" : "") +
+               (isAdmin ? GetDiskInfo() : "");
     }
 
     private long GetTotalPhysicalMemory()
@@ -88,7 +107,7 @@ internal class CommandStats(
 
     private string FormatBytes(long bytes)
     {
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+        string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
         int counter = 0;
         double number = bytes;
         while (number >= 1024 && counter < suffixes.Length - 1)
@@ -96,6 +115,7 @@ internal class CommandStats(
             number /= 1024;
             counter++;
         }
+
         return $"{number:F2} {suffixes[counter]}";
     }
 

@@ -6,3 +6,4 @@ publish/
 letsencrypt/
 manifest.json
 .env
+*.zip

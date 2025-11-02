@@ -6,7 +6,7 @@
     <!-- made by hexx.one -->
 </head>
 <body>
-<div class="page type-interior pluginConfigurationPage"
+<div class="page type-interior pluginConfigurationPage telejelly-page"
      data-controller="__plugin/TeleJelly.js"
      data-require="emby-input,emby-button,emby-select,emby-checkbox"
      data-role="page"
@@ -40,7 +40,7 @@
                         <li>You must have a Telegram username to use this login method.</li>
                         <li>A Telegram Bot is required to validate the Telegram login.</li>
                         <li>A valid, public domain SSL certificate is required for the Login Widget to work.</li>
-                        <li>The Bot Token can be obtained from <a class="button-link emby-button" href="https://t.me/Botfather" is="emby-linkbutton">@BotFather</a>.</li>
+                        <li>The Bot Token can be obtained from <a class="button-link emby-button" href="https://t.me/Botfather" is="emby-linkbutton" target="_blank">@BotFather</a>.</li>
                         <li>Once you have chosen a bot, use the <i>/setdomain</i> command to link your jellyfin domain to the bot.</li>
                         <li>A Telegram User has to be Administrator OR part of at least one Group in order to login.</li>
                     </ul>
@@ -53,7 +53,7 @@
                     <div class="inputContainer bot-token-input">
                         <div>
                             <label class="inputLabel inputLabelUnfocused" for="TgBotToken">Telegram Bot Token:</label>
-                            <input class="sso-text" id="TgBotToken" is="emby-input" maxlength="200" required="" type="password"/>
+                            <input class="sso-text" id="TgBotToken" is="emby-input" maxlength="200" required="required" type="password"/>
                         </div>
                         <a class="button-link" id="show-hide-token" is="emby-linkbutton" target="_blank">
                             <p>Show / Hide</p>
@@ -62,6 +62,20 @@
                             <div class="paperlist">
                                 <p>Telegram Bot Username:</p>
                                 <p id="TgBotUsername"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LoginBaseUrl -->
+                    <div class="inputContainer">
+                        <div>
+                            <label class="inputLabel inputLabelUnfocused" for="LoginBaseUrl">Server Domain and Base URL:</label>
+                            <input class="sso-text" id="LoginBaseUrl" is="emby-input" maxlength="200" type="url"/>
+                            <div class="fieldDescription">
+                                The Base-Domain (and BaseURL if configured) which should be used to log-in on the Server.
+                                If set, this needs to be the same domain as used for the @BotFather /setdomain command.
+                                You can leave this empty if you want.
+                                This will mainly be used for telling your Telegram-users this Server's URL.
                             </div>
                         </div>
                     </div>
@@ -166,6 +180,14 @@
                                 <label>
                                     <span>Linked Telegram Group: </span><span id="LinkedTelegramGroupId">None</span>
                                 </label>
+                                <label>
+                                    <!-- TODO add label + jellyfin/empby styling for this input -->
+                                    <input type="checkbox" id="SyncUserNames" />
+                                </label>
+                                <label>
+                                    <!-- TODO add label + jellyfin/empby styling for this input -->
+                                    <input type="checkbox" id="NotifyNewContent" />
+                                </label>
                                 <p>Telegram Usernames:</p>
                                 <textarea class="username-list sso-line-list emby-textarea"
                                           id="UserNames"
@@ -190,8 +212,8 @@
                         <li>Choose the enabled Libraries for the selected Group.</li>
                         <li>Enter all TG-Usernames which should be part of the Group.</li>
                         <li><strong>When finished editing, don't forget to click "Save"</strong></li>
+                        <li>After creating the Group, <a id="BotLinkCommandUrl" href="#INVALID_BOT_TOKEN" target="_blank">/link the Group to Telegram</a></li>
                     </ol>
-                    <p>In order to link a Group to Telegram, you can use the <a id="BotLinkCommandUrl" href="TODO_BOT_LINK_COMMAND">/link command in Telegram</a></p>
                 </fieldset>
 
 
@@ -208,10 +230,10 @@
                     <p>This way it can be way easier to find.</p>
                     <p>Here is an example (the stylesheet will differ on the actual Login page):</p>
                     <div id="ExampleBranding">Please enable JavaScript.</div>
-                    <pre id="ExampleBrandingCode">Please enable JavaScript.</pre>
+                    <pre id="ExampleBrandingCode" style="max-width: 52rem; overflow: scroll">Please enable JavaScript.</pre>
                     <p>
                         To set the branding, you can copy above code and apply it in the:
-                        <a id="GeneralSettingsTabUrl" href="{{SERVER_URL}}/web/index.html#/dashboard/settings">"General" Settings tab</a>.
+                        <a id="GeneralSettingsTabUrl" href="/web/index.html#/dashboard/settings" target="_blank">"General" Settings tab</a>.
                     </p>
                 </fieldset>
 

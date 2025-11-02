@@ -8,15 +8,15 @@ using Telegram.Bot.Types.Enums;
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
 /// <summary>
-///     Command for unlinking a Telegram Group from Jellyfin.
+///     Command for printing all users in the current linked group.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandUnlink : ICommandBase
+public class CommandUserlist : ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.
     /// </summary>
-    public string Command => "unlink";
+    public string Command => "userlist";
 
     /// <summary>
     ///     Gets a value indicating whether this command can only be run as Admin.
@@ -42,14 +42,10 @@ public class CommandUnlink : ICommandBase
         var group = telegramBotService._config.TelegramGroups.FirstOrDefault(g => g.TelegramGroupChat?.TelegramChatId == message.Chat.Id);
         if (group != null)
         {
-            group.TelegramGroupChat = null;
-
-            // TODO test saving the config
-            TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
-
+            var users = string.Join("\n", group.UserNames.Select(u => $"@{u}"));
             await botClient.SendMessage(
                 message.Chat.Id,
-                $"Unlinked this Telegram group from TeleJelly group '{group.GroupName}'",
+                $"Registered Users in this group ({group.GroupName}):\n{users}",
                 cancellationToken: cancellationToken);
         }
         else

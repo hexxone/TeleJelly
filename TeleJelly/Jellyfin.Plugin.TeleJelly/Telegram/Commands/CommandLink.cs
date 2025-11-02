@@ -1,17 +1,44 @@
-﻿using System.Threading;
+﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
-internal class CommandLink(TelegramBotService telegramBotService) : CommandBase(telegramBotService)
+/// <summary>
+///     Command for linking a Jellyfin Group to a Telegram group.
+/// </summary>
+// ReSharper disable once UnusedType.Global
+public class CommandLink : ICommandBase
 {
-    internal override string Command => "link";
-    internal override bool NeedsAdmin => true;
+    /// <summary>
+    ///     Gets what command to trigger on.
+    /// </summary>
+    public string Command => "link";
 
-    internal override async Task Execute(ITelegramBotClient botClient, Message message, bool isAdmin, CancellationToken cancellationToken)
+    /// <summary>
+    ///     Gets a value indicating whether this command can only be run as Admin.
+    /// </summary>
+    public bool NeedsAdmin => true;
+
+    /// <summary>
+    ///     The action code to trigger for the Command.
+    /// </summary>
+    public async Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
+        var botClient = telegramBotService._client;
+        if (message.Chat.Type == ChatType.Private)
+        {
+            await botClient.SendMessage(
+                message.Chat.Id,
+                isAdmin ? Constants.PrivateAdminWelcomeMessage : Constants.PrivateUserWelcomeMessage,
+                cancellationToken: cancellationToken);
+
+            return;
+        }
+
         var parts = message.Text!.Split(' ');
         if (parts.Length != 2)
         {
@@ -24,8 +51,7 @@ internal class CommandLink(TelegramBotService telegramBotService) : CommandBase(
         }
 
         var groupName = parts[1];
-        var group = _telegramBotService._config.TelegramGroups.Find(g => g.GroupName == groupName);
-
+        var group = telegramBotService._config.TelegramGroups.FirstOrDefault(g => g.GroupName == groupName);
         if (group == null)
         {
             await botClient.SendMessage(
@@ -39,7 +65,7 @@ internal class CommandLink(TelegramBotService telegramBotService) : CommandBase(
         group.TelegramGroupChat = new TelegramGroupChat { TelegramChatId = message.Chat.Id, SyncUserNames = true, NotifyNewContent = true, };
 
         // TODO test saving the config
-        TeleJellyPlugin.Instance!.SaveConfiguration(_telegramBotService._config);
+        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
 
         await botClient.SendMessage(
             message.Chat.Id,

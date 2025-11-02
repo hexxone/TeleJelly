@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
@@ -21,14 +21,17 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
     /// </summary>
+    /// <param name="logger">startup logger</param>
     /// <param name="applicationPaths">Internal Jellyfin interface for the ApplicationPath.</param>
     /// <param name="xmlSerializer">Internal Jellyfin interface for the XML information.</param>
-    public TeleJellyPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+    public TeleJellyPlugin(ILogger<TeleJellyPlugin> logger, IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
         : base(applicationPaths, xmlSerializer)
     {
         ApplicationPaths = applicationPaths;
 
         Instance = this;
+
+        logger.LogInformation("{PluginName} initialized.", nameof(TeleJellyPlugin));
     }
 
     /// <summary>

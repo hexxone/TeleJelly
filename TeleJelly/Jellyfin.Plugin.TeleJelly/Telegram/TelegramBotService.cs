@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
@@ -16,32 +17,45 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram;
 /// </summary>
 public class TelegramBotService : IDisposable
 {
-    private readonly TelegramBotClient _botClient;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly CommandBase[] _commands;
-
-    internal readonly ILogger _logger;
-    internal readonly PluginConfiguration _config;
+    private readonly ICommandBase[] _commands;
 
     private User? _botInfo;
 
+    internal readonly ILogger _logger;
+    internal readonly ITelegramBotClient _client;
+    internal readonly IServiceProvider _serviceProvider;
+
+    internal PluginConfiguration _config;
     internal DateTime? _startTime;
 
 
     /// <summary>
     ///     Constructs a new instance of the BotService.
     /// </summary>
-    /// <param name="botToken"></param>
-    /// <param name="config"></param>
-    /// <param name="logger"></param>
-    /// <param name="commands"></param>
-    internal TelegramBotService(string botToken, PluginConfiguration config, ILogger logger, CommandBase[] commands)
+    internal TelegramBotService(IServiceProvider serviceProvider, ILogger logger,
+        ICommandBase[] commands, string botToken, PluginConfiguration config)
     {
-        _botClient = new TelegramBotClient(botToken);
         _cancellationTokenSource = new CancellationTokenSource();
-        _config = config;
-        _logger = logger;
         _commands = commands;
+
+        _logger = logger;
+        _client = new TelegramBotClient(botToken);
+        _serviceProvider = serviceProvider;
+
+        _config = config;
+
+        logger.LogInformation("{PluginName} Service: {ServiceName} initialized.", nameof(TeleJellyPlugin), nameof(TelegramBotService));
+    }
+
+    /// <summary>
+    ///     Needs to be called manually on Config-Change, because the original object reference doesn't get updated.
+    ///     Not sure if we could use something like IOptionsMonitor instead ?
+    /// </summary>
+    /// <param name="configuration"></param>
+    public void UpdateConfig(PluginConfiguration configuration)
+    {
+        _config = configuration;
     }
 
     /// <summary>
@@ -51,13 +65,13 @@ public class TelegramBotService : IDisposable
     {
         try
         {
-            _botClient.StartReceiving(
+            _client.StartReceiving(
                 HandleUpdateAsync,
                 HandlePollingErrorAsync,
                 cancellationToken: _cancellationTokenSource.Token
             );
 
-            _botInfo = await _botClient.GetMe();
+            _botInfo = await _client.GetMe();
             _logger.LogInformation("Telegram Bot listening as @{UserName}", _botInfo.Username);
             _startTime = DateTime.UtcNow;
         }
@@ -76,10 +90,16 @@ public class TelegramBotService : IDisposable
                 throw new Exception($"No bot info available in: {nameof(TelegramBotService)}.{nameof(HandleUpdateAsync)}");
             }
 
+
             // Handle chat member updates
             if (update is { Type: UpdateType.ChatMember, ChatMember: not null })
             {
-                await HandleChatMemberUpdate(update, cancellationToken);
+                var needsConfigSave = await HandleChatMemberUpdate(update, cancellationToken);
+                if (needsConfigSave)
+                {
+                    // TODO test saving the config
+                    TeleJellyPlugin.Instance!.SaveConfiguration(_config);
+                }
             }
             // Handle commands
             else if (update is { Type: UpdateType.Message, Message.Text: not null })
@@ -93,7 +113,13 @@ public class TelegramBotService : IDisposable
         }
     }
 
-    private async Task HandleChatMemberUpdate(Update update, CancellationToken cancellationToken)
+    /// <summary>
+    ///     Handle a chat member update message
+    /// </summary>
+    /// <param name="update"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns> TRUE if the Config needs to be saved. </returns>
+    private async Task<bool> HandleChatMemberUpdate(Update update, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Bot received Update type: {Type}", update.Type);
 
@@ -101,61 +127,71 @@ public class TelegramBotService : IDisposable
         var user = member.NewChatMember.User;
         var groupId = member.Chat.Id;
 
-        var group = _config.TelegramGroups.Find(g => g.TelegramGroupChat?.TelegramChatId == groupId);
+        var telegramGroup = _config.TelegramGroups.FirstOrDefault(g => g.TelegramGroupChat?.TelegramChatId == groupId);
 
         if (string.IsNullOrEmpty(user.Username))
         {
-            await _botClient.SendMessage(
+            await _client.SendMessage(
                 groupId,
-                $"Warning: User {user.FirstName} {user.LastName} does not have a Telegram username set. " +
-                "They need to set a username to use TeleJelly SSO login.",
+                $"Warning: User '{user.FirstName} {user.LastName}' does not have a Telegram username set. " +
+                "They need to set a username before using TeleJelly login.",
                 cancellationToken: cancellationToken);
 
             _logger.LogInformation("User Id '{UserId}' has caused a Group ChatMember event but has no Telegram username set.", user.Id);
-            return;
+            return false;
         }
 
         // User added to group
         if (member.NewChatMember.Status == ChatMemberStatus.Member)
         {
-            if (group == null)
+            if (telegramGroup == null)
             {
-                // TODO if self, print "welcome" message / instructions - otherwise: maybe print message "group not linked" ?
+                // TODO if own ID, print "welcome" message / instructions - otherwise: maybe print message "group not linked" ?
 
-                return;
+                return false;
             }
 
-            if (!group.UserNames.Contains(user.Username))
+            if (telegramGroup.TelegramGroupChat!.SyncUserNames && !telegramGroup.UserNames.Contains(user.Username))
             {
-                group.UserNames.Add(user.Username);
-                await _botClient.SendMessage(
+                // add Jellyfin Public-Url to Msg if set
+                var baseUrl = _config.LoginBaseUrl;
+                var serverUrl = baseUrl != null ? $"\nServer URL: {baseUrl}" : "";
+
+                telegramGroup.UserNames.Add(user.Username);
+                await _client.SendMessage(
                     groupId,
-                    $"Added @{user.Username} to TeleJelly whitelist",
+                    $"Welcome @{user.Username}! You have been added to the TeleJelly whitelist. {serverUrl}",
                     cancellationToken: cancellationToken);
 
-                _logger.LogInformation("Added @{UserName} to TeleJelly group '{Group}'", user.Username, group.GroupName);
+                _logger.LogInformation("Added @{UserName} to TeleJelly group '{Group}'", user.Username, telegramGroup.GroupName);
+
+                return true;
             }
         }
         // User removed from group
         else if (member.NewChatMember.Status is ChatMemberStatus.Left or ChatMemberStatus.Kicked)
         {
-            if (group == null)
+            if (telegramGroup == null || user.Username == null)
             {
-                return;
+                return false;
             }
 
-            // TODO if self, remove group linking and maybe send info to administrators?
+            // TODO if own ID, remove group linking and maybe send info to administrators?
 
-            if (group.UserNames.Remove(user.Username))
+            if (telegramGroup.TelegramGroupChat!.SyncUserNames && telegramGroup.UserNames.Remove(user.Username))
             {
-                await _botClient.SendMessage(
+                await _client.SendMessage(
                     groupId,
                     $"Removed @{user.Username} from TeleJelly whitelist",
                     cancellationToken: cancellationToken);
 
-                _logger.LogInformation("Removed @{UserName} from TeleJelly group '{Group}'", user.Username, group.GroupName);
+                _logger.LogInformation("Removed @{UserName} from TeleJelly group '{Group}'", user.Username, telegramGroup.GroupName);
+
+                return true;
             }
         }
+
+        return false;
     }
 
     private async Task HandleBotMessage(Update update, CancellationToken cancellationToken)
@@ -196,7 +232,7 @@ public class TelegramBotService : IDisposable
 
             if (command.NeedsAdmin && !isAdmin)
             {
-                await _botClient.SendMessage(
+                await _client.SendMessage(
                     message.Chat.Id,
                     "You are not an administrator.",
                     cancellationToken: cancellationToken);
@@ -205,14 +241,14 @@ public class TelegramBotService : IDisposable
             }
 
             _logger.LogDebug("Executing command: {Command}", command.Command);
-            await command.Execute(_botClient, message, isAdmin, cancellationToken);
+            await command.Execute(this, message, isAdmin, cancellationToken);
             isProcessed = true;
             break;
         }
 
         if (!isProcessed)
         {
-            await _botClient.SendMessage(message.Chat.Id, "Unknown command.", cancellationToken: cancellationToken);
+            await _client.SendMessage(message.Chat.Id, "Unknown command.", cancellationToken: cancellationToken);
         }
     }
 
@@ -260,7 +296,7 @@ public class TelegramBotService : IDisposable
     }
 
     /// <summary>
-    ///
+    ///     Game-End the bot.
     /// </summary>
     public void Dispose()
     {
