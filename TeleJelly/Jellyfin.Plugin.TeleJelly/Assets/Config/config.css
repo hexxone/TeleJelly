@@ -19,10 +19,41 @@
     --theme-button-background: #303030;
     --theme-button-hover: #404040;
     --theme-button-active: #005480;
+
+    /* Blocks */
+    --card-max: 48em;
+    --gap: 1.25rem;
 }
 
 *:disabled {
     cursor: not-allowed;
+}
+
+fieldset {
+    background-color: #202020;
+    border-color: #000;
+    border-radius: .5rem;
+    padding: 1.5em;
+}
+
+/* Card styling (vertical content inside) */
+.block {
+    display: flex;
+    flex-direction: column;
+    /*max-width: var(--card-max);*/
+    /*width: 100%;*/
+    padding: 1rem;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+}
+
+/* Medium: two columns, fill by columns so 1/2 left, 3/4 right */
+@media (min-width: 110em) {
+    .blocks {
+        display: grid;
+        gap: var(--gap);
+        justify-content: center; /* center the column on wide containers */
+        grid-template-columns: auto auto;
+    }
 }
 
 .emby-textarea {
@@ -85,18 +116,20 @@
     padding-left: 0.5em;
 }
 
-code {
+#ExampleBrandingCode {
     border: 1px dotted #777;
     display: block;
     padding: 1rem;
-    max-width: 54em;
+    max-width: min(var(--card-max), 70vw);
+    max-height: 14em;
+    overflow: scroll;
 }
 
 .sectionTitleContainer > * {
     margin-left: 1.25em !important;
 }
 
-/* -------- Basic Config --------*/
+/* -------- General Config --------*/
 
 
 .inputContainer {
@@ -105,7 +138,7 @@ code {
     flex-direction: column;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 1050px) {
     .bot-token-input {
         display: grid;
         grid-template-columns: minmax(200px, 2fr) minmax(50px, 0.5fr) minmax(200px, 2fr);
@@ -116,30 +149,29 @@ code {
 
 /* -------- Group Config --------*/
 
-.group-management {
-    margin-bottom: 2em;
-}
-
-@media (max-width: 700px) {
+@media (max-width: 1050px) {
     .group-column {
         margin-top: 2rem;
     }
 }
 
-@media (min-width: 700px) {
+@media (min-width: 1050px) {
     .grid-3-columns {
         display: grid;
         grid-template-columns: minmax(200px, 2fr) minmax(200px, 2fr) minmax(200px, 2fr);
         gap: 1rem;
         margin-bottom: 1rem;
     }
+
+    .group-column {
+        display: flex;
+        flex-direction: column;
+        min-width: 0; /* Prevents flex children from overflowing */
+    }
 }
 
 .group-column {
-    display: flex;
-    flex-direction: column;
     gap: 1rem;
-    min-width: 0; /* Prevents flex children from overflowing */
     max-height: 800px;
 }
 
@@ -194,7 +226,7 @@ code {
 }
 
 .username-list {
-    height: 100%;
+    /*height: 100%;*/
     min-height: 320px;
     resize: vertical;
 }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
+using Jellyfin.Plugin.TeleJelly.Services;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Serialization;
 using Microsoft.Extensions.Logging;
 
@@ -11,8 +13,11 @@ namespace Jellyfin.Plugin.TeleJelly;
 /// <summary>
 ///     Main SSO plugin class.
 /// </summary>
-public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages
+public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages, IDisposable
 {
+    private readonly ILibraryManager _libraryManager;
+    private readonly NotificationService _notificationService;
+
     /// <summary>
     ///     Gets or sets the Plugin Singleton instance.
     /// </summary>
@@ -24,13 +29,20 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <param name="logger">startup logger</param>
     /// <param name="applicationPaths">Internal Jellyfin interface for the ApplicationPath.</param>
     /// <param name="xmlSerializer">Internal Jellyfin interface for the XML information.</param>
-    public TeleJellyPlugin(ILogger<TeleJellyPlugin> logger, IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+    public TeleJellyPlugin(
+        ILogger<TeleJellyPlugin> logger,
+        IApplicationPaths applicationPaths,
+        IXmlSerializer xmlSerializer,
+        ILibraryManager libraryManager,
+        NotificationService notificationService)
         : base(applicationPaths, xmlSerializer)
     {
         ApplicationPaths = applicationPaths;
-
         Instance = this;
-
+        _libraryManager = libraryManager;
+        _notificationService = notificationService;
+        _libraryManager.ItemAdded += _notificationService.OnItemAdded;
+        _libraryManager.ItemUpdated += _notificationService.OnItemUpdated;
         logger.LogInformation("{PluginName} initialized.", nameof(TeleJellyPlugin));
     }
 
@@ -74,4 +86,10 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     //
     //     Console.WriteLine("!!!!!!!!! TeleJellyPlugin.UpdateConfiguration EVENT TRIGGERED !!!!!!!!!");
     // }
+
+    public void Dispose()
+    {
+        _libraryManager.ItemAdded -= _notificationService.OnItemAdded;
+        _libraryManager.ItemUpdated -= _notificationService.OnItemUpdated;
+    }
 }

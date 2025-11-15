@@ -22,12 +22,13 @@ const loadingSpinner = {
 window.onload = function() {
     const creds = localStorage.getItem("jellyfin_credentials");
     if (creds) {
-        // TODO validate token valid duration
         const parsedCreds = JSON.parse(creds);
         if (parsedCreds && parsedCreds.Servers && parsedCreds.Servers.length > 0) {
-            // TODO fix this - what about if BaseUrl is set ? what if we only use /sso/teleGRAM (without login or with different casing)
-            const serverUrl = window.location.href.replace("/sso/Telegram/login", "");
-            window.location.replace(serverUrl);
+            const server = parsedCreds.Servers[0];
+            if (server.Connect.Expires && new Date(server.Connect.Expires) > new Date()) {
+                const serverUrl = window.location.href.replace(/\/sso\/telegram(\/login)?/i, "");
+                window.location.replace(serverUrl);
+            }
         }
     }
 };

@@ -1,7 +1,10 @@
-﻿using Jellyfin.Plugin.TeleJelly.Telegram;
+﻿using Jellyfin.Plugin.TeleJelly.Services;
+using Jellyfin.Plugin.TeleJelly.Telegram;
+using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
@@ -20,5 +23,13 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
     {
         // Register background service
         serviceCollection.AddHostedService<TelegramBackgroundService>();
+        serviceCollection.AddSingleton<TelegramBotClientWrapper>();
+        serviceCollection.AddSingleton<NotificationService>(s =>
+            new NotificationService(
+                s.GetRequiredService<ILogger<NotificationService>>(),
+                s.GetRequiredService<TelegramBotClientWrapper>(),
+                s.GetRequiredService<IConfigurationManager>(),
+                s
+            ));
     }
 }

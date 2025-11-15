@@ -13,231 +13,251 @@
      id="telejelly-config-page">
     <div data-role="content">
         <div class="content-primary">
-            <form id="TeleJellyConfigForm">
 
-                <!-- Header Section -->
-                <div class="sectionTitleContainer flex align-items-center">
-                    <h2 class="sectionTitle">TeleJelly Configuration</h2>
-                    <h3>Version: <b id="TeleJellyVersion">1.0.9.0</b></h3>
-                    <a class="button-link emby-button headerHelpButton"
-                       href="https://github.com/hexxone/TeleJelly"
-                       is="emby-linkbutton"
-                       target="_blank">Github Repository</a>
+            <!-- Header Section -->
+            <div class="sectionTitleContainer flex align-items-center">
+                <h2 class="sectionTitle">TeleJelly</h2>
+                <h3>Version: <b id="TeleJellyVersion">1.0.9.0</b></h3>
+                <a class="raised button-alt headerHelpButton emby-button"
+                   href="https://github.com/hexxone/TeleJelly"
+                   is="emby-linkbutton"
+                   target="_blank">GitHub</a>
+            </div>
+
+            <div class="blocks">
+                <!-- Information Section -->
+                <div class="block">
+                    <form id="InfoSectionForm">
+                        <fieldset class="verticalSection">
+                            <legend><h3>General Information</h3></legend>
+                            <p>
+                                <i>Note:</i>
+                                This plug-in is free, open-source software. I do not accept any responsibilities.
+                                <br/>
+                                <strong>Live "Public"-usage is NOT recommended unless you understand the risks.</strong>
+                            </p>
+
+                            <strong>Requirements:</strong>
+                            <ul>
+                                <li>You must have a Telegram username to use this login method.</li>
+                                <li>A Telegram Bot is required to validate the Telegram login.</li>
+                                <li>A valid, public domain SSL certificate is required for the Login Widget to work.</li>
+                                <li>The Bot Token can be obtained from <a class="button-link emby-button" href="https://t.me/Botfather" is="emby-linkbutton" target="_blank">@BotFather</a>.</li>
+                                <li>Once you have chosen a bot, use the <i>/setdomain</i> command to link your jellyfin domain to the bot.</li>
+                                <li>A Telegram User has to be Administrator OR part of at least one Group in order to login.</li>
+                            </ul>
+
+                            <strong>Instructions:</strong>
+                            <ol>
+                                <li>Set up the General Configuration and click "Save".</li>
+                                <li>If there are no Groups, enter a new Group Name, then click Add.</li>
+                                <li>Click on the group you want to edit in the list.</li>
+                                <li>Choose the Libraries which the selected Group should see.</li>
+                                <li>Enter all TG-Usernames which should be part of the Group.</li>
+                                <li>When finished editing Groups, click on "Save Groups".</li>
+                                <li>After creating a Group (and saving), you can <a id="BotLinkCommandUrl" class="button-link emby-button" href="#INVALID_BOT_TOKEN" target="_blank">/link it to Telegram</a></li>
+                            </ol>
+                        </fieldset>
+                    </form>
                 </div>
 
-                <!-- Information Section -->
-                <fieldset class="verticalSection">
-                    <legend><h3>Important Information</h3></legend>
-                    <p>
-                        <i>Note:</i>
-                        This plug-in is free open-source software. I do not accept any responsibilities.
-                        <br/>
-                        <strong>Live "Production"-usage is NOT recommended unless you exactly know what you are doing.</strong>
-                    </p>
+                <!-- Branding Section -->
+                <div class="block">
+                    <form id="BrandingSectionForm">
+                        <fieldset class="verticalSection">
+                            <legend><h3>Branding Information</h3></legend>
+                            <strong>
+                                Telegram Login-Page:
+                                <a class="button-link" id="SSOTelegramLoginUrl" is="emby-linkbutton" target="_blank"></a>
+                            </strong>
+                            <br/>
+                            <p>
+                                You can share the link with your friends but also include it in the Login Page "Branding".
+                                This way it can be way easier to find. Here is an example (the stylesheet will differ on the actual Login page):
+                            </p>
+                            <div id="ExampleBranding">Please enable JavaScript.</div>
+                            <pre id="ExampleBrandingCode">Please enable JavaScript.</pre>
+                            <p>
+                                To set the branding, you can copy above code and apply it in the:
+                                <a id="GeneralSettingsTabUrl" class="button-link emby-button" href="/web/index.html#/dashboard/settings" target="_blank">"General" Settings tab</a>.
+                            </p>
+                        </fieldset>
+                    </form>
+                </div>
 
-                    <strong>Requirements:</strong>
-                    <ul>
-                        <li>You must have a Telegram username to use this login method.</li>
-                        <li>A Telegram Bot is required to validate the Telegram login.</li>
-                        <li>A valid, public domain SSL certificate is required for the Login Widget to work.</li>
-                        <li>The Bot Token can be obtained from <a class="button-link emby-button" href="https://t.me/Botfather" is="emby-linkbutton" target="_blank">@BotFather</a>.</li>
-                        <li>Once you have chosen a bot, use the <i>/setdomain</i> command to link your jellyfin domain to the bot.</li>
-                        <li>A Telegram User has to be Administrator OR part of at least one Group in order to login.</li>
-                    </ul>
-                </fieldset>
-
-                <!-- Basic Configuration Section -->
-                <fieldset class="verticalSection">
-                    <legend><h3>Basic Configuration</h3></legend>
-                    <!-- BotToken -->
-                    <div class="inputContainer bot-token-input">
-                        <div>
-                            <label class="inputLabel inputLabelUnfocused" for="TgBotToken">Telegram Bot Token:</label>
-                            <input class="sso-text" id="TgBotToken" is="emby-input" maxlength="200" required="required" type="password"/>
-                        </div>
-                        <a class="button-link" id="show-hide-token" is="emby-linkbutton" target="_blank">
-                            <p>Show / Hide</p>
-                        </a>
-                        <div class="fieldDescription">
-                            <div class="paperlist">
-                                <p>Telegram Bot Username:</p>
-                                <p id="TgBotUsername"></p>
+                <!-- General Configuration Section -->
+                <div class="block">
+                    <form id="BasicConfigForm">
+                        <fieldset class="verticalSection">
+                            <legend><h3>General Configuration</h3></legend>
+                            <!-- BotToken -->
+                            <div class="inputContainer bot-token-input">
+                                <div>
+                                    <label class="inputLabel inputLabelUnfocused" for="TgBotToken">Telegram Bot Token:</label>
+                                    <input class="sso-text" id="TgBotToken" is="emby-input" maxlength="200" required="required" type="password"/>
+                                </div>
+                                <a class="button-link" id="show-hide-token" is="emby-linkbutton" target="_blank">
+                                    <p>Show / Hide</p>
+                                </a>
+                                <div class="fieldDescription">
+                                    <div class="paperlist">
+                                        <p>Telegram Bot Username:</p>
+                                        <p id="TgBotUsername"></p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- LoginBaseUrl -->
-                    <div class="inputContainer">
-                        <div>
-                            <label class="inputLabel inputLabelUnfocused" for="LoginBaseUrl">Server Domain and Base URL:</label>
-                            <input class="sso-text" id="LoginBaseUrl" is="emby-input" maxlength="200" type="url"/>
-                            <div class="fieldDescription">
-                                The Base-Domain (and BaseURL if configured) which should be used to log-in on the Server.
-                                If set, this needs to be the same domain as used for the @BotFather /setdomain command.
-                                You can leave this empty if you want.
-                                This will mainly be used for telling your Telegram-users this Server's URL.
+                            <!-- LoginBaseUrl -->
+                            <div class="inputContainer">
+                                <div>
+                                    <label class="inputLabel inputLabelUnfocused" for="LoginBaseUrl">Server Domain and Base URL:</label>
+                                    <input class="sso-text" id="LoginBaseUrl" is="emby-input" maxlength="200" type="url"/>
+                                    <div class="fieldDescription">
+                                        The Base-Domain (and BaseURL if configured) which should be used to log-in on the Server.
+                                        If set, this needs to be the same domain as used for the @BotFather /setdomain command.
+                                        You can leave this empty if you want.
+                                        This will mainly be used for telling your Telegram-users this Server's URL.
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- List: Administrators -->
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="TgAdministrators">Administrators:</label>
-                        <textarea class="sso-line-list emby-textarea"
-                                  id="TgAdministrators"
-                                  is="emby-textarea"
-                                  maxlength="32"
-                                  onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
-                                  type="text"></textarea>
-                        <div class="fieldDescription">
-                            A List of <strong>Telegram Usernames to grant Jellyfin Admin privileges</strong> when logging in, one per line
-                        </div>
-                    </div>
+                            <!-- List: Administrators -->
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="TgAdministrators">Administrators:</label>
+                                <textarea class="sso-line-list emby-textarea"
+                                          id="TgAdministrators"
+                                          is="emby-textarea"
+                                          maxlength="32"
+                                          onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
+                                          type="text"></textarea>
+                                <div class="fieldDescription">
+                                    A List of <strong>Telegram Usernames to grant Jellyfin Admin privileges</strong> when logging in, one per line
+                                </div>
+                            </div>
 
-                    <!-- URL Scheme Section -->
-                    <div class="inputContainer">
-                        <div>
-                            <label class="inputLabel inputLabelUnfocused" for="ForcedUrlScheme">
-                                Enforce External URL Scheme?
-                            </label>
-                            <select class="emby-select-withcolor emby-select" id="ForcedUrlScheme">
-                                <option value="none">None</option>
-                                <option value="https">Secure (https://)</option>
-                                <option value="http">Unsecure (http://)</option>
-                            </select>
-                        </div>
-                        <div class="fieldDescription checkboxFieldDescription">
-                            Should the Plugin force a Specific protocol Scheme on it's returned URLS?
-                            This is probably useful if your jellyfin is running behind a Reverse Proxy which
-                            does "SSL-stripping" (like Traefik). <strong>If you are unsure, leave this setting turned off (None).</strong>
-                        </div>
-                    </div>
+                            <!-- URL Scheme Section -->
+                            <div class="inputContainer">
+                                <div>
+                                    <label class="inputLabel inputLabelUnfocused" for="ForcedUrlScheme">
+                                        Enforce External URL Scheme?
+                                    </label>
+                                    <select class="emby-select-withcolor emby-select" id="ForcedUrlScheme">
+                                        <option value="none">None</option>
+                                        <option value="https">Secure (https://)</option>
+                                        <option value="http">Unsecure (http://)</option>
+                                    </select>
+                                </div>
+                                <div class="fieldDescription checkboxFieldDescription">
+                                    Should the Plugin force a Specific protocol Scheme on it's returned URLS?
+                                    This is probably useful if your jellyfin is running behind a Reverse Proxy which
+                                    does "SSL-stripping" (like Traefik). <strong>If you are unsure, leave this setting turned off (None).</strong>
+                                </div>
+                            </div>
 
-                    <button class="raised button-submit block emby-button"
-                            id="SaveConfig"
-                            is="emby-button"
-                            type="button">
-                        <span>Save Configuration</span>
-                    </button>
-                </fieldset>
+                            <button class="raised button-submit block emby-button"
+                                    id="SaveConfig"
+                                    is="emby-button"
+                                    type="button">
+                                <span>Save Configuration</span>
+                            </button>
+                        </fieldset>
+                    </form>
+                </div>
 
                 <!-- Group Management Section -->
-                <fieldset class="verticalSection">
-                    <legend><h3>Group Management</h3></legend>
+                <div class="block">
+                    <form id="GroupManagementForm">
+                        <fieldset class="verticalSection">
+                            <legend><h3>Group Management</h3></legend>
 
-                    <div class="group-management">
-                        <div class="grid-3-columns">
-                            <!-- Group Names Column -->
-                            <div class="group-column">
-                                <div class="column-header">Groups</div>
-                                <div class="group-input-row">
-                                    <input class="sso-text"
-                                           id="TgGroupName"
-                                           is="emby-input"
-                                           minlength="3"
-                                           maxlength="32"
-                                           onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9_\-]/g, '')"
-                                           placeholder="New group name"
-                                           type="text"/>
-                                    <button class="button-submit emby-button"
-                                            id="AddGroup"
-                                            is="emby-button"
-                                            type="button">
-                                        <span>Add</span>
-                                    </button>
+                            <div class="group-management">
+                                <div class="grid-3-columns">
+                                    <!-- Group Names Column -->
+                                    <div class="group-column">
+                                        <div class="column-header">Groups</div>
+                                        <div class="group-input-row">
+                                            <input class="sso-text"
+                                                   id="TgGroupName"
+                                                   is="emby-input"
+                                                   minlength="3"
+                                                   maxlength="32"
+                                                   onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9_\-]/g, '')"
+                                                   placeholder="New group name"
+                                                   type="text"/>
+                                            <button class="button-submit emby-button"
+                                                    id="AddGroup"
+                                                    is="emby-button"
+                                                    type="button">
+                                                <span>Add</span>
+                                            </button>
+                                        </div>
+
+                                        <div class="group-list" id="TgBotGroupList">
+                                            <!-- Groups will be dynamically inserted here -->
+                                        </div>
+
+                                        <button class="raised button-delete block emby-button"
+                                                id="DeleteGroup"
+                                                is="emby-button"
+                                                type="button">
+                                            <span>Delete</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Libraries Column -->
+                                    <div class="group-column">
+                                        <div class="column-header">Libraries</div>
+                                        <label>
+                                            <input id="EnableAllFolders"
+                                                   is="emby-checkbox"
+                                                   type="checkbox"/>
+                                            <span>Enable All Libraries</span>
+                                        </label>
+                                        <div class="folder-list checkboxList paperList checkboxList-paperList"
+                                             id="EnabledFolders">
+                                            <!-- Folders will be dynamically inserted here -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Usernames Column -->
+                                    <div class="group-column">
+                                        <div class="column-header">Telegram Settings</div>
+                                        <span>Linked Telegram Group: </span>
+                                        <span id="LinkedTelegramGroupId">None</span>
+                                        <label>
+                                            <input id="SyncUserNames"
+                                                   is="emby-checkbox"
+                                                   type="checkbox"/>
+                                            <span>Sync Usernames</span>
+                                        </label>
+                                        <label>
+                                            <input id="NotifyNewContent"
+                                                   is="emby-checkbox"
+                                                   type="checkbox"/>
+                                            <span>Notify new content</span>
+                                        </label>
+                                        <label>
+                                            <span>Telegram Usernames</span>
+                                            <textarea class="username-list sso-line-list emby-textarea"
+                                                      id="UserNames"
+                                                      is="emby-textarea"
+                                                      onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
+                                                      placeholder="Enter Telegram usernames, one per line"></textarea>
+                                        </label>
+                                    </div>
                                 </div>
 
-                                <div class="group-list" id="TgBotGroupList">
-                                    <!-- Groups will be dynamically inserted here -->
-                                </div>
-
-                                <button class="raised button-delete block emby-button"
-                                        id="DeleteGroup"
+                                <button class="raised button-submit block emby-button"
+                                        id="SaveGroupConfig"
                                         is="emby-button"
                                         type="button">
-                                    <span>Delete</span>
+                                    <span>Save Groups</span>
                                 </button>
                             </div>
-
-                            <!-- Libraries Column -->
-                            <div class="group-column">
-                                <div class="column-header">Libraries</div>
-                                <label>
-                                    <input id="EnableAllFolders"
-                                           is="emby-checkbox"
-                                           type="checkbox"/>
-                                    <span>Enable All Libraries</span>
-                                </label>
-                                <div class="folder-list checkboxList paperList checkboxList-paperList"
-                                     id="EnabledFolders">
-                                    <!-- Folders will be dynamically inserted here -->
-                                </div>
-                            </div>
-
-                            <!-- Usernames Column -->
-                            <div class="group-column">
-                                <div class="column-header">Telegram Settings</div>
-                                <label>
-                                    <span>Linked Telegram Group: </span><span id="LinkedTelegramGroupId">None</span>
-                                </label>
-                                <div>
-                                    <input type="checkbox" is="emby-checkbox" id="SyncUserNames" />
-                                    <label for="SyncUserNames">Sync Usernames</label>
-                                </div>
-                                <div>
-                                    <input type="checkbox" is="emby-checkbox" id="NotifyNewContent" />
-                                    <label for="NotifyNewContent">Notify on New Content</label>
-                                </div>
-                                <p>Telegram Usernames:</p>
-                                <textarea class="username-list sso-line-list emby-textarea"
-                                          id="UserNames"
-                                          is="emby-textarea"
-                                          onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
-                                          placeholder="Enter Telegram usernames, one per line"></textarea>
-                            </div>
-                        </div>
-
-                        <button class="raised button-submit block emby-button"
-                                id="SaveGroupConfig"
-                                is="emby-button"
-                                type="button">
-                            <span>Save Groups</span>
-                        </button>
-                    </div>
-
-                    <p>Instructions:</p>
-                    <ol>
-                        <li>If there are no Groups, enter a new Group Name, then click Add.</li>
-                        <li>Select the group you want to edit.</li>
-                        <li>Choose the enabled Libraries for the selected Group.</li>
-                        <li>Enter all TG-Usernames which should be part of the Group.</li>
-                        <li><strong>When finished editing, don't forget to click "Save"</strong></li>
-                        <li>After creating the Group, <a id="BotLinkCommandUrl" href="#INVALID_BOT_TOKEN" target="_blank">/link the Group to Telegram</a></li>
-                    </ol>
-                </fieldset>
-
-
-                <!-- Branding Section -->
-                <fieldset class="verticalSection">
-                    <legend><h3>Branding Options</h3></legend>
-                    <strong>
-                        <a class="button-link" id="SSOTelegramLoginUrl" is="emby-linkbutton" target="_blank">
-                            Here is the link to the Telegram Login Page
-                        </a>
-                    </strong>
-                    <br/>
-                    <p>You can share the link with your friends but also include it in the Login Page "Branding".</p>
-                    <p>This way it can be way easier to find.</p>
-                    <p>Here is an example (the stylesheet will differ on the actual Login page):</p>
-                    <div id="ExampleBranding">Please enable JavaScript.</div>
-                    <pre id="ExampleBrandingCode" style="max-width: 52rem; overflow: scroll">Please enable JavaScript.</pre>
-                    <p>
-                        To set the branding, you can copy above code and apply it in the:
-                        <a id="GeneralSettingsTabUrl" href="/web/index.html#/dashboard/settings" target="_blank">"General" Settings tab</a>.
-                    </p>
-                </fieldset>
-
-            </form>
+                        </fieldset>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

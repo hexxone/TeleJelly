@@ -2,10 +2,10 @@
   <configuration default="false" name="Docker Test" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
     <deployment type="docker-compose.yml">
       <settings>
-        <option name="envFilePath" value=".env" />
+        <option name="envFilePath" value="" />
         <option name="envFilePaths">
           <list>
-            <option value=".env" />
+            <option value="" />
           </list>
         </option>
         <option name="removeImagesOnComposeDown" value="ALL" />
@@ -18,7 +18,6 @@
           </list>
         </option>
         <option name="sourceFilePath" value="docker-compose.yml" />
-        <option name="upDetach" value="false" />
         <option name="upForceRecreate" value="true" />
         <option name="upRenewAnonVolumes" value="true" />
       </settings>

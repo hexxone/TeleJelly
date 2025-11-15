@@ -93,7 +93,7 @@ public class TelegramLoginService
         // get user groups / whitelist
         var groups = _config.TelegramGroups;
         var userGroups = groups.Where(group => group.UserNames.Any(user => string.Equals(user, userName, StringComparison.CurrentCultureIgnoreCase))).ToArray();
-        if (!isAdmin && !userGroups.Any())
+        if (!isAdmin && userGroups.Length == 0)
         {
             throw new ArgumentException("Username not whitelisted.");
         }

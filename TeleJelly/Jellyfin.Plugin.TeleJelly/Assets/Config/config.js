@@ -569,11 +569,12 @@ export default function (view) {
     // login URL
     const loginUrl = window.ApiClient.getUrl("/sso/Telegram");
     view.querySelector("#SSOTelegramLoginUrl").href = loginUrl;
+    view.querySelector("#SSOTelegramLoginUrl").innerText = loginUrl;
 
     // Branding
     const brandingWidget = `
 <form action="${loginUrl}">
-<button is="emby-button" style="display: flex; width: auto;" class="block emby-button raised button-submit">
+<button is="emby-button" style="display:flex;flex-direction:row;width:auto;" class="block emby-button raised button-submit">
 Sign in with Telegram
 <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" style="max-height:4.20em;">
     <defs>

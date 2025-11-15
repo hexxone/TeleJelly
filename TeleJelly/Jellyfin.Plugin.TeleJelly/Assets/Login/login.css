@@ -145,6 +145,10 @@ h2 {
     margin-bottom: 2.5rem;
 }
 
+.loginForm {
+    flex-grow: 1;
+}
+
 /** margin & padding */
 
 .margin-auto-y {
@@ -293,6 +297,9 @@ h2 {
 }
 
 .readOnlyContent {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
     margin: .5em auto 1em;
 }
 
@@ -461,7 +468,7 @@ h2 {
     }
 
     100% {
-        transform: rotate(1080deg); /* 3 full rotations clockwise */
+        transform: rotate(720deg); /* 2 full rotations clockwise */
     }
 }
 
@@ -778,8 +785,6 @@ h2 {
     contain: layout style size;
 }
 
-.powered-by {
-    position: absolute;
-    bottom: 2rem;
-    z-index: 99999999;
+.provided-by {
+    align-self: center;
 }

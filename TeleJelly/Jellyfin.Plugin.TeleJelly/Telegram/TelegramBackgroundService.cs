@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 using MediaBrowser.Model.Plugins;
 using Microsoft.Extensions.Hosting;
@@ -17,6 +18,7 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     private readonly TeleJellyPlugin _plugin;
     private readonly ILogger<TelegramBackgroundService> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly TelegramBotClientWrapper _botClientWrapper;
 
     // keep the Commands here so they don't get initialized with the BotService everytime.
     private readonly ICommandBase[] _commands;
@@ -30,11 +32,13 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     /// </summary>
     /// <param name="logger">Used for printing service status and events.</param>
     /// <param name="serviceProvider">Used for instantiating the Commands with Dependency Injection.</param>
-    public TelegramBackgroundService(ILogger<TelegramBackgroundService> logger, IServiceProvider serviceProvider)
+    /// <param name="botClientWrapper"></param>
+    public TelegramBackgroundService(ILogger<TelegramBackgroundService> logger, IServiceProvider serviceProvider, TelegramBotClientWrapper botClientWrapper)
     {
         _plugin = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _botClientWrapper = botClientWrapper;
 
         _commands = _plugin.GetType().Assembly.GetTypes()
             .Where(t =>
@@ -137,6 +141,7 @@ public class TelegramBackgroundService : IHostedService, IDisposable
         {
             // Create and start new service
             _botService = new TelegramBotService(_serviceProvider, _logger, _commands, newToken, config);
+            _botClientWrapper.Client = _botService._client;
             _botService.StartAsync().ConfigureAwait(false);
             _currentToken = newToken;
         }

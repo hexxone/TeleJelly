@@ -148,14 +148,11 @@ public class TelegramBotService : IDisposable
         {
             if (telegramGroup == null)
             {
-                // TODO put / reuse message from Constants
                 if (user.Id == _botInfo?.Id)
                 {
                     await _client.SendMessage(
                         groupId,
-                        "Hello! I'm TeleJelly, your Jellyfin bot.\n" +
-                        "To link this group to a Jellyfin group, use the `/link` command followed by the Jellyfin group name.\n" +
-                        "For example: `/link MyJellyfinGroup`",
+                        Constants.GroupWelcomeMessage,
                         cancellationToken: cancellationToken);
                 }
                 else
