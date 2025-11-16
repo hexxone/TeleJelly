@@ -10,9 +10,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using Jellyfin.Plugin.TeleJelly.Classes;
+using Jellyfin.Plugin.TeleJelly.Telegram;
 using MediaBrowser.Model.Entities;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace Jellyfin.Plugin.TeleJelly.Services;
 
@@ -161,45 +163,48 @@ public class NotificationService : IDisposable
         // Build the display text (name + year + type)
         var baseUrl = config.LoginBaseUrl;
         var displayText = item.GetDisplayText();
+        var safeDisplayText = TelegramMarkdown.Escape(displayText);
 
         // Make it a link if baseUrl is available
         if (!string.IsNullOrWhiteSpace(baseUrl))
         {
             var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
-            message.Append('[').Append(displayText).Append("](").Append(itemUrl).Append(')');
+            message.Append('[').Append(safeDisplayText).Append("](").Append(itemUrl).Append(')');
         }
         else
         {
-            message.Append(displayText);
+            message.Append(safeDisplayText);
         }
 
         var extraLink = item.GetExtraLink();
         if (extraLink != null)
         {
+            // extraLink already contains valid MarkdownV2 link syntax
             message.Append(extraLink);
         }
 
         message.AppendLine();
 
-
         var audioLanguages = item.GetMediaStreams()
-            .Where(m => m.Type == MediaStreamType.Audio)
-            .Select(m => m.Language)
-            .Distinct().ToArray();
+            .Where(m => m.Type == MediaStreamType.Audio && !string.IsNullOrEmpty(m.Language))
+            .Select(m => m.Language!)
+            .Distinct()
+            .ToArray();
 
         if (audioLanguages.Length > 0)
         {
-            message.AppendLine("Audio: " + string.Join(", ", audioLanguages));
+            message.AppendLine("Audio: " + string.Join(", ", audioLanguages.Select(TelegramMarkdown.Escape)));
         }
 
         var subtitleLanguages = item.GetMediaStreams()
-            .Where(m => m.Type == MediaStreamType.Subtitle)
-            .Select(m => m.Language)
-            .Distinct().ToArray();
+            .Where(m => m.Type == MediaStreamType.Subtitle && !string.IsNullOrEmpty(m.Language))
+            .Select(m => m.Language!)
+            .Distinct()
+            .ToArray();
 
         if (subtitleLanguages.Length > 0)
         {
-            message.AppendLine($"Subtitles: " + string.Join(", ", subtitleLanguages));
+            message.AppendLine("Subtitles: " + string.Join(", ", subtitleLanguages.Select(TelegramMarkdown.Escape)));
         }
 
         foreach (var notifyGroup in notifyGroups)
@@ -212,7 +217,8 @@ public class NotificationService : IDisposable
                     chatId: notifyGroup.TelegramGroupChat!.TelegramChatId,
                     showCaptionAboveMedia: true,
                     caption: message.ToString(),
-                    photo: InputFile.FromStream(fromFile)
+                    photo: InputFile.FromStream(fromFile),
+                    parseMode: ParseMode.MarkdownV2
                 ).Wait(TimeSpan.FromSeconds(30));
             }
             catch (Exception e)

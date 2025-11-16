@@ -78,6 +78,7 @@ public class TelegramBotService : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to Start Telegram Bot: {Msg}", ex.Message);
+            throw;
         }
     }
 
@@ -90,23 +91,26 @@ public class TelegramBotService : IDisposable
                 throw new Exception($"No bot info available in: {nameof(TelegramBotService)}.{nameof(HandleUpdateAsync)}");
             }
 
-
-            // Handle chat member updates
-            if (update is { Type: UpdateType.ChatMember, ChatMember: not null })
+            switch (update)
             {
-                var needsConfigSave = await HandleChatMemberUpdate(update, cancellationToken);
-                if (needsConfigSave)
+                // Handle chat member updates
+                case { Type: UpdateType.ChatMember, ChatMember: not null }:
                 {
-                    // Manually test saving the config by:
-                    // 1. Triggering a ChatMemberUpdate event (e.g., by adding a user to a group).
-                    // 2. Verifying that the plugin's configuration file is updated with the new data.
-                    TeleJellyPlugin.Instance!.SaveConfiguration(_config);
+                    var needsConfigSave = await HandleChatMemberUpdate(update, cancellationToken);
+                    if (needsConfigSave)
+                    {
+                        // Manually test saving the config by:
+                        // 1. Triggering a ChatMemberUpdate event (e.g., by adding a user to a group).
+                        // 2. Verifying that the plugin's configuration file is updated with the new data.
+                        TeleJellyPlugin.Instance!.SaveConfiguration(_config);
+                    }
+
+                    break;
                 }
-            }
-            // Handle commands
-            else if (update is { Type: UpdateType.Message, Message.Text: not null })
-            {
-                await HandleBotMessage(update, cancellationToken);
+                // Handle commands
+                case { Type: UpdateType.Message, Message.Text: not null }:
+                    await HandleBotMessage(update, cancellationToken);
+                    break;
             }
         }
         catch (Exception ex)
@@ -245,40 +249,48 @@ public class TelegramBotService : IDisposable
 
     private async Task FindAndExecuteCommand(Message message, string commandText, CancellationToken cancellationToken)
     {
-        var isAdmin = message.From?.Username != null && _config.AdminUserNames.Contains(message.From.Username);
-        var isProcessed = false;
-        foreach (var command in _commands)
+        try
         {
-            if (!command.Command.Equals(commandText, StringComparison.CurrentCultureIgnoreCase))
+            var isAdmin = message.From?.Username != null && _config.AdminUserNames.Contains(message.From.Username);
+            var isProcessed = false;
+            foreach (var command in _commands)
             {
-                continue;
-            }
+                if (!command.Command.Equals(commandText, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    continue;
+                }
 
-            if (command.NeedsAdmin && !isAdmin)
-            {
-                await _client.SendMessage(
-                    message.Chat.Id,
-                    "You are not an administrator.",
-                    cancellationToken: cancellationToken);
+                if (command.NeedsAdmin && !isAdmin)
+                {
+                    await _client.SendMessage(
+                        message.Chat.Id,
+                        "You are not an administrator.",
+                        cancellationToken: cancellationToken);
+                    isProcessed = true;
+                    break;
+                }
+
+                _logger.LogDebug("Executing command: {Command}", command.Command);
+                await command.Execute(this, message, isAdmin, cancellationToken);
                 isProcessed = true;
                 break;
             }
 
-            _logger.LogDebug("Executing command: {Command}", command.Command);
-            await command.Execute(this, message, isAdmin, cancellationToken);
-            isProcessed = true;
-            break;
+            if (!isProcessed)
+            {
+                await _client.SendMessage(message.Chat.Id, "Unknown command.", cancellationToken: cancellationToken);
+            }
         }
-
-        if (!isProcessed)
+        catch (Exception e)
         {
-            await _client.SendMessage(message.Chat.Id, "Unknown command.", cancellationToken: cancellationToken);
+            _logger.LogError(e, "An error occured while executing command : {Command}", commandText);
+            throw;
         }
     }
 
     private static string? GetCommandText(string messageText, string botUsername)
     {
-        // Strip "/" slash and get the first word as command
+        // Strip "/" slash and get the first word as a command
         var commandText = messageText[1..];
 
         // If contains spaces, get first word as command
@@ -288,8 +300,8 @@ public class TelegramBotService : IDisposable
             commandText = commandText[..spaceIndex];
         }
 
-        // Handle directed bot commands (e.g. /command@botname)
-        // If command is directed at a different bot, ignore it
+        // Handle directed bot commands (e.g., /command@botname)
+        // If a command is directed at a different bot, ignore it
         if (commandText.Contains('@'))
         {
             var parts = commandText.Split('@', 2);

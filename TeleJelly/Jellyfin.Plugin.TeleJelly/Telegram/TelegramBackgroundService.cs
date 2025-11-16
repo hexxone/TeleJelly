@@ -139,7 +139,7 @@ public class TelegramBackgroundService : IHostedService, IDisposable
 
         try
         {
-            // Create and start new service
+            // Create and start a new service
             _botService = new TelegramBotService(_serviceProvider, _logger, _commands, newToken, config);
             _botClientWrapper.Client = _botService._client;
             _botService.StartAsync().ConfigureAwait(false);

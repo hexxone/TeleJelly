@@ -81,8 +81,8 @@ public class CommandSearch : ICommandBase
         {
             await botClient.SendMessage(
                 message.Chat.Id,
-                "Usage: `/search <text>` – please provide a search term.",
-                parseMode: ParseMode.Markdown,
+                "Usage: `/search \\<text\\>` – please provide a search term.",
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
 
             return;
@@ -128,8 +128,10 @@ public class CommandSearch : ICommandBase
         var hasMore = results.Count > MaxResultCount;
 
         var sb = new StringBuilder();
+
+        var safeQueryText = TelegramMarkdown.Escape(queryText);
         sb.Append("Search results for “");
-        sb.Append(queryText);
+        sb.Append(safeQueryText);
         sb.AppendLine("”:");
 
         var baseUrl = telegramBotService._config.LoginBaseUrl;
@@ -141,22 +143,24 @@ public class CommandSearch : ICommandBase
 
             // Build the display text (name + year + type)
             var displayText = item.GetDisplayText();
+            var safeDisplayText = TelegramMarkdown.Escape(displayText);
 
             // Make it a link if baseUrl is available
             if (!string.IsNullOrWhiteSpace(baseUrl))
             {
                 var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
-                sb.Append('[').Append(displayText).Append("](").Append(itemUrl).Append(')');
+                // itemUrl is used as the link destination; can stay unescaped.
+                sb.Append('[').Append(safeDisplayText).Append("](").Append(itemUrl).Append(')');
             }
             else
             {
-                sb.Append(displayText);
+                sb.Append(safeDisplayText);
             }
 
             var extraLink = item.GetExtraLink();
             if (extraLink != null)
             {
-                sb.Append(extraLink);
+                sb.Append(TelegramMarkdown.Escape(extraLink));
             }
 
             sb.AppendLine();
@@ -179,13 +183,13 @@ public class CommandSearch : ICommandBase
                 if (audioLanguages.Length > 0)
                 {
                     sb.Append("   Audio: ");
-                    sb.AppendLine(string.Join(", ", audioLanguages));
+                    sb.AppendLine(string.Join(", ", audioLanguages.Select(TelegramMarkdown.Escape)));
                 }
 
                 if (subtitleLanguages.Length > 0)
                 {
                     sb.Append("   Subtitles: ");
-                    sb.AppendLine(string.Join(", ", subtitleLanguages));
+                    sb.AppendLine(string.Join(", ", subtitleLanguages.Select(TelegramMarkdown.Escape)));
                 }
             }
 
@@ -202,11 +206,11 @@ public class CommandSearch : ICommandBase
         await botClient.SendMessage(
             message.Chat.Id,
             sb.ToString(),
-            parseMode: ParseMode.Markdown,
+            parseMode: ParseMode.MarkdownV2,
             linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
             cancellationToken: cancellationToken);
     }
-
+    
     private static string GetSearchQuery(string? messageText)
     {
         if (string.IsNullOrWhiteSpace(messageText))
