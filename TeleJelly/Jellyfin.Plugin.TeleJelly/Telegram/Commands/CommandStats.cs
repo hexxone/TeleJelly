@@ -8,6 +8,7 @@ using MediaBrowser.Controller;
 using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
@@ -39,6 +40,8 @@ public class CommandStats : ICommandBase
         await botClient.SendMessage(
             message.Chat.Id,
             statsMessage,
+            ParseMode.MarkdownV2,
+            linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
             cancellationToken: cancellationToken);
     }
 
@@ -65,6 +68,7 @@ public class CommandStats : ICommandBase
         // Get system memory info
         var workingSet = process.WorkingSet64;
         var totalPhysicalMemory = GetTotalPhysicalMemory();
+        var percentUsed = (double)totalPhysicalMemory / workingSet;
 
         // add Jellyfin Public-Url to Msg if set
         var baseUrl = telegramBotService._config.LoginBaseUrl;
@@ -73,13 +77,13 @@ public class CommandStats : ICommandBase
         return $"📊 TeleJelly Stats 📊\n\n" +
                $"🖥️ Jellyfin Server\n" +
                serverUrl +
-               $"Server Name: {serverApplicationHost.Name}\n" +
-               $"Version: {serverApplicationHost.ApplicationVersion}\n" +
-               $"Uptime: {FormatTimeSpan(serverUptime)}\n" +
-               (isAdmin ? $"Process Memory: {FormatBytes(workingSet)}\n" : "") +
-               (isAdmin ? $"System Memory: {FormatBytes(totalPhysicalMemory)}\n\n" : "") +
+               $"Version: `{serverApplicationHost.ApplicationVersion}`\n" +
+               $"Uptime: `{FormatTimeSpan(serverUptime)}`\n" +
+               (isAdmin ? $"Process Memory: `{FormatBytes(workingSet)}`\n" : "") +
+               (isAdmin ? $"System Memory: `{FormatBytes(totalPhysicalMemory)}`\n\n" : "") +
+               (isAdmin ? $"Memory Usage: `{percentUsed:P1}`\n\n" : "") +
                $"🤖 Telegram Bot\n" +
-               $"Uptime: {botUptimeText}\n\n" +
+               $"Uptime: `{botUptimeText}`\n\n" +
                (isAdmin ? $"💾 Disk Space\n" : "") +
                (isAdmin ? GetDiskInfo() : "");
     }
@@ -123,8 +127,10 @@ public class CommandStats : ICommandBase
     {
         var result = "";
 
-        // Get all drives
-        var drives = DriveInfo.GetDrives().Where(d => d.IsReady).ToList();
+        // Get all ready drives which have size > 0
+        var drives = DriveInfo.GetDrives()
+            .Where(d => d is { IsReady: true, TotalSize: > 0, DriveType: DriveType.Removable or DriveType.Fixed or DriveType.Network })
+            .ToList();
 
         foreach (var drive in drives)
         {
@@ -133,7 +139,7 @@ public class CommandStats : ICommandBase
             var usedSpace = totalSize - freeSpace;
             var percentUsed = (double)usedSpace / totalSize;
 
-            result += $"{drive.Name} {FormatBytes(usedSpace)}/{FormatBytes(totalSize)} ({percentUsed:P1})\n";
+            result += $"`{drive.Name}` - `{FormatBytes(usedSpace)}/{FormatBytes(totalSize)}` (`{percentUsed:P1}`)\n";
         }
 
         return result;

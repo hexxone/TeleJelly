@@ -6,5 +6,6 @@ publish/
 letsencrypt/
 manifest.json
 *DotSettings.user
+.DS_Store
 .env
 *.zip

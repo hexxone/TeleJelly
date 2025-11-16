@@ -29,6 +29,8 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     /// <param name="logger">startup logger</param>
     /// <param name="applicationPaths">Internal Jellyfin interface for the ApplicationPath.</param>
     /// <param name="xmlSerializer">Internal Jellyfin interface for the XML information.</param>
+    /// <param name="libraryManager"></param>
+    /// <param name="notificationService"></param>
     public TeleJellyPlugin(
         ILogger<TeleJellyPlugin> logger,
         IApplicationPaths applicationPaths,
@@ -75,18 +77,9 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
         ];
     }
 
-    // public override void UpdateConfiguration(BasePluginConfiguration configuration)
-    // {
-    //     base.UpdateConfiguration(configuration);
-
-    //     // determine why this is not getting triggered by base???
-    //     // ConfigurationChanged?.Invoke(this, configuration);
-    //
-    //     Debugger.Break();
-    //
-    //     Console.WriteLine("!!!!!!!!! TeleJellyPlugin.UpdateConfiguration EVENT TRIGGERED !!!!!!!!!");
-    // }
-
+    /// <summary>
+    ///     Releases the resources used by the <see cref="TeleJellyPlugin" /> instance, such as event handlers.
+    /// </summary>
     public void Dispose()
     {
         _libraryManager.ItemAdded -= _notificationService.OnItemAdded;

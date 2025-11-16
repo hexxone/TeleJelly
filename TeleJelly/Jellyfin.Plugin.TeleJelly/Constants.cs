@@ -72,6 +72,6 @@ public static class Constants
         new() { Name = "login.css", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.css", NeedsReplacement = true },
         new() { Name = "login.js", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.login.js", NeedsReplacement = true },
         new() { Name = "material_icons.woff2", EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.material_icons.woff2" },
-        new() { Name = DefaultUserImageExtraFile, EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.TeleJellyLogo.jpg" }
+        new() { Name = DefaultUserImageExtraFile, EmbeddedResourcePath = $"{typeof(TeleJellyPlugin).Namespace}.Assets.Login.TeleJellyLogo.png" }
     ];
 }

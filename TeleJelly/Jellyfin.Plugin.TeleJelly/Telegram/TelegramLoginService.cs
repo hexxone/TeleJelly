@@ -73,7 +73,6 @@ public class TelegramLoginService
     ///     If the user exists, check against his TG user id.
     ///     If the user does not exist, create him.
     ///     Update user details and save them.
-    ///     return user.
     /// </summary>
     /// <param name="authData">verified Telegram user data.</param>
     /// <returns>Jellyfin User.</returns>

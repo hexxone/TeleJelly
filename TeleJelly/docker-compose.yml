@@ -6,7 +6,6 @@ networks:
 
 volumes:
     traefik-le:
-    jellyfin-media:
 
 services:
     traefik:
@@ -37,7 +36,7 @@ services:
                 DOTNET_VERSION: "8.0"
                 JELLYFIN_VERSION: "10.10"
         volumes:
-            - jellyfin-media:/media
+            - ./jellyfin-media:/media
         networks:
             - jellyfin-network
         labels:

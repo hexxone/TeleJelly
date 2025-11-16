@@ -115,6 +115,17 @@ or [.NET8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see Tool
 
 E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 
+## Bot Commands
+
+- `/start` - Shows a welcome message.
+- `/help` - Shows a list of available commands.
+- `/link` - Links your Telegram group to your Jellyfin group.
+- `/register` - Registers a new user in your Jellyfin group.
+- `/search <text>` - Searches for a media item in your Jellyfin server.
+- `/stats` - Shows some statistics about your Jellyfin server and the plugin.
+- `/unlink` - Unlinks your Telegram group from your Jellyfin group.
+- `/userlist` - Lists all users in your Jellyfin group.
+
 ## Known issues
 
 - This Login-method is intended for Desktop/Browser usage. It has not been tested to be working with official Jellyfin
@@ -130,7 +141,7 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 - If a User were to change/sell his Username, a random person would possibly be able to use this Service.
   However, having Names over ID's is much more convenient for Management.
 
-- If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy,
+- If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy;
   otherwise adversaries might be able to lag the system.
 
 ## Demo Video

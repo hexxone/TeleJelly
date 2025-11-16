@@ -12,3 +12,5 @@ letsencrypt/
 **/*.userosscache
 **/*.dbmdl
 **/*.jfm
+**/.DS_Store
+**/*.zip

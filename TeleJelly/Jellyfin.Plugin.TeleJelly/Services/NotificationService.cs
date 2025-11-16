@@ -9,6 +9,7 @@ using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Model.Entities;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -16,7 +17,11 @@ using Telegram.Bot.Types;
 namespace Jellyfin.Plugin.TeleJelly.Services;
 
 /// <summary>
-///
+///     Provides functionality to handle notifications related to item updates and additions.
+///     This service monitors changes to library items, checks the completeness of metadata,
+///     and sends notifications using a Telegram bot integration. It also ensures that
+///     notifications are managed effectively, including handling pending notifications and
+///     timing out incomplete notifications.
 /// </summary>
 public class NotificationService : IDisposable
 {
@@ -28,7 +33,9 @@ public class NotificationService : IDisposable
     private readonly Timer _timer;
 
     /// <summary>
-    ///
+    ///     Provides functionality to handle notifications related to item updates and additions.
+    ///     This class is responsible for managing notifications, checking metadata completeness, and
+    ///     handling timed-out notifications.
     /// </summary>
     public NotificationService(ILogger<NotificationService> logger, TelegramBotClientWrapper botClientWrapper, IConfigurationManager configurationManager, IServiceProvider serviceProvider)
     {
@@ -40,8 +47,12 @@ public class NotificationService : IDisposable
     }
 
     /// <summary>
-    ///
+    ///     Handles logic triggered when a library item's metadata or properties are updated.
+    ///     This method processes updates to ensure notifications are sent if the metadata
+    ///     is complete and removes associated pending notifications if applicable.
     /// </summary>
+    /// <param name="sender">The source of the event, typically the library manager.</param>
+    /// <param name="e">The event data containing details about the updated item.</param>
     public void OnItemUpdated(object? sender, ItemChangeEventArgs e)
     {
         _logger.LogInformation("Item updated: {ItemName}", e.Item.Name);
@@ -53,8 +64,17 @@ public class NotificationService : IDisposable
     }
 
     /// <summary>
-    ///
+    ///     Handles the event when a new item is added to the library. This method checks the item's metadata
+    ///     for completeness and, if complete, sends a notification using a Telegram bot integration.
+    ///     If the metadata is incomplete, the item is added to a collection of pending notifications for further processing.
     /// </summary>
+    /// <param name="sender">
+    ///     The source of the event, typically the library manager that triggered the item addition event.
+    /// </param>
+    /// <param name="e">
+    ///     An instance of <see cref="ItemChangeEventArgs"/> that contains information about the item
+    ///     that was added, including its metadata and identifier.
+    /// </param>
     public void OnItemAdded(object? sender, ItemChangeEventArgs e)
     {
         _logger.LogInformation("Item added: {ItemName}", e.Item.Name);
@@ -69,7 +89,7 @@ public class NotificationService : IDisposable
         }
     }
 
-    private async void CheckForTimeouts(object state)
+    private void CheckForTimeouts(object? state)
     {
         _logger.LogInformation("Checking for timed out notifications");
 
@@ -109,14 +129,16 @@ public class NotificationService : IDisposable
             return;
         }
 
-        var config = _configurationManager.GetConfiguration<PluginConfiguration>("TeleJelly");
+        var config = TeleJellyPlugin.Instance?.Configuration
+                     ?? throw new Exception("TeleJellyPlugin Instance/Config was null.");
+
         var notifyGroups = config.TelegramGroups
             .Where(g => g.TelegramGroupChat is { NotifyNewContent: true })
             .ToArray();
 
-        if (_botClientWrapper.Client == null)
+        if (notifyGroups.Length == 0)
         {
-            _logger.LogInformation("Cannot send notification for '{ItemName}' because no group has them enabled.", item.Name);
+            _logger.LogInformation("Cannot send notification for '{ItemName}' because no group has notifications enabled.", item.Name);
             return;
         }
 
@@ -136,21 +158,32 @@ public class NotificationService : IDisposable
             message.AppendLine("New content added:");
         }
 
-        message.AppendLine(item.Name);
+        // Build the display text (name + year + type)
+        var baseUrl = config.LoginBaseUrl;
+        var displayText = item.GetDisplayText();
 
-        if (item.ProductionYear.HasValue)
+        // Make it a link if baseUrl is available
+        if (!string.IsNullOrWhiteSpace(baseUrl))
         {
-            message.AppendLine("Year: " + item.ProductionYear.Value);
+            var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
+            message.Append('[').Append(displayText).Append("](").Append(itemUrl).Append(')');
+        }
+        else
+        {
+            message.Append(displayText);
         }
 
-        var imdbId = item.GetProviderId(MetadataProvider.Imdb);
-        if (!string.IsNullOrEmpty(imdbId))
+        var extraLink = item.GetExtraLink();
+        if (extraLink != null)
         {
-            message.AppendLine("IMDb: https://www.imdb.com/title/" + imdbId);
+            message.Append(extraLink);
         }
+
+        message.AppendLine();
+
 
         var audioLanguages = item.GetMediaStreams()
-            .Where(m => m.Type == MediaBrowser.Model.Entities.MediaStreamType.Audio)
+            .Where(m => m.Type == MediaStreamType.Audio)
             .Select(m => m.Language)
             .Distinct().ToArray();
 
@@ -160,7 +193,7 @@ public class NotificationService : IDisposable
         }
 
         var subtitleLanguages = item.GetMediaStreams()
-            .Where(m => m.Type == MediaBrowser.Model.Entities.MediaStreamType.Subtitle)
+            .Where(m => m.Type == MediaStreamType.Subtitle)
             .Select(m => m.Language)
             .Distinct().ToArray();
 
@@ -169,26 +202,22 @@ public class NotificationService : IDisposable
             message.AppendLine($"Subtitles: " + string.Join(", ", subtitleLanguages));
         }
 
-        foreach (var group in config.TelegramGroups)
+        foreach (var notifyGroup in notifyGroups)
         {
-            if (group.TelegramGroupChat is not { NotifyNewContent: true })
-            {
-                continue;
-            }
-
             try
             {
                 using var fromFile = new FileStream(imageUrl, FileMode.Open, FileAccess.Read);
 
                 _ = _botClientWrapper.Client.SendPhoto(
-                    chatId: group.TelegramGroupChat.TelegramChatId,
-                    photo: InputFile.FromStream(fromFile),
-                    caption: message.ToString()
+                    chatId: notifyGroup.TelegramGroupChat!.TelegramChatId,
+                    showCaptionAboveMedia: true,
+                    caption: message.ToString(),
+                    photo: InputFile.FromStream(fromFile)
                 ).Wait(TimeSpan.FromSeconds(30));
             }
             catch (Exception e)
             {
-                _logger.LogInformation("Failed to send notification for '{ItemName}' to group '{Group}'", item.Name, group.GroupName);
+                _logger.LogInformation("Failed to send notification for '{ItemName}' to group '{Group}'", item.Name, notifyGroup.GroupName);
                 Console.WriteLine(e);
                 throw;
             }
@@ -196,7 +225,8 @@ public class NotificationService : IDisposable
     }
 
     /// <summary>
-    ///
+    ///     Releases all resources used by the <see cref="NotificationService" />.
+    ///     This method disposes of the internal timer and performs any necessary cleanup tasks.
     /// </summary>
     public void Dispose()
     {

@@ -64,7 +64,7 @@ public class CommandRegister : ICommandBase
                     {
                         existingUsers.Add(member.User.Username);
                     }
-                    else
+                    else if(linkedGroup.TelegramGroupChat?.SyncUserNames ?? false)
                     {
                         linkedGroup.UserNames.Add(member.User.Username);
                         addedUsers.Add(member.User.Username);
@@ -103,7 +103,7 @@ public class CommandRegister : ICommandBase
                             $"You are already added to the group, @{user.Username}.",
                             cancellationToken: cancellationToken);
                     }
-                    else
+                    else if(linkedGroup.TelegramGroupChat?.SyncUserNames ?? false)
                     {
                         var baseUrl = telegramBotService._config.LoginBaseUrl;
                         var serverUrl = baseUrl != null ? $"\nYou can now login here: {baseUrl}" : "";
@@ -113,6 +113,14 @@ public class CommandRegister : ICommandBase
                         await botClient.SendMessage(
                             message.Chat.Id,
                             $"Welcome @{user.Username}! You have been added to the TeleJelly group.{serverUrl}",
+                            cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+
+                        await botClient.SendMessage(
+                            message.Chat.Id,
+                            $"Sorry @{user.Username}! Automatic Username Sync is disabled for this group.",
                             cancellationToken: cancellationToken);
                     }
                 }
