@@ -19,7 +19,7 @@ const loadingSpinner = {
 };
 
 // on page loaded, check logged in ? -> redirect home
-window.onload = function() {
+window.onload = function () {
     const creds = localStorage.getItem("jellyfin_credentials");
     if (creds) {
         const parsedCreds = JSON.parse(creds);
@@ -182,7 +182,7 @@ function detectBrowser() {
     }
 
     return browser;
-};
+}
 
 const BrowserName = {
     tizen: 'Samsung Smart TV',

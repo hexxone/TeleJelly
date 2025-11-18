@@ -158,7 +158,7 @@ public class TelegramLoginService
             App = Constants.PluginName,
             AppVersion = GetType().Assembly.GetName().Version?.ToString() ?? "0.0.0.1",
             DeviceName = GetDeviceName(request),
-            DeviceId =  GetDeviceId(request),
+            DeviceId = GetDeviceId(request),
             RemoteEndPoint = request.HttpContext.GetNormalizedRemoteIP().ToString(),
             UserId = user.Id,
             Username = user.Username

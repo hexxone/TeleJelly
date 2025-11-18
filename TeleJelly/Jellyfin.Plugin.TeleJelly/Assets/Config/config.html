@@ -78,7 +78,7 @@
                             <pre id="ExampleBrandingCode">Please enable JavaScript.</pre>
                             <p>
                                 To set the branding, you can copy above code and apply it in the:
-                                <a id="GeneralSettingsTabUrl" class="button-link emby-button" href="/web/index.html#/dashboard/settings" target="_blank">"General" Settings tab</a>.
+                                <a class="button-link emby-button" href="/web/index.html#/dashboard/settings" id="GeneralSettingsTabUrl" target="_blank">"General" Settings tab</a>.
                             </p>
                         </fieldset>
                     </form>
@@ -191,8 +191,8 @@
                                             <input class="sso-text"
                                                    id="TgGroupName"
                                                    is="emby-input"
-                                                   minlength="3"
                                                    maxlength="32"
+                                                   minlength="3"
                                                    onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9_\-]/g, '')"
                                                    placeholder="New group name"
                                                    type="text"/>
@@ -259,7 +259,7 @@
                                     </div>
                                 </div>
 
-                                <p>After creating a Group (and saving), you can <a id="BotLinkCommandUrl" class="button-link emby-button" href="#INVALID_BOT_TOKEN" target="_blank">/link it to Telegram</a></p>
+                                <p>After creating a Group (and saving), you can <a class="button-link emby-button" href="#INVALID_BOT_TOKEN" id="BotLinkCommandUrl" target="_blank">/link it to Telegram</a></p>
 
                                 <button class="raised button-submit block emby-button"
                                         id="SaveGroupConfig"

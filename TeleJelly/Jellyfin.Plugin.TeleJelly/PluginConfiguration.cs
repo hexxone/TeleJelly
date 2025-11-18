@@ -49,7 +49,7 @@ public class PluginConfiguration : BasePluginConfiguration
 
     /// <summary>
     ///     Gets or sets the externally forced URL Scheme.
-    ///  !!! IMPORTANT !!!
+    ///     !!! IMPORTANT !!!
     ///     Only gets used when either "http" or "https".
     ///     All other values will be ignored (e.g. empty "", or "None")
     /// </summary>

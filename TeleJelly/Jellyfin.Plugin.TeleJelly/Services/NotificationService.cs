@@ -2,16 +2,14 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
-using System.Threading;
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Library;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Text;
+using System.Threading;
 using Jellyfin.Plugin.TeleJelly.Classes;
 using Jellyfin.Plugin.TeleJelly.Telegram;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -28,9 +26,9 @@ namespace Jellyfin.Plugin.TeleJelly.Services;
 public class NotificationService : IDisposable
 {
     private readonly ILogger<NotificationService> _logger;
+    private readonly ILibraryManager _libraryManager;
+
     private readonly TelegramBotClientWrapper _botClientWrapper;
-    private readonly IConfigurationManager _configurationManager;
-    private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<Guid, DateTime> _pendingNotifications = new();
     private readonly Timer _timer;
 
@@ -39,12 +37,11 @@ public class NotificationService : IDisposable
     ///     This class is responsible for managing notifications, checking metadata completeness, and
     ///     handling timed-out notifications.
     /// </summary>
-    public NotificationService(ILogger<NotificationService> logger, TelegramBotClientWrapper botClientWrapper, IConfigurationManager configurationManager, IServiceProvider serviceProvider)
+    public NotificationService(ILogger<NotificationService> logger, ILibraryManager libraryManager, TelegramBotClientWrapper botClientWrapper)
     {
         _logger = logger;
         _botClientWrapper = botClientWrapper;
-        _configurationManager = configurationManager;
-        _serviceProvider = serviceProvider;
+        _libraryManager = libraryManager;
         _timer = new Timer(CheckForTimeouts, null, TimeSpan.Zero, TimeSpan.FromHours(1));
     }
 
@@ -74,7 +71,7 @@ public class NotificationService : IDisposable
     ///     The source of the event, typically the library manager that triggered the item addition event.
     /// </param>
     /// <param name="e">
-    ///     An instance of <see cref="ItemChangeEventArgs"/> that contains information about the item
+    ///     An instance of <see cref="ItemChangeEventArgs" /> that contains information about the item
     ///     that was added, including its metadata and identifier.
     /// </param>
     public void OnItemAdded(object? sender, ItemChangeEventArgs e)
@@ -95,8 +92,6 @@ public class NotificationService : IDisposable
     {
         _logger.LogInformation("Checking for timed out notifications");
 
-        var libraryManager = _serviceProvider.GetRequiredService<ILibraryManager>();
-
         foreach (var item in _pendingNotifications)
         {
             if (DateTime.UtcNow - item.Value <= TimeSpan.FromHours(24))
@@ -109,7 +104,7 @@ public class NotificationService : IDisposable
                 continue;
             }
 
-            var baseItem = libraryManager.GetItemById(item.Key);
+            var baseItem = _libraryManager.GetItemById(item.Key);
             if (baseItem != null)
             {
                 SendRichNotificationAsync(baseItem, true);
@@ -151,13 +146,15 @@ public class NotificationService : IDisposable
             : item.GetImagePath(ImageType.Backdrop);
 
         var message = new StringBuilder();
+
+        // Escape all literal text for MarkdownV2
         if (isTimeout)
         {
-            message.AppendLine("New content added (metadata might be incomplete):");
+            message.AppendLine(TelegramMarkdown.Escape("🎉 New content added (metadata might be incomplete 😅):"));
         }
         else
         {
-            message.AppendLine("New content added:");
+            message.AppendLine(TelegramMarkdown.Escape("🎉 New content added 🎉"));
         }
 
         // Build the display text (name + year + type)
@@ -165,11 +162,19 @@ public class NotificationService : IDisposable
         var displayText = item.GetDisplayText();
         var safeDisplayText = TelegramMarkdown.Escape(displayText);
 
+        // ... existing code ...
         // Make it a link if baseUrl is available
         if (!string.IsNullOrWhiteSpace(baseUrl))
         {
             var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
-            message.Append('[').Append(safeDisplayText).Append("](").Append(itemUrl).Append(')');
+            var safeItemUrl = TelegramMarkdown.Escape(itemUrl);
+
+            // Only the []() are raw Markdown; both text and URL content are escaped
+            message.Append('[')
+                .Append(safeDisplayText)
+                .Append("](")
+                .Append(safeItemUrl)
+                .Append(')');
         }
         else
         {
@@ -179,7 +184,6 @@ public class NotificationService : IDisposable
         var extraLink = item.GetExtraLink();
         if (extraLink != null)
         {
-            // extraLink already contains valid MarkdownV2 link syntax
             message.Append(extraLink);
         }
 
@@ -193,7 +197,8 @@ public class NotificationService : IDisposable
 
         if (audioLanguages.Length > 0)
         {
-            message.AppendLine("Audio: " + string.Join(", ", audioLanguages.Select(TelegramMarkdown.Escape)));
+            var audioLine = "Audio: " + string.Join(", ", audioLanguages);
+            message.AppendLine(TelegramMarkdown.Escape(audioLine));
         }
 
         var subtitleLanguages = item.GetMediaStreams()
@@ -204,7 +209,8 @@ public class NotificationService : IDisposable
 
         if (subtitleLanguages.Length > 0)
         {
-            message.AppendLine("Subtitles: " + string.Join(", ", subtitleLanguages.Select(TelegramMarkdown.Escape)));
+            var subsLine = "Subtitles: " + string.Join(", ", subtitleLanguages);
+            message.AppendLine(TelegramMarkdown.Escape(subsLine));
         }
 
         foreach (var notifyGroup in notifyGroups)
@@ -214,7 +220,7 @@ public class NotificationService : IDisposable
                 using var fromFile = new FileStream(imageUrl, FileMode.Open, FileAccess.Read);
 
                 _ = _botClientWrapper.Client.SendPhoto(
-                    chatId: notifyGroup.TelegramGroupChat!.TelegramChatId,
+                    notifyGroup.TelegramGroupChat!.TelegramChatId,
                     showCaptionAboveMedia: true,
                     caption: message.ToString(),
                     photo: InputFile.FromStream(fromFile),

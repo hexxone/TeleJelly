@@ -98,8 +98,8 @@ You can choose between 3 options below.
 Don't trust the downloads?
 
 1. `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
-2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) 
-or [.NET8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see Tools section below)
+2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+   or [.NET8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see the Tools section below)
 3. run command `dotnet publish TeleJelly -c Release`
 4. copy files from `./publish/` folder into `config/plugins/TeleJelly` (create it if non-existing)
 5. restart jellyfin server
@@ -118,9 +118,9 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 ## Bot Commands
 
 - `/start` - Shows a welcome message.
-- `/help` - Shows a list of available commands.
 - `/link` - Links your Telegram group to your Jellyfin group.
 - `/register` - Registers a new user in your Jellyfin group.
+- `/request <imdb>` - Requests a movie or series from IMDB-Id or URL.
 - `/search <text>` - Searches for a media item in your Jellyfin server.
 - `/stats` - Shows some statistics about your Jellyfin server and the plugin.
 - `/unlink` - Unlinks your Telegram group from your Jellyfin group.
@@ -147,7 +147,7 @@ E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
 ## Demo Video
 
 _Note: Video & Screenshots are taken
-with [my custom css theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied. 
+with [my custom css theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied.
 The Logo is AI-generated._
 
 https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
@@ -223,13 +223,13 @@ Licensing is a complex topic. This repository features a GPLv3 license template 
 default license for your plugin. You may alter this if you like, but if you do a permissive license must be chosen.
 
 Due to how plugins in Jellyfin work, when your plugin is compiled into a binary, it will link against the various
-Jellyfin binary NuGet packages. These packages are licensed under the GPLv3. Thus, due to the nature and restrictions 
+Jellyfin binary NuGet packages. These packages are licensed under the GPLv3. Thus, due to the nature and restrictions
 of the GPL, the binary plugin you get will also be licensed under the GPLv3.
 
-If you accept the default GPLv3 license from this template, all will be good. If you however choose a different license,
-please keep this fact in mind, as it might not always be obvious that a, e.g. MIT-licensed plugin would become GPLv3 
+If you accept the default GPLv3 license from this template, all will be well. If you, however, choose a different license,
+please keep this fact in mind, as it might not always be obvious that an e.g. MIT-licensed plugin would become GPLv3
 when compiled.
 
 Please note that this also means making "proprietary", source-unavailable, or otherwise "hidden" plugins for public
-consumption is not permitted. To build a Jellyfin plugin for distribution to others, it must be under the GPLv3 or 
+consumption is not permitted. To build a Jellyfin plugin for distribution to others, it must be under the GPLv3 or
 a permissive open-source license that can be linked against the GPLv3.

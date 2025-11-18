@@ -16,7 +16,6 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 // ReSharper disable once UnusedType.Global
 public class CommandStart : ICommandBase
 {
-
     /// <summary>
     ///     Gets what command to trigger on.
     /// </summary>
@@ -42,7 +41,7 @@ public class CommandStart : ICommandBase
             case ChatType.Private:
                 await botClient.SendMessage(
                     message.Chat.Id,
-                    Constants. PrivateAdminWelcomeMessage,
+                    Constants.PrivateAdminWelcomeMessage,
                     cancellationToken: cancellationToken);
                 break;
         }
@@ -75,7 +74,7 @@ public class CommandStart : ICommandBase
 
                 // fixes broken encoded input strings so they can be converted by C#
                 var parameter = message.Text.Split(' ', 2)[1];
-                int mod4 = parameter.Length % 4;
+                var mod4 = parameter.Length % 4;
                 if (mod4 > 0)
                 {
                     parameter += new string('=', 4 - mod4);
@@ -103,7 +102,7 @@ public class CommandStart : ICommandBase
         // 3. Else: Print info message for unlinked group
         await botClient.SendMessage(
             message.Chat.Id,
-            Constants. GroupWelcomeMessage,
+            Constants.GroupWelcomeMessage,
             cancellationToken: cancellationToken);
     }
 

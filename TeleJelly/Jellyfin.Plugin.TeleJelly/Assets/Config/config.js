@@ -471,11 +471,10 @@ const tgTokenHelper = {
             nameElement.innerHTML = `@${data.BotUsername}`;
 
             // update Bot Link-Command Url
-            if(tgConfigPage.currentGroup) {
+            if (tgConfigPage.currentGroup) {
                 const encodedText = btoa(`${LinkPrefix}${tgConfigPage.currentGroup}`);
                 page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${data.BotUsername}?startgroup=${encodedText}`;
-            }
-            else {
+            } else {
                 page.querySelector("#BotLinkCommandUrl").href = `https://t.me/${data.BotUsername}?startgroup`;
             }
 
@@ -521,7 +520,7 @@ export default function (view) {
     view.querySelector("#LoginBaseUrl").addEventListener("change", (e) => {
         const ref = view.querySelectorAll('#LoginBaseUrl');
         const inputValue = ref?.value;
-        if(inputValue?.endsWith("/")) {
+        if (inputValue?.endsWith("/")) {
             ref.value = inputValue.substring(0, inputValue.length - 1);
         }
     });
@@ -563,7 +562,7 @@ export default function (view) {
     // Bot token validation
     let debounce;
     const inputElement = view.querySelector("#TgBotToken");
-    inputElement.addEventListener("input",  () => {
+    inputElement.addEventListener("input", () => {
         clearTimeout(debounce);
         debounce = setTimeout(() => tgTokenHelper.validateToken(view, inputElement.value), 250);
     });

@@ -62,7 +62,7 @@ public class CommandLink : ICommandBase
             return;
         }
 
-        group.TelegramGroupChat = new TelegramGroupChat { TelegramChatId = message.Chat.Id, SyncUserNames = true, NotifyNewContent = true, };
+        group.TelegramGroupChat = new TelegramGroupChat { TelegramChatId = message.Chat.Id, SyncUserNames = true, NotifyNewContent = true };
 
         // Manually test saving the config by:
         // 1. Linking a group using the `/link` command.

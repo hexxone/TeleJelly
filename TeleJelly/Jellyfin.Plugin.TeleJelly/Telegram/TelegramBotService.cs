@@ -78,7 +78,6 @@ public class TelegramBotService : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to Start Telegram Bot: {Msg}", ex.Message);
-            throw;
         }
     }
 
@@ -166,6 +165,7 @@ public class TelegramBotService : IDisposable
                         "This group is not linked to Jellyfin. Please ask an administrator to link this group using the `/link` command.",
                         cancellationToken: cancellationToken);
                 }
+
                 return false;
             }
 

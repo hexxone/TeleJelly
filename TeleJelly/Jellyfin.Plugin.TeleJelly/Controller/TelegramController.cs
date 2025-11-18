@@ -63,7 +63,6 @@ public class TelegramController : ControllerBase
     /// <summary>
     ///     Returns the HTML,CSS and JS File-streams of the login page.
     ///     Replaces certain string params and uses memory caching.
-    ///
     ///     1. User will click on "Login with Telegram"
     ///     2. a Telegram.org popup opens, asking for login and bot permission
     ///     3. when confirmed by user -> will get redirected to "Confirm" method.

@@ -36,7 +36,7 @@ public class CommandRegister : ICommandBase
         {
             await botClient.SendMessage(
                 message.Chat.Id,
-                 isAdmin ? Constants.PrivateAdminWelcomeMessage : Constants.PrivateUserWelcomeMessage,
+                isAdmin ? Constants.PrivateAdminWelcomeMessage : Constants.PrivateUserWelcomeMessage,
                 cancellationToken: cancellationToken);
 
             return;
@@ -64,7 +64,7 @@ public class CommandRegister : ICommandBase
                     {
                         existingUsers.Add(member.User.Username);
                     }
-                    else if(linkedGroup.TelegramGroupChat?.SyncUserNames ?? false)
+                    else if (linkedGroup.TelegramGroupChat?.SyncUserNames ?? false)
                     {
                         linkedGroup.UserNames.Add(member.User.Username);
                         addedUsers.Add(member.User.Username);
@@ -77,10 +77,12 @@ public class CommandRegister : ICommandBase
                     TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
                     response += $"\nNow Added Users:\n{string.Join("\n", addedUsers)}\n";
                 }
+
                 if (existingUsers.Any())
                 {
                     response += $"\nExisting Users:\n{string.Join("\n", existingUsers)}\n";
                 }
+
                 if (missingUsernames.Any())
                 {
                     response += $"\nUsers without a username:\n{string.Join("\n", missingUsernames)}\n";
@@ -103,7 +105,7 @@ public class CommandRegister : ICommandBase
                             $"You are already added to the group, @{user.Username}.",
                             cancellationToken: cancellationToken);
                     }
-                    else if(linkedGroup.TelegramGroupChat?.SyncUserNames ?? false)
+                    else if (linkedGroup.TelegramGroupChat?.SyncUserNames ?? false)
                     {
                         var baseUrl = telegramBotService._config.LoginBaseUrl;
                         var serverUrl = baseUrl != null ? $"\nYou can now login here: {baseUrl}" : "";
@@ -117,7 +119,6 @@ public class CommandRegister : ICommandBase
                     }
                     else
                     {
-
                         await botClient.SendMessage(
                             message.Chat.Id,
                             $"Sorry @{user.Username}! Automatic Username Sync is disabled for this group.",

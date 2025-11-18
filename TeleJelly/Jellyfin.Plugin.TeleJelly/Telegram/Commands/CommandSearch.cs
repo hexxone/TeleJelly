@@ -1,7 +1,10 @@
-﻿using System.Linq;
-using System;
+﻿using System;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
+using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
@@ -9,11 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using System.Text;
-using Jellyfin.Data.Enums;
-using Jellyfin.Plugin.TeleJelly.Classes;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
@@ -23,7 +21,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 // ReSharper disable once UnusedType.Global
 public class CommandSearch : ICommandBase
 {
-    const int MaxResultCount = 5;
+    private const int MaxResultCount = 5;
 
 
     /// <summary>
@@ -79,16 +77,16 @@ public class CommandSearch : ICommandBase
         var queryText = GetSearchQuery(message.Text);
         if (string.IsNullOrWhiteSpace(queryText))
         {
+            // Send usage as plain text to avoid Markdown headaches
             await botClient.SendMessage(
                 message.Chat.Id,
-                "Usage: `/search \\<text\\>` – please provide a search term.",
-                parseMode: ParseMode.MarkdownV2,
+                "Usage: /search <text> – please provide a search term.",
+                ParseMode.None,
                 cancellationToken: cancellationToken);
 
             return;
         }
 
-        // Use InternalItemsQuery for efficient database-level filtering
         var query = new InternalItemsQuery
         {
             SearchTerm = queryText,
@@ -118,7 +116,8 @@ public class CommandSearch : ICommandBase
         {
             await botClient.SendMessage(
                 message.Chat.Id,
-                $"No results found for “{queryText}”.",
+                $"No results found for \"{queryText}\".",
+                ParseMode.None,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -130,16 +129,18 @@ public class CommandSearch : ICommandBase
         var sb = new StringBuilder();
 
         var safeQueryText = TelegramMarkdown.Escape(queryText);
-        sb.Append("Search results for “");
+        sb.Append(TelegramMarkdown.Escape("Search results for \""));
         sb.Append(safeQueryText);
-        sb.AppendLine("”:");
+        sb.AppendLine(TelegramMarkdown.Escape("\":"));
 
         var baseUrl = telegramBotService._config.LoginBaseUrl;
 
         var index = 1;
         foreach (var item in resultsToShow)
         {
-            sb.Append(index++).Append(". ");
+            // Number prefix (e.g. "1. ") must be escaped for MarkdownV2
+            var indexPrefix = $"{index++}. ";
+            sb.Append(TelegramMarkdown.Escape(indexPrefix));
 
             // Build the display text (name + year + type)
             var displayText = item.GetDisplayText();
@@ -149,8 +150,13 @@ public class CommandSearch : ICommandBase
             if (!string.IsNullOrWhiteSpace(baseUrl))
             {
                 var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
-                // itemUrl is used as the link destination; can stay unescaped.
-                sb.Append('[').Append(safeDisplayText).Append("](").Append(itemUrl).Append(')');
+                var safeItemUrl = TelegramMarkdown.Escape(itemUrl);
+
+                sb.Append('[')
+                    .Append(safeDisplayText)
+                    .Append("](")
+                    .Append(safeItemUrl)
+                    .Append(')');
             }
             else
             {
@@ -160,7 +166,7 @@ public class CommandSearch : ICommandBase
             var extraLink = item.GetExtraLink();
             if (extraLink != null)
             {
-                sb.Append(TelegramMarkdown.Escape(extraLink));
+                sb.Append(extraLink);
             }
 
             sb.AppendLine();
@@ -182,13 +188,15 @@ public class CommandSearch : ICommandBase
 
                 if (audioLanguages.Length > 0)
                 {
-                    sb.Append("   Audio: ");
+                    var audioPrefix = TelegramMarkdown.Escape("   Audio: ");
+                    sb.Append(audioPrefix);
                     sb.AppendLine(string.Join(", ", audioLanguages.Select(TelegramMarkdown.Escape)));
                 }
 
                 if (subtitleLanguages.Length > 0)
                 {
-                    sb.Append("   Subtitles: ");
+                    var subsPrefix = TelegramMarkdown.Escape("   Subtitles: ");
+                    sb.Append(subsPrefix);
                     sb.AppendLine(string.Join(", ", subtitleLanguages.Select(TelegramMarkdown.Escape)));
                 }
             }
@@ -200,17 +208,17 @@ public class CommandSearch : ICommandBase
         // think about pagination ? for now only show the first 5 and hint
         if (hasMore)
         {
-            sb.AppendLine("Only showing first 5 results. Refine your search to narrow down further.");
+            sb.AppendLine(TelegramMarkdown.Escape("Only showing first 5 results. Refine your search to narrow down further."));
         }
 
         await botClient.SendMessage(
             message.Chat.Id,
             sb.ToString(),
-            parseMode: ParseMode.MarkdownV2,
+            ParseMode.MarkdownV2,
             linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
             cancellationToken: cancellationToken);
     }
-    
+
     private static string GetSearchQuery(string? messageText)
     {
         if (string.IsNullOrWhiteSpace(messageText))

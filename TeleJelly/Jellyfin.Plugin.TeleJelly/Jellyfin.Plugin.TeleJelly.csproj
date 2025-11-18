@@ -50,8 +50,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Assets\*"/>
-        <EmbeddedResource Include="Assets\**\*"/>
+        <EmbeddedResource Include="Assets\**" Exclude="**/.DS_Store"/>
         <None Include="..\..\README.md">
             <Link>README.md</Link>
         </None>

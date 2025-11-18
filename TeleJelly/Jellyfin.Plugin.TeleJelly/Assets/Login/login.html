@@ -3,9 +3,9 @@
     <meta content="Jellyfin Telegram SSO" property="og:title"/>
     <meta content="Jellyfin Telegram SSO" property="og:site_name"/>
     <meta content="https://jellyfin.org" property="og:url"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <meta name="application-name" content="Jellyfin">
-    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <meta content="Jellyfin" name="application-name">
+    <meta content="noindex, nofollow, noarchive" name="robots">
     <title>Jellyfin - Telegram SSO</title>
     <!-- made by hexx.one -->
     <link href="/web/themes/dark/theme.css"
@@ -38,7 +38,7 @@
 
 <!-- Jellyfin'ish Login Form Wrapper -->
 <div class="mainAnimatedPages skinBody">
-    <div id="loginPage" class="page standalonePage mainAnimatedPage telejelly-page" data-role="page" data-type="login">
+    <div class="page standalonePage mainAnimatedPage telejelly-page" data-role="page" data-type="login" id="loginPage">
         <div class="padded-left padded-right padded-bottom-page margin-auto-y">
             <div class="readOnlyContent">
 
@@ -48,35 +48,35 @@
                     <div class="padded-left padded-right flex flex-direction-column align-items-center justify-content-center">
                         <!-- Icons -->
                         <div class="linkLogos flex flex-direction-row align-items-center justify-content-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-label="Telegram" role="img" viewBox="0 0 240 240" style="height:4.20em;">
+                            <svg aria-label="Telegram" role="img" style="height:4.20em;" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                                 <defs>
-                                    <linearGradient gradientUnits="userSpaceOnUse" x2="120" y1="240" x1="120" id="linear-gradient">
-                                        <stop stop-color="#1d93d2" offset="0"></stop>
-                                        <stop stop-color="#38b0e3" offset="1"></stop>
+                                    <linearGradient gradientUnits="userSpaceOnUse" id="linear-gradient" x1="120" x2="120" y1="240">
+                                        <stop offset="0" stop-color="#1d93d2"></stop>
+                                        <stop offset="1" stop-color="#38b0e3"></stop>
                                     </linearGradient>
                                 </defs>
                                 <title>Telegram_logo</title>
-                                <circle fill="url(#linear-gradient)" r="120" cy="120" cx="120"></circle>
-                                <path fill="#fff" d="M81.486,130.178,52.2,120.636s-3.5-1.42-2.373-4.64c.232-.664.7-1.229,2.1-2.2,6.489-4.523,120.106-45.36,120.106-45.36s3.208-1.081,5.1-.362a2.766,2.766,0,0,1,1.885,2.055,9.357,9.357,0,0,1,.254,2.585c-.009.752-.1,1.449-.169,2.542-.692,11.165-21.4,94.493-21.4,94.493s-1.239,4.876-5.678,5.043A8.13,8.13,0,0,1,146.1,172.5c-8.711-7.493-38.819-27.727-45.472-32.177a1.27,1.27,0,0,1-.546-.9c-.093-.469.417-1.05.417-1.05s52.426-46.6,53.821-51.492c.108-.379-.3-.566-.848-.4-3.482,1.281-63.844,39.4-70.506,43.607A3.21,3.21,0,0,1,81.486,130.178Z"></path>
+                                <circle cx="120" cy="120" fill="url(#linear-gradient)" r="120"></circle>
+                                <path d="M81.486,130.178,52.2,120.636s-3.5-1.42-2.373-4.64c.232-.664.7-1.229,2.1-2.2,6.489-4.523,120.106-45.36,120.106-45.36s3.208-1.081,5.1-.362a2.766,2.766,0,0,1,1.885,2.055,9.357,9.357,0,0,1,.254,2.585c-.009.752-.1,1.449-.169,2.542-.692,11.165-21.4,94.493-21.4,94.493s-1.239,4.876-5.678,5.043A8.13,8.13,0,0,1,146.1,172.5c-8.711-7.493-38.819-27.727-45.472-32.177a1.27,1.27,0,0,1-.546-.9c-.093-.469.417-1.05.417-1.05s52.426-46.6,53.821-51.492c.108-.379-.3-.566-.848-.4-3.482,1.281-63.844,39.4-70.506,43.607A3.21,3.21,0,0,1,81.486,130.178Z" fill="#fff"></path>
                             </svg>
-                            <span id="ssoSyncIcon" class="material-symbols-outlined animate-on-load animate-on-hover">
+                            <span class="material-symbols-outlined animate-on-load animate-on-hover" id="ssoSyncIcon">
                             autorenew
                         </span>
-                            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-label="Jellyfin" role="img" viewBox="0 0 512 512" style="height:4.20em;">
-                                <rect width="512" height="512" rx="15%" fill="#ffffff"/>
+                            <svg aria-label="Jellyfin" role="img" style="height:4.20em;" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <rect fill="#ffffff" height="512" rx="15%" width="512"/>
                                 <defs>
                                     <path d="M190.56 329.07c8.63 17.3 122.4 17.12 130.93 0 8.52-17.1-47.9-119.78-65.46-119.8-17.57 0-74.1 102.5-65.47 119.8z" id="A"/>
-                                    <linearGradient id="B" gradientUnits="userSpaceOnUse" x1="126.15" y1="219.32" x2="457.68" y2="410.73">
+                                    <linearGradient gradientUnits="userSpaceOnUse" id="B" x1="126.15" x2="457.68" y1="219.32" y2="410.73">
                                         <stop offset="0%" stop-color="#aa5cc3"/>
                                         <stop offset="100%" stop-color="#00a4dc"/>
                                     </linearGradient>
                                     <path d="M58.75 417.03c25.97 52.15 368.86 51.55 394.55 0S308.93 56.08 256.03 56.08c-52.92 0-223.25 308.8-197.28 360.95zm68.04-45.25c-17.02-34.17 94.6-236.5 129.26-236.5 34.67 0 146.1 202.7 129.26 236.5-16.83 33.8-241.5 34.17-258.52 0z" id="C"/>
                                 </defs>
                                 <title>Jellyfin_logo</title>
-                                <use xlink:href="#A" fill="url(#B)"/>
-                                <use xlink:href="#A" fill-opacity="0" stroke="#000000" stroke-opacity="0"/>
-                                <use xlink:href="#C" fill="url(#B)"/>
-                                <use xlink:href="#C" fill-opacity="0" stroke="#000000" stroke-opacity="0"/>
+                                <use fill="url(#B)" xlink:href="#A"/>
+                                <use fill-opacity="0" stroke="#000000" stroke-opacity="0" xlink:href="#A"/>
+                                <use fill="url(#B)" xlink:href="#C"/>
+                                <use fill-opacity="0" stroke="#000000" stroke-opacity="0" xlink:href="#C"/>
                             </svg>
                         </div>
                         <!-- Text -->
@@ -85,7 +85,7 @@
                     </div>
 
                     <!-- Error message -->
-                    <div id="errorMessage" class="spacedContent padded-left padded-right flex align-items-center justify-content-center"
+                    <div class="spacedContent padded-left padded-right flex align-items-center justify-content-center" id="errorMessage"
                          style="color:#dd4444;">
                     </div>
 
@@ -103,8 +103,8 @@
 
                     <!-- Back button -->
                     <div class="backButton spacedContent">
-                        <button is="emby-button" type="button" class="raised cancel btnQuick emby-button block"
-                                onclick="window.location.replace('/web/index.html#!/login.html')">
+                        <button class="raised cancel btnQuick emby-button block" is="emby-button" onclick="window.location.replace('/web/index.html#!/login.html')"
+                                type="button">
                             <span class="material-symbols-outlined">
                                 password
                             </span>

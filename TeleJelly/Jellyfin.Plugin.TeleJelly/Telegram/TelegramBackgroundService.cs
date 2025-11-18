@@ -120,7 +120,7 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     private void ConfigureBot(PluginConfiguration config)
     {
         var newToken = config.BotToken.Trim();
-        if (!config.EnableBotService ||string.IsNullOrWhiteSpace(newToken) || newToken.Equals(Constants.DefaultBotToken))
+        if (!config.EnableBotService || string.IsNullOrWhiteSpace(newToken) || newToken.Equals(Constants.DefaultBotToken))
         {
             DisposeBotService();
             _logger.LogInformation("Telegram bot service deactivated, token empty or invalid.");
