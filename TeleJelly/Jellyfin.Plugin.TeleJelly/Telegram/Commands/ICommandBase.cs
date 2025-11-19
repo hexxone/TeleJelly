@@ -7,7 +7,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 /// <summary>
 ///     Provides a base-class for custom Telegram Bot Commands.
 /// </summary>
-public interface ICommandBase
+internal interface ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.

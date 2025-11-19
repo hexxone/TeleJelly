@@ -18,7 +18,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 ///     Command for printing the server infos.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandStats : ICommandBase
+internal class CommandStats : ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.

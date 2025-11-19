@@ -11,5 +11,5 @@ public class TelegramBotClientWrapper
     /// <summary>
     ///     DI-Singleton global initialized Client.
     /// </summary>
-    public ITelegramBotClient? Client { get; set; }
+    internal ITelegramBotClient? Client { get; set; }
 }

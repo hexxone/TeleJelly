@@ -14,7 +14,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 ///     Command for printing the info message and/or linking the bot initially.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandStart : ICommandBase
+internal class CommandStart : ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.

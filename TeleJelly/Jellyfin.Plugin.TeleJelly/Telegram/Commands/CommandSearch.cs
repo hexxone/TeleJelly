@@ -19,7 +19,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 ///     Command for searching media on the Server.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandSearch : ICommandBase
+internal class CommandSearch : ICommandBase
 {
     private const int MaxResultCount = 5;
 

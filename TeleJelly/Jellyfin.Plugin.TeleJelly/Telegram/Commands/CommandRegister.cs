@@ -12,7 +12,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 ///     Command for checking if all admin usernames from Telegram are actually registered and if not, registering them.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandRegister : ICommandBase
+internal class CommandRegister : ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.

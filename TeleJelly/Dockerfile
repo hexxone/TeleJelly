@@ -15,7 +15,7 @@ RUN dotnet restore
 
 # full copy + build
 COPY . .
-RUN dotnet publish Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj -c Release -o /app/publish
+RUN dotnet publish Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj -c Release -v d -o /app/publish
 
 # Final stage using official Jellyfin image
 FROM jellyfin/jellyfin:${JELLYFIN_VERSION}

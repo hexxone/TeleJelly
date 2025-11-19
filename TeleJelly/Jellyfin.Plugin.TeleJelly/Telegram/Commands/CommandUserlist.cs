@@ -11,7 +11,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 ///     Command for printing all users in the current linked group.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandUserlist : ICommandBase
+internal class CommandUserlist : ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.

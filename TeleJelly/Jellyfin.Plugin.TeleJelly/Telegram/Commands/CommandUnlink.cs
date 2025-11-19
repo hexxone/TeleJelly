@@ -11,7 +11,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 ///     Command for unlinking a Telegram Group from Jellyfin.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandUnlink : ICommandBase
+internal class CommandUnlink : ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.

@@ -29,6 +29,7 @@ public class NotificationService : IDisposable
     private readonly ILibraryManager _libraryManager;
 
     private readonly TelegramBotClientWrapper _botClientWrapper;
+    private readonly RequestService _requestService;
     private readonly ConcurrentDictionary<Guid, DateTime> _pendingNotifications = new();
     private readonly Timer _timer;
 
@@ -37,11 +38,16 @@ public class NotificationService : IDisposable
     ///     This class is responsible for managing notifications, checking metadata completeness, and
     ///     handling timed-out notifications.
     /// </summary>
-    public NotificationService(ILogger<NotificationService> logger, ILibraryManager libraryManager, TelegramBotClientWrapper botClientWrapper)
+    public NotificationService(
+        ILogger<NotificationService> logger,
+        ILibraryManager libraryManager,
+        TelegramBotClientWrapper botClientWrapper,
+        RequestService requestService)
     {
         _logger = logger;
         _botClientWrapper = botClientWrapper;
         _libraryManager = libraryManager;
+        _requestService = requestService;
         _timer = new Timer(CheckForTimeouts, null, TimeSpan.Zero, TimeSpan.FromHours(1));
     }
 
@@ -59,6 +65,7 @@ public class NotificationService : IDisposable
         if (IsMetadataComplete(e.Item) && _pendingNotifications.TryRemove(e.Item.Id, out _))
         {
             SendRichNotificationAsync(e.Item);
+            RemoveRequestIfNeeded(e.Item);
         }
     }
 
@@ -81,6 +88,7 @@ public class NotificationService : IDisposable
         if (IsMetadataComplete(e.Item))
         {
             SendRichNotificationAsync(e.Item);
+            RemoveRequestIfNeeded(e.Item);
         }
         else
         {
@@ -108,7 +116,31 @@ public class NotificationService : IDisposable
             if (baseItem != null)
             {
                 SendRichNotificationAsync(baseItem, true);
+                RemoveRequestIfNeeded(baseItem);
             }
+        }
+    }
+
+    private void RemoveRequestIfNeeded(BaseItem item)
+    {
+        if (!IsMetadataComplete(item))
+        {
+            return;
+        }
+
+        var imdbId = item.GetProviderId(MetadataProvider.Imdb);
+        if (string.IsNullOrEmpty(imdbId))
+        {
+            return;
+        }
+
+        try
+        {
+            _requestService.RemoveRequestAsync(imdbId, CancellationToken.None).Wait();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove request for item '{ItemName}'", item.Name);
         }
     }
 

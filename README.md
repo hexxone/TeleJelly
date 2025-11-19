@@ -100,9 +100,10 @@ Don't trust the downloads?
 1. `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
 2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
    or [.NET8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see the Tools section below)
-3. run command `dotnet publish TeleJelly -c Release`
-4. copy files from `./publish/` folder into `config/plugins/TeleJelly` (create it if non-existing)
-5. restart jellyfin server
+3. go to folder `cd ./TeleJelly`
+4. run command `dotnet publish Jellyfin.Plugin.TeleJelly -c Release -v d`
+5. copy files from `./publish/` folder into `config/plugins/TeleJelly` (create it if non-existing)
+6. restart jellyfin server
 
 ## Configuration
 

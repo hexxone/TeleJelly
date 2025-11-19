@@ -5,8 +5,6 @@ namespace Jellyfin.Plugin.TeleJelly.Classes;
 /// <summary>
 ///     DTO representing a single media request.
 ///     Used both by the Telegram command layer and the configuration API.
-///
-///     TODO remove "requested" items in NotificationService when they arrive.
 /// </summary>
 public class MediaRequest
 {

@@ -23,7 +23,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 ///     but only Name, Year, Type, Extra Info + ImDb inline link. No images.
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class CommandRequest : ICommandBase
+internal class CommandRequest : ICommandBase
 {
     private const int MaxRequestsPerUser = 5;
 

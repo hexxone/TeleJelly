@@ -3,8 +3,7 @@
     <PropertyGroup>
         <Internalize>false</Internalize>
         <NoRepackRes>true</NoRepackRes>
-        <!-- Add debug symbols -->
-        <DebugType>embedded</DebugType>
-        <DebugSymbols>true</DebugSymbols>
+        <CodeAnalysisVerbose>true</CodeAnalysisVerbose>
+        <DebugInfo>true</DebugInfo>
     </PropertyGroup>
 </Project>

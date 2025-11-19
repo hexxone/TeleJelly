@@ -132,6 +132,32 @@ public class RequestService
         return RequestAddResult.Error;
     }
 
+    /// <summary>
+    ///     Removes a request by IMDb ID.
+    /// </summary>
+    public async Task RemoveRequestAsync(string imdbId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(imdbId))
+        {
+            return;
+        }
+
+        await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
+
+        bool needsSave;
+        lock (_lock)
+        {
+            var removedCount = _requests.RemoveAll(r =>
+                string.Equals(r.ImdbId, imdbId.Trim(), StringComparison.OrdinalIgnoreCase));
+            needsSave = removedCount > 0;
+        }
+
+        if (needsSave)
+        {
+            await SaveAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     private async Task EnsureLoadedAsync(CancellationToken cancellationToken)
     {
         if (_loaded)
