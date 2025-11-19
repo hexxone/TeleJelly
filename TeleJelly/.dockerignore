@@ -1,0 +1,17 @@
+﻿#.git # needed for MinVer tagging
+.github
+.idea
+.vs
+.vscode
+publish/
+letsencrypt/
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+**/*.userosscache
+**/*.dbmdl
+**/*.jfm
+**/.DS_Store
+**/*.zip
+**/*.mp4

@@ -1,0 +1,790 @@
+:root {
+    --spin-animation-time: 5332ms;
+}
+
+@font-face {
+    font-family: "Material Symbols Outlined";
+    font-style: normal;
+    font-weight: 400;
+    src: url("./material_icons.woff2") format("woff2");
+}
+
+* {
+    user-select: none;
+}
+
+html {
+    font-family: Montserrat, Noto Sans, Noto Sans HK, Noto Sans JP, Noto Sans KR, Noto Sans SC, Noto Sans TC, sans-serif;
+    line-height: 1.35;
+    text-size-adjust: 100%;
+    font-size: 93%;
+}
+
+
+body {
+    transition: opacity ease-in 0.2s;
+}
+
+body[unresolved] {
+    display: block;
+    opacity: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+h1,
+h2 {
+    font-family: Noto Sans, Noto Sans HK, Noto Sans JP, Noto Sans KR, Noto Sans SC, sans-serif;
+    font-weight: 400;
+}
+
+.material-symbols-outlined {
+    direction: ltr;
+    display: inline-block;
+    font-family: "Material Symbols Outlined";
+    font-size: 24px;
+    font-style: normal;
+    font-weight: normal;
+    letter-spacing: normal;
+    line-height: 1;
+    text-transform: none;
+    white-space: nowrap;
+    word-wrap: normal;
+}
+
+.pageTitle {
+    align-items: center;
+    display: inline-flex;
+    flex-shrink: 1;
+    height: 1.7em;
+    margin: 0 0 0 0.5em;
+}
+
+.pageTitleWithLogo {
+    background-position: 0;
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 13.2em;
+}
+
+.pageTitleWithDefaultLogo {
+    background-image: url('/web/assets/img/banner-light.png');
+}
+
+.skinHeader {
+    border: 0;
+    contain: layout style paint;
+    display: flex;
+    flex-direction: column;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    transition: background 0.5s ease-in-out;
+    z-index: 999;
+}
+
+.skinHeader, html {
+    color: #ddd;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.skinHeader.semiTransparent {
+    backdrop-filter: none !important;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.headerTop {
+    padding: 0.8em;
+}
+
+.headerLeft {
+    display: flex;
+}
+
+.mainContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    margin-top: 4em;
+    max-width: 800px;
+}
+
+.spacedContent {
+    margin: 1em 0.2em;
+    text-align: center;
+}
+
+.headerBackButton {
+    color: #ddd;
+    background-color: rgba(100, 100, 100, 0.1);
+    border-radius: 50%;
+    border-width: 0;
+    padding: 0.5em;
+    transition: all 0.25s ease-in-out;
+}
+
+.headerBackButton:hover {
+    color: #ddd;
+    border-color: #ddd;
+    background-color: rgba(100, 100, 100, 0.3);
+    border-width: 0.05em;
+}
+
+.linkLogos > * {
+    margin: 0.5rem;
+}
+
+.linkLogos > .material-symbols-outlined {
+    font-size: 2.5rem;
+}
+
+.telegramButton {
+    margin-bottom: 2.5rem;
+}
+
+.loginForm {
+    flex-grow: 1;
+}
+
+/** margin & padding */
+
+.margin-auto-y {
+    margin-bottom: auto;
+    margin-top: auto;
+}
+
+.padded-right {
+    padding-right: 3.3%;
+}
+
+.padded-left {
+    padding-left: 3.3%;
+}
+
+.content-primary, .padded-bottom-page, .page, .pageWithAbsoluteTabs .pageTabContent {
+    padding-bottom: 5em !important;
+}
+
+/** Flex */
+
+.flex {
+    display: -webkit-flex;
+    display: flex
+}
+
+.inline-flex {
+    display: -webkit-inline-flex;
+    display: inline-flex
+}
+
+.flex-direction-column {
+    -webkit-flex-direction: column;
+    flex-direction: column
+}
+
+.flex-direction-row {
+    -webkit-flex-direction: row;
+    flex-direction: row
+}
+
+.flex-grow {
+    -webkit-flex-grow: 1;
+    flex-grow: 1
+}
+
+.flex-shrink-zero {
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0
+}
+
+.align-items-center {
+    -webkit-align-items: center;
+    align-items: center
+}
+
+.align-items-flex-start {
+    -webkit-align-items: flex-start;
+    align-items: flex-start
+}
+
+.align-items-flex-end {
+    -webkit-align-items: flex-end;
+    align-items: flex-end
+}
+
+.justify-content-center {
+    -webkit-justify-content: center;
+    justify-content: center
+}
+
+.justify-content-flex-end {
+    -webkit-justify-content: flex-end;
+    justify-content: flex-end
+}
+
+.justify-content-space-between {
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.flex-wrap-wrap {
+    -webkit-flex-wrap: wrap;
+    flex-wrap: wrap
+}
+
+.align-self-flex-end {
+    -webkit-align-self: flex-end;
+    align-self: flex-end
+}
+
+/** emby-button */
+
+.emby-button {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-align-items: center;
+    align-items: center;
+    border: 0;
+    border-radius: .2em;
+    box-sizing: border-box;
+    color: inherit;
+    cursor: pointer;
+    display: -webkit-inline-flex;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    line-height: 1.35;
+    margin: .3em;
+    outline: none !important;
+    outline-width: 0;
+    padding: .9em 1em;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    -webkit-transform-origin: center;
+    transform-origin: center;
+    transition: .2s;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+    vertical-align: middle;
+    z-index: 0;
+}
+
+.fab, .raised {
+    background: #303030;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.emby-button.block, .fab {
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-justify-content: center;
+    justify-content: center;
+}
+
+.emby-button.block {
+    /*display: block;*/
+    margin: .25em 0;
+    width: 100%;
+}
+
+.emby-button > .material-symbols-outlined {
+    margin: 0 0.5rem;
+}
+
+.readOnlyContent {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    margin: .5em auto 1em;
+}
+
+@media (min-width: 50em) {
+    .readOnlyContent, form {
+        max-width: 54em;
+    }
+}
+
+/** animatedPage */
+
+.mainAnimatedPage {
+    bottom: 0;
+    contain: layout style size;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0
+}
+
+.standalonePage {
+    padding-top: 4.5em;
+}
+
+@-webkit-keyframes view-fadeout {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        opacity: 0
+    }
+}
+
+@keyframes view-fadeout {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        opacity: 0
+    }
+}
+
+@-webkit-keyframes view-fadein {
+    0% {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
+}
+
+@keyframes view-fadein {
+    0% {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
+}
+
+@-webkit-keyframes view-slideleft {
+    0% {
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@keyframes view-slideleft {
+    0% {
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@-webkit-keyframes view-slideleft-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
+    }
+}
+
+@keyframes view-slideleft-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
+    }
+}
+
+@-webkit-keyframes view-slideright {
+    0% {
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@keyframes view-slideright {
+    0% {
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
+    }
+
+    to {
+        -webkit-transform: none;
+        transform: none
+    }
+}
+
+@-webkit-keyframes view-slideright-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
+    }
+}
+
+@keyframes view-slideright-r {
+    0% {
+        -webkit-transform: none;
+        transform: none
+    }
+
+    to {
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
+    }
+}
+
+/** animated icon */
+
+@keyframes rotate-slow {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(720deg); /* 2 full rotations clockwise */
+    }
+}
+
+@keyframes continuous-rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg); /* One full rotation clockwise */
+    }
+}
+
+.material-symbols-outlined {
+    display: inline-block;
+    /* Ensure the icon is centered on its axis for rotation */
+    transform-origin: center;
+}
+
+.animate-on-load {
+    animation: rotate-slow 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-on-hover:hover {
+    animation: rotate-slow 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-continuous {
+    pointer-events: none;
+    animation: continuous-rotate .7s linear infinite;
+    /* Overrides the hover animation */
+    animation-play-state: running !important;
+}
+
+/** Jellyfin Loading Spinner **/
+
+
+.mdl-spinner {
+    position: relative;
+    width: 1.95em;
+    height: 1.95em;
+    display: none;
+}
+
+.mdlSpinnerActive {
+    display: inline-block;
+    animation: mdl-spinner__container-rotate 1s linear infinite;
+}
+
+@keyframes mdl-spinner__container-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.mdl-spinner__layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+.mdl-spinner__layer-1 {
+    border-color: #00a4dc;
+}
+
+.mdlSpinnerActive .mdl-spinner__layer-1 {
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-1-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+}
+
+.mdl-spinner__layer-2 {
+    border-color: #00a4dc;
+}
+
+.mdlSpinnerActive .mdl-spinner__layer-2 {
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-2-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+}
+
+.mdl-spinner__layer-3 {
+    border-color: #00a4dc;
+}
+
+.mdlSpinnerActive .mdl-spinner__layer-3 {
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-3-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+}
+
+.mdl-spinner__layer-4 {
+    border-color: #00a4dc;
+}
+
+.mdlSpinnerActive .mdl-spinner__layer-4 {
+    animation: mdl-spinner__fill-unfill-rotate var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both, mdl-spinner__layer-4-fade-in-out var(--spin-animation-time) cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+}
+
+@keyframes mdl-spinner__fill-unfill-rotate {
+    12.5% {
+        transform: rotate(135deg);
+    }
+
+    25% {
+        transform: rotate(270deg);
+    }
+
+    37.5% {
+        transform: rotate(405deg);
+    }
+
+    50% {
+        transform: rotate(540deg);
+    }
+
+    62.5% {
+        transform: rotate(675deg);
+    }
+
+    75% {
+        transform: rotate(810deg);
+    }
+
+    87.5% {
+        transform: rotate(945deg);
+    }
+
+    to {
+        transform: rotate(1080deg);
+    }
+}
+
+/**
+* HACK: Even though the intention is to have the current .mdl-spinner__layer-N
+* at `opacity: 1`, we set it to `opacity: 0.99` instead since this forces Chrome
+* to do proper subpixel rendering for the elements being animated.
+* This is especially visible in Chrome 39 on Ubuntu 14.04. See:
+* - https://github.com/Polymer/paper-spinner/issues/9
+* - https://code.google.com/p/chromium/issues/detail?id=436255
+*/
+@keyframes mdl-spinner__layer-1-fade-in-out {
+    from {
+        opacity: 0.99;
+    }
+
+    25% {
+        opacity: 0.99;
+    }
+
+    26% {
+        opacity: 0;
+    }
+
+    89% {
+        opacity: 0;
+    }
+
+    90% {
+        opacity: 0.99;
+    }
+
+    100% {
+        opacity: 0.99;
+    }
+}
+
+@keyframes mdl-spinner__layer-2-fade-in-out {
+    from {
+        opacity: 0;
+    }
+
+    15% {
+        opacity: 0;
+    }
+
+    25% {
+        opacity: 0.99;
+    }
+
+    50% {
+        opacity: 0.99;
+    }
+
+    51% {
+        opacity: 0;
+    }
+}
+
+@keyframes mdl-spinner__layer-3-fade-in-out {
+    from {
+        opacity: 0;
+    }
+
+    40% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.99;
+    }
+
+    75% {
+        opacity: 0.99;
+    }
+
+    76% {
+        opacity: 0;
+    }
+}
+
+@keyframes mdl-spinner__layer-4-fade-in-out {
+    from {
+        opacity: 0;
+    }
+
+    65% {
+        opacity: 0;
+    }
+
+    75% {
+        opacity: 0.99;
+    }
+
+    90% {
+        opacity: 0.99;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+.mdl-spinner__circle {
+    box-sizing: border-box;
+    height: 100%;
+    border-width: 0.21em;
+    border-style: solid;
+    border-color: inherit;
+    border-bottom-color: transparent !important;
+    border-radius: 50%;
+    animation: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+.mdl-spinner__circle-clipper {
+    display: inline-block;
+    position: relative;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    border-color: inherit;
+}
+
+.mdl-spinner__circle-clipper .mdl-spinner__circle {
+    width: 200%;
+}
+
+.mdl-spinner__circleLeft {
+    border-right-color: transparent !important;
+    transform: rotate(129deg);
+}
+
+.mdlSpinnerActive .mdl-spinner__circleLeft {
+    animation: mdl-spinner__left-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+}
+
+.mdl-spinner__circleRight {
+    left: -100%;
+    border-left-color: transparent !important;
+    transform: rotate(-129deg);
+}
+
+.mdlSpinnerActive .mdl-spinner__circleRight {
+    animation: mdl-spinner__right-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+}
+
+@keyframes mdl-spinner__left-spin {
+    from {
+        transform: rotate(130deg);
+    }
+
+    50% {
+        transform: rotate(-5deg);
+    }
+
+    to {
+        transform: rotate(130deg);
+    }
+}
+
+@keyframes mdl-spinner__right-spin {
+    from {
+        transform: rotate(-130deg);
+    }
+
+    50% {
+        transform: rotate(5deg);
+    }
+
+    to {
+        transform: rotate(-130deg);
+    }
+}
+
+.docspinner {
+    margin-top: -5vh;
+    margin-left: -5vh;
+    width: 10vh;
+    height: 10vh;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 9999999;
+    contain: layout style size;
+}
+
+.provided-by {
+    align-self: center;
+}

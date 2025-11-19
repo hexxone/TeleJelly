@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <Internalize>false</Internalize>
+        <NoRepackRes>true</NoRepackRes>
+        <CodeAnalysisVerbose>true</CodeAnalysisVerbose>
+        <DebugInfo>true</DebugInfo>
+    </PropertyGroup>
+</Project>

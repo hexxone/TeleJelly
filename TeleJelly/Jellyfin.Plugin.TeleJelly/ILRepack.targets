@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="ILRepacker" AfterTargets="Build">
+        <Message Importance="high" Text="&#xA;      Repacking DLLs...&#xA;    "/>
+
+        <PropertyGroup>
+            <FinalOutputPath Condition="'$(PublishDir)' != ''">$(PublishDir)</FinalOutputPath>
+            <FinalOutputPath Condition="'$(PublishDir)' == ''">$(TargetDir)</FinalOutputPath>
+        </PropertyGroup>
+
+        <ItemGroup>
+            <!-- 1. The Plugin DLL itself -->
+            <InputAssemblies Include="$(TargetPath)"/>
+
+            <!-- 2. ONLY Telegram.Bot (using ReferencePath to get implementation assembly) -->
+            <InputAssemblies Include="@(ReferencePath)" Condition="'%(filename)' == 'Telegram.Bot'"/>
+
+            <!-- 3. Vital: Directories to look for other dependencies (System.*, etc.) -->
+            <LibraryPath Include="@(ReferencePath->'%(RootDir)%(Directory)')" />
+        </ItemGroup>
+
+        <ILRepack
+            Parallel="true"
+            DebugInfo="true"
+            Internalize="false"
+            NoRepackRes="true"
+            Verbose="true"
+            InputAssemblies="@(InputAssemblies)"
+            LibraryPath="@(LibraryPath)"
+            TargetKind="Dll"
+            OutputFile="$(FinalOutputPath)$(TargetFileName)"
+        />
+
+        <Message Text="Merged assemblies: @(InputAssemblies)" Importance="high"/>
+        <Message Text="Output written to: $(FinalOutputPath)$(TargetFileName)" Importance="high"/>
+    </Target>
+</Project>
