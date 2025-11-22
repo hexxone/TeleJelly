@@ -36,6 +36,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 - [Usage](#usage)
 - [Installation](#installation)
 - [Configuration](#configuration)
+- [Bot Interaction](#bot-interaction)
 - [Known issues](#known-issues)
 - [Demo Video](#demo-video)
 - [Screenshots](#screenshots)
@@ -45,7 +46,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 
 1. User clicks the `Sign in with Telegram` Disclaimer Link on the Jellyfin Login Page
 2. User lands on the page `/sso/Telegram`
-3. Plugin shows a Page with embedded Telegram Login Widget.
+3. Plugin shows a Page with an embedded Telegram Login Widget.
 4. When the button is clicked, Plugin validates User credentials using bot token.
     - On Success -> Authenticate & redirect User to Jellyfin Dashboard
     - On Failure -> Show Error Message (e.g. Invalid Data, not Whitelisted)
@@ -70,6 +71,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - allows Creating/Editing/Deleting a "virtual" management Group
         - Grants access to all OR specific Libraries for non-Administrators.
         - _Note: A user needs to be Admin OR part of at least ONE Group to Log-in._
+        - _Important: If "Sync Usernames" is disabled, you must manually add every Telegram Username to the list for them to be able to log in._
 
 ### Requirements
 
@@ -113,11 +115,49 @@ Don't trust the downloads? You can also do it by yourself.
 1. Make a new Bot & get the Token via [@Botfather](https://t.me/BotFather)
 2. Make sure to use the `/setdomain` command to link your jellyfin domain (needs valid SSL cert).
 3. Go to the TeleJelly plugin configuration page and fill in the Bot-Token.
-4. Add yourself into the "Administrators" list for full access or create an Administrator Group.
-5. Now you should be able to log in via Telegram by visiting `/sso/Telegram`.
-6. You may also include this link in the Login "Branding" via Markdown or HTML. See screenshots below.
+4. (Optional) Fill in the "Server Domain and Base URL" if you want the bot to use a specific URL in messages.
+5. Add yourself into the "Administrators" list for full access or create an Administrator Group.
+6. Now you should be able to log in via Telegram by visiting `/sso/Telegram`.
+7. You may also include this link in the Login "Branding" via Markdown or HTML. The configuration page provides a **ready-to-copy code snippet** for this. See screenshots below.
 
-## Bot Commands
+### Group Setup & Linking
+
+To give other users access without making them Admins:
+
+1. Create a new Group on the TeleJelly Config page (e.g., "Friends").
+2. Add the Bot to your corresponding Telegram Group.
+3. Run `/link` inside that Telegram Group to connect it to the TeleJelly Group.
+4. If "Sync Usernames" is enabled, users joining the chat are automatically added to the plugin access list.
+
+## Bot Interaction
+
+The Telegram bot will only listen to commands, send notifications, and sync usernames if the `Enable bot service`
+checkbox is **activated** on the configuration page and a **valid bot token** is set.
+
+If the checkbox is **not activated**, you can still log in with configured groups, but nothing else will work.
+
+> **Troubleshooting:** If the bot stops responding, you can restart the background service by unchecking `Enable bot service` -> Save -> checking it again -> Save.
+
+### Bot Events
+
+If a Telegram-group is successfully linked to a TeleJelly-group, the bot will listen for chat events:
+
+- User joins chat && `Sync Usernames` enabled -> User gets added to TeleJelly group automatically if he has a Username set.
+- User left chat && `Sync Usernames` enabled -> User gets removed from TeleJelly group automatically if he has a Username set.
+
+### Bot Notifications
+
+If a Telegram-group is successfully linked to a TeleJelly-group **AND** `Notify New Content` is enabled, the bot can send a notification if new Content is being 
+added to the Jellyfin server.
+
+This currently includes: `Movies`, `Series`, `Seasons`, `Episodes`.
+
+If "new content" is being detected, the bot will check if the Metadata is already complete (IMDb, Banner, etc.).
+- If the metadata is complete, the bot sends a "rich" notification with all important info about the Item to all Groups 
+that have access to the Item.
+- If the metadata is not complete, wait for 24 hours before sending the notification anyway with incomplete metadata.
+
+### Bot Commands
 
 - `/start` - Shows a welcome message.
 - `/link` - Links your Telegram group to your Jellyfin group.
@@ -127,6 +167,9 @@ Don't trust the downloads? You can also do it by yourself.
 - `/stats` - Shows some statistics about your Jellyfin server and the plugin.
 - `/unlink` - Unlinks your Telegram group from your Jellyfin group.
 - `/userlist` - Lists all users in your Jellyfin group.
+
+**Notice:** Certain commands like `/link` are only available to TeleJelly "Admins" or might give additional info to
+"Admins" like the `/stats` command.
 
 ## Known issues
 
@@ -154,7 +197,7 @@ The Logo is AI-generated._
 
 https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
-## Screenshots
+## Screenshots (outdated)
 
 <details>
 
