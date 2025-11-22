@@ -142,26 +142,8 @@ internal class CommandSearch : ICommandBase
             var indexPrefix = $"{index++}. ";
             sb.Append(TelegramMarkdown.Escape(indexPrefix));
 
-            // Build the display text (name + year + type)
-            var displayText = item.GetDisplayText();
-            var safeDisplayText = TelegramMarkdown.Escape(displayText);
-
-            // Make it a link if baseUrl is available
-            if (!string.IsNullOrWhiteSpace(baseUrl))
-            {
-                var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
-                var safeItemUrl = TelegramMarkdown.Escape(itemUrl);
-
-                sb.Append('[')
-                    .Append(safeDisplayText)
-                    .Append("](")
-                    .Append(safeItemUrl)
-                    .Append(')');
-            }
-            else
-            {
-                sb.Append(safeDisplayText);
-            }
+            // Build the display text (name + year + type) with Link if available
+            sb.Append(item.GetTelegramHyperlink(baseUrl));
 
             var extraLink = item.GetExtraLink();
             if (extraLink != null)
@@ -171,34 +153,22 @@ internal class CommandSearch : ICommandBase
 
             sb.AppendLine();
 
-            var mediaStreams = item.GetMediaStreams();
-            if (mediaStreams is { Count: > 0 })
+            // Audio
+            var audioLanguages = item.GetStreamLanguages(MediaStreamType.Audio);
+            if (audioLanguages.Length > 0)
             {
-                var audioLanguages = mediaStreams
-                    .Where(s => s.Type == MediaStreamType.Audio && !string.IsNullOrEmpty(s.Language))
-                    .Select(s => s.Language)
-                    .Distinct()
-                    .ToArray();
+                var audioPrefix = TelegramMarkdown.Escape("   Audio: ");
+                sb.Append(audioPrefix);
+                sb.AppendLine(string.Join(", ", audioLanguages.Select(TelegramMarkdown.Escape)));
+            }
 
-                var subtitleLanguages = mediaStreams
-                    .Where(s => s.Type == MediaStreamType.Subtitle && !string.IsNullOrEmpty(s.Language))
-                    .Select(s => s.Language)
-                    .Distinct()
-                    .ToArray();
-
-                if (audioLanguages.Length > 0)
-                {
-                    var audioPrefix = TelegramMarkdown.Escape("   Audio: ");
-                    sb.Append(audioPrefix);
-                    sb.AppendLine(string.Join(", ", audioLanguages.Select(TelegramMarkdown.Escape)));
-                }
-
-                if (subtitleLanguages.Length > 0)
-                {
-                    var subsPrefix = TelegramMarkdown.Escape("   Subtitles: ");
-                    sb.Append(subsPrefix);
-                    sb.AppendLine(string.Join(", ", subtitleLanguages.Select(TelegramMarkdown.Escape)));
-                }
+            // Subtitles
+            var subtitleLanguages = item.GetStreamLanguages(MediaStreamType.Subtitle);
+            if (subtitleLanguages.Length > 0)
+            {
+                var subsPrefix = TelegramMarkdown.Escape("   Subtitles: ");
+                sb.Append(subsPrefix);
+                sb.AppendLine(string.Join(", ", subtitleLanguages.Select(TelegramMarkdown.Escape)));
             }
 
             // Add a blank line between entries
@@ -206,10 +176,6 @@ internal class CommandSearch : ICommandBase
         }
 
         // think about pagination ? for now only show the first 5 and hint
-        if (hasMore)
-        {
-            sb.AppendLine(TelegramMarkdown.Escape("Only showing first 5 results. Refine your search to narrow down further."));
-        }
 
         await botClient.SendMessage(
             message.Chat.Id,

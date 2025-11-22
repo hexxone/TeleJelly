@@ -125,9 +125,21 @@ internal class CommandRequest : ICommandBase
                 return;
             }
 
+            case RequestAddResult.Removed:
+            {
+                var msg = $"Request for \"{title}\" removed.";
+                await botClient.SendMessage(
+                    message.Chat.Id,
+                    TelegramMarkdown.Escape(msg),
+                    ParseMode.MarkdownV2,
+                    linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
             case RequestAddResult.Duplicate:
             {
-                var msg = $"This IMDb id \"{imdbId}\" is already in the request list.";
+                var msg = $"This IMDb id \"{imdbId}\" WAS already in the request list.";
                 await botClient.SendMessage(
                     message.Chat.Id,
                     TelegramMarkdown.Escape(msg),
@@ -150,18 +162,10 @@ internal class CommandRequest : ICommandBase
                     .Append(safeTitle)
                     .Append("](")
                     .Append(safeImdbUrl)
-                    .Append(')')
-                    .AppendLine();
+                    .Append(')'); // We close the link here
 
-                if (!string.IsNullOrEmpty(typeName))
-                {
-                    successText.Append(TelegramMarkdown.Escape($" – {typeName}"));
-                }
-
-                if (year.HasValue)
-                {
-                    successText.Append(TelegramMarkdown.Escape($" ({year.Value})"));
-                }
+                // Append unified Type/Year info
+                AppendRequestInfo(successText, typeName, year);
 
                 await botClient.SendMessage(
                     message.Chat.Id,
@@ -247,28 +251,16 @@ internal class CommandRequest : ICommandBase
         sb.AppendLine();
 
         var index = 1;
-        foreach (var mediaRequest in snapshot
-                     .OrderByDescending(r => r.RequestedAtUtc))
+        foreach (var mediaRequest in snapshot.OrderBy(r => r.RequestedAtUtc))
         {
             var indexPrefix = $"{index++}. ";
             sb.Append(TelegramMarkdown.Escape(indexPrefix));
 
-            // Title [linked to IMDb]
-            sb.Append('[')
-                .Append(TelegramMarkdown.Escape(mediaRequest.Title))
-                .Append("](")
-                .Append(TelegramMarkdown.Escape($"https://www.imdb.com/title/{mediaRequest.ImdbId}/"))
-                .Append(')');
+            // Title
+            sb.Append(TelegramMarkdown.Escape(mediaRequest.Title));
 
-            if (!string.IsNullOrEmpty(mediaRequest.TypeName))
-            {
-                sb.Append(TelegramMarkdown.Escape($" – {mediaRequest.TypeName}"));
-            }
-
-            if (mediaRequest.Year.HasValue)
-            {
-                sb.Append(TelegramMarkdown.Escape($" ({mediaRequest.Year.Value})"));
-            }
+            // Append unified Type/Year info
+            AppendRequestInfo(sb, mediaRequest.TypeName, mediaRequest.Year);
 
             if (!string.IsNullOrWhiteSpace(mediaRequest.ExtraInfo))
             {
@@ -286,7 +278,6 @@ internal class CommandRequest : ICommandBase
                 .Append('`')
                 .Append(dateText)
                 .Append('`')
-                .AppendLine()
                 .AppendLine();
         }
 
@@ -318,5 +309,18 @@ internal class CommandRequest : ICommandBase
         }
 
         return string.IsNullOrWhiteSpace(name) ? "Unknown" : name;
+    }
+
+    private static void AppendRequestInfo(StringBuilder sb, string? typeName, int? year)
+    {
+        if (!string.IsNullOrEmpty(typeName))
+        {
+            sb.Append(TelegramMarkdown.Escape($" – {typeName}"));
+        }
+
+        if (year.HasValue)
+        {
+            sb.Append(TelegramMarkdown.Escape($" ({year.Value})"));
+        }
     }
 }

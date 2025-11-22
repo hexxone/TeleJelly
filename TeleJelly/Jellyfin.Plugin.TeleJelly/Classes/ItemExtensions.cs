@@ -49,6 +49,37 @@ internal static class ItemExtensions
         return displayText;
     }
 
+    /// <summary>
+    ///     Returns a Markdown formatted link "[DisplayText](Url)" if baseUrl is provided,
+    ///     otherwise returns the escaped DisplayText.
+    /// </summary>
+    internal static string GetTelegramHyperlink(this BaseItem item, string? baseUrl)
+    {
+        var displayText = item.GetDisplayText();
+        var safeDisplayText = TelegramMarkdown.Escape(displayText);
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return safeDisplayText;
+        }
+
+        var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
+        var safeItemUrl = TelegramMarkdown.Escape(itemUrl);
+
+        return $"[{safeDisplayText}]({safeItemUrl})";
+    }
+
+    /// <summary>
+    ///     Returns distinct languages for the specified stream type.
+    /// </summary>
+    internal static string[] GetStreamLanguages(this BaseItem item, MediaStreamType type)
+    {
+        return item.GetMediaStreams()
+            .Where(m => m.Type == type && !string.IsNullOrEmpty(m.Language))
+            .Select(m => m.Language!)
+            .Distinct()
+            .ToArray();
+    }
 
     internal static string? GetExtraLink(this BaseItem item)
     {

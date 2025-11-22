@@ -7,6 +7,8 @@ using System.Threading;
 using Jellyfin.Plugin.TeleJelly.Classes;
 using Jellyfin.Plugin.TeleJelly.Telegram;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
@@ -60,7 +62,12 @@ public class NotificationService : IDisposable
     /// <param name="e">The event data containing details about the updated item.</param>
     public void OnItemUpdated(object? sender, ItemChangeEventArgs e)
     {
-        _logger.LogInformation("Item updated: {ItemName}", e.Item.Name);
+        if (e.Item is not (Movie or Series or Season or Episode))
+        {
+            return;
+        }
+
+        _logger.LogInformation("Item updated: {ItemType} - {ItemName}", e.Item.GetType().Name, e.Item.Name);
 
         if (IsMetadataComplete(e.Item) && _pendingNotifications.TryRemove(e.Item.Id, out _))
         {
@@ -83,7 +90,12 @@ public class NotificationService : IDisposable
     /// </param>
     public void OnItemAdded(object? sender, ItemChangeEventArgs e)
     {
-        _logger.LogInformation("Item added: {ItemName}", e.Item.Name);
+        if (e.Item is not (Movie or Series or Season or Episode))
+        {
+            return;
+        }
+
+        _logger.LogInformation("Item added: {ItemType} - {ItemName}", e.Item.GetType().Name, e.Item.Name);
 
         if (IsMetadataComplete(e.Item))
         {
@@ -140,7 +152,7 @@ public class NotificationService : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to remove request for item '{ItemName}'", item.Name);
+            _logger.LogError(ex, "Failed to remove request for item: {ItemType} - '{ItemName}'", item.GetType().Name, item.Name);
         }
     }
 
@@ -154,7 +166,7 @@ public class NotificationService : IDisposable
     {
         if (_botClientWrapper.Client == null)
         {
-            _logger.LogInformation("Cannot send notification for '{ItemName}' because Bot-Client is null.", item.Name);
+            _logger.LogInformation("Cannot send notification for: {ItemType} - '{ItemName}' because Bot-Client is null.", item.GetType().Name, item.Name);
             return;
         }
 
@@ -167,11 +179,11 @@ public class NotificationService : IDisposable
 
         if (notifyGroups.Length == 0)
         {
-            _logger.LogInformation("Cannot send notification for '{ItemName}' because no group has notifications enabled.", item.Name);
+            _logger.LogInformation("Cannot send notification for: {ItemType} - '{ItemName}' because no group has notifications enabled.", item.GetType().Name, item.Name);
             return;
         }
 
-        _logger.LogInformation("Sending rich notification for '{ItemName}' to {Amount} groups.", item.Name, notifyGroups.Length);
+        _logger.LogInformation("Sending rich notification for: {ItemType} - '{ItemName}' to {Amount} groups.", item.GetType().Name, item.Name, notifyGroups.Length);
 
         var imageUrl = item.HasImage(ImageType.Primary)
             ? item.GetImagePath(ImageType.Primary)
@@ -191,27 +203,7 @@ public class NotificationService : IDisposable
 
         // Build the display text (name + year + type)
         var baseUrl = config.LoginBaseUrl;
-        var displayText = item.GetDisplayText();
-        var safeDisplayText = TelegramMarkdown.Escape(displayText);
-
-        // ... existing code ...
-        // Make it a link if baseUrl is available
-        if (!string.IsNullOrWhiteSpace(baseUrl))
-        {
-            var itemUrl = $"{baseUrl.TrimEnd('/')}/web/index.html#!/details?id={item.Id:N}";
-            var safeItemUrl = TelegramMarkdown.Escape(itemUrl);
-
-            // Only the []() are raw Markdown; both text and URL content are escaped
-            message.Append('[')
-                .Append(safeDisplayText)
-                .Append("](")
-                .Append(safeItemUrl)
-                .Append(')');
-        }
-        else
-        {
-            message.Append(safeDisplayText);
-        }
+        message.Append(item.GetTelegramHyperlink(baseUrl));
 
         var extraLink = item.GetExtraLink();
         if (extraLink != null)
@@ -221,24 +213,14 @@ public class NotificationService : IDisposable
 
         message.AppendLine();
 
-        var audioLanguages = item.GetMediaStreams()
-            .Where(m => m.Type == MediaStreamType.Audio && !string.IsNullOrEmpty(m.Language))
-            .Select(m => m.Language!)
-            .Distinct()
-            .ToArray();
-
+        var audioLanguages = item.GetStreamLanguages(MediaStreamType.Audio);
         if (audioLanguages.Length > 0)
         {
             var audioLine = "Audio: " + string.Join(", ", audioLanguages);
             message.AppendLine(TelegramMarkdown.Escape(audioLine));
         }
 
-        var subtitleLanguages = item.GetMediaStreams()
-            .Where(m => m.Type == MediaStreamType.Subtitle && !string.IsNullOrEmpty(m.Language))
-            .Select(m => m.Language!)
-            .Distinct()
-            .ToArray();
-
+        var subtitleLanguages = item.GetStreamLanguages(MediaStreamType.Subtitle);
         if (subtitleLanguages.Length > 0)
         {
             var subsLine = "Subtitles: " + string.Join(", ", subtitleLanguages);

@@ -97,39 +97,57 @@ public class RequestService
 
         await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
 
-        bool needsSave;
+        bool needsSave = false;
+        RequestAddResult result;
 
         lock (_lock)
         {
             var normalized = Normalize(request);
 
-            // Per-user limit
-            var userRequestCount = _requests.Count(r =>
-                string.Equals(r.UserId, normalized.UserId, StringComparison.Ordinal));
+            // Check if it already exists
+            var existing = _requests.FirstOrDefault(r =>
+                string.Equals(r.ImdbId, normalized.ImdbId, StringComparison.OrdinalIgnoreCase));
 
-            if (maxRequestsPerUser > 0 && userRequestCount >= maxRequestsPerUser)
+            if (existing != null)
             {
-                return RequestAddResult.UserLimitReached;
+                // If it exists and is from the same user, toggle (remove) it
+                if (string.Equals(existing.UserId, normalized.UserId, StringComparison.Ordinal))
+                {
+                    _requests.Remove(existing);
+                    result = RequestAddResult.Removed;
+                    needsSave = true;
+                }
+                else
+                {
+                    // If it exists but from another user, report duplicate
+                    result = RequestAddResult.Duplicate;
+                }
             }
-
-            // Duplicate by IMDb id
-            if (_requests.Any(r =>
-                    string.Equals(r.ImdbId, normalized.ImdbId, StringComparison.OrdinalIgnoreCase)))
+            else
             {
-                return RequestAddResult.Duplicate;
-            }
+                // Per-user limit check for new requests
+                var userRequestCount = _requests.Count(r =>
+                    string.Equals(r.UserId, normalized.UserId, StringComparison.Ordinal));
 
-            _requests.Add(normalized);
-            needsSave = true;
+                if (maxRequestsPerUser > 0 && userRequestCount >= maxRequestsPerUser)
+                {
+                    result = RequestAddResult.UserLimitReached;
+                }
+                else
+                {
+                    _requests.Add(normalized);
+                    result = RequestAddResult.Added;
+                    needsSave = true;
+                }
+            }
         }
 
         if (needsSave)
         {
             await SaveAsync(cancellationToken).ConfigureAwait(false);
-            return RequestAddResult.Added;
         }
 
-        return RequestAddResult.Error;
+        return result;
     }
 
     /// <summary>
@@ -290,6 +308,7 @@ public enum RequestAddResult
 {
     Added,
     Duplicate,
+    Removed,
     UserLimitReached,
     Error
 }

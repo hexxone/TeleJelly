@@ -13,26 +13,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v3
+      - name: Setup .NET8
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.x'
+          dotnet-version: '8.0.x'
 
       - name: Build Plugin
         run: |
+          cd TeleJelly
           dotnet tool restore
           version=$(dotnet tool run minver)
           echo "version=$version" >> $GITHUB_ENV
-          dotnet publish TeleJelly -c Release
+          dotnet publish Jellyfin.Plugin.TeleJelly -c Release
+
+      - name: Get Target ABI
+        id: get_abi
+        run: |
+          abi=$(jq -r .targetAbi TeleJelly/meta.json)
+          echo "targetAbi=$abi" >> $GITHUB_ENV
 
       - name: Publish Manifest
         run: |
+          # Copy manifest to root. It is untracked here, so 'git rm' won't touch it.
+          cp TeleJelly/manifest.json .
+
           git config --global user.name  'TeleJelly-Release-bot'
           git config --global user.email 'TeleJelly-Release-bot@users.noreply.github.com'
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}
 
           git checkout --orphan dist
           git rm -rf .
+          
           git add manifest.json
           git commit -m "Auto added v${{env.version}} by Github Actions"
           git push -f -u origin dist
@@ -44,6 +55,7 @@ jobs:
         with:
           body: |
             _Automatic Release by Github Actions_
+            **Jellyfin Target ABI:** `${{ env.targetAbi }}`
             The [Repository manifest URL](https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json) should now include this version as well.
           draft: false
           tag_name: ${{env.version}}
@@ -54,4 +66,4 @@ jobs:
           make_latest: true
           prerelease: ${{ contains(env.version, '-alpha') }}
           files: |
-            ./TeleJelly_v${{env.version}}.zip
+            ./TeleJelly/TeleJelly_v${{env.version}}.zip

@@ -79,9 +79,9 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 
 ## Installation
 
-You can choose between 3 options below.
+You can choose between three options below.
 
-### Option 1: Plugin Repository (easiest way)
+### Option 1: Plugin Repository (easiest)
 
 1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json>
 2. install `TeleJelly` from the Plugin catalogue
@@ -89,32 +89,33 @@ You can choose between 3 options below.
 
 ### Option 2: Download manually
 
-1. Download the [Latest Release](https://github.com/hexxone/TeleJelly/releases/latest) (TeleJelly_vX.X.X.zip)
-2. Extract files into `config/plugins/TeleJelly` folder (create it if non-existing)
-3. restart jellyfin server
+If your sever doesn't have internet access, or you need older versions.
 
-### Option 3: Compile by yourself
+1. Download the [Release](https://github.com/hexxone/TeleJelly/releases/) (`TeleJelly_vX.X.X.zip`) for your correct Jellyfin Server TargetAbi
+2. Extract the `.zip`-content into your jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
+3. Restart jellyfin server
 
-Don't trust the downloads?
+### Option 3: Compile from source
 
-1. `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
+Don't trust the downloads? You can also do it by yourself.
+
+1. run command `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
 2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
    or [.NET8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see the Tools section below)
-3. go to folder `cd ./TeleJelly`
+3. navigate solution folder `cd ./TeleJelly`
 4. run command `dotnet publish Jellyfin.Plugin.TeleJelly -c Release -v d`
-5. copy files from `./publish/` folder into `config/plugins/TeleJelly` (create it if non-existing)
-6. restart jellyfin server
+5. you will get a file like `TeleJelly_vX.X.X-alpha.X.X.zip`
+6. extract the `.zip`-content into your jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
+7. restart jellyfin server
 
 ## Configuration
 
 1. Make a new Bot & get the Token via [@Botfather](https://t.me/BotFather)
 2. Make sure to use the `/setdomain` command to link your jellyfin domain (needs valid SSL cert).
 3. Go to the TeleJelly plugin configuration page and fill in the Bot-Token.
-4. Add yourself into the "Administrators" list for full access, or create an Administrator Group.
-5. Now you should be able to log in via Telegram by visiting `jelly.fin/sso/Telegram`.
-6. You may also include this link in the Login "Branding" via Markdown or HTML.
-
-E.g.: `[Telegram-Login](https://jelly.fin/sso/telegram)` or screenshots below.
+4. Add yourself into the "Administrators" list for full access or create an Administrator Group.
+5. Now you should be able to log in via Telegram by visiting `/sso/Telegram`.
+6. You may also include this link in the Login "Branding" via Markdown or HTML. See screenshots below.
 
 ## Bot Commands
 
@@ -218,19 +219,16 @@ When incrementing the version of Jellyfin, remember to set the correct `TargetAb
 
 > Feel free to open a new Pull-Requests for useful additions and fixes.
 
+### Release Process
+
+This project uses a GitHub Actions workflow for automated releases (`dotnetcore.yml`). Here is how it ties into the release cycle:
+
+1.  **Trigger**: The workflow is triggered manually via the **Actions** tab on GitHub.
+2.  **Versioning**: It uses `MinVer` to calculate the version number based on the latest Git tag in the history.
+3.  **Build**: The plugin is compiled using the .NET 8 SDK.
+4.  **Repository Update**: It automatically updates the `manifest.json` in the orphaned `dist` branch. This allows Jellyfin instances to see the new version immediately via the repository URL.
+5.  **GitHub Release**: Finally, it creates a new Release entry on GitHub, drafts the changelog, and attaches the compiled `.zip` file for manual download.
+
 ## Licensing
 
-Licensing is a complex topic. This repository features a GPLv3 license template that can be used to provide a good
-default license for your plugin. You may alter this if you like, but if you do a permissive license must be chosen.
-
-Due to how plugins in Jellyfin work, when your plugin is compiled into a binary, it will link against the various
-Jellyfin binary NuGet packages. These packages are licensed under the GPLv3. Thus, due to the nature and restrictions
-of the GPL, the binary plugin you get will also be licensed under the GPLv3.
-
-If you accept the default GPLv3 license from this template, all will be well. If you, however, choose a different license,
-please keep this fact in mind, as it might not always be obvious that an e.g. MIT-licensed plugin would become GPLv3
-when compiled.
-
-Please note that this also means making "proprietary", source-unavailable, or otherwise "hidden" plugins for public
-consumption is not permitted. To build a Jellyfin plugin for distribution to others, it must be under the GPLv3 or
-a permissive open-source license that can be linked against the GPLv3.
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
