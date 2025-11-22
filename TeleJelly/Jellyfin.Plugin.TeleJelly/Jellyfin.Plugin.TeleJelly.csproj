@@ -55,9 +55,11 @@
         </None>
     </ItemGroup>
 
+    
     <PropertyGroup>
         <FinalOutputPath Condition="'$(PublishDir)' != ''">$(PublishDir)</FinalOutputPath>
         <FinalOutputPath Condition="'$(PublishDir)' == ''">$(TargetDir)</FinalOutputPath>
+        <FinalOutputPath Condition="!$([System.IO.Path]::IsPathRooted('$(FinalOutputPath)'))">$(ProjectDir)$(FinalOutputPath)</FinalOutputPath>
     </PropertyGroup>
 
     <Target Name="VersionTarget" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
