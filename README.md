@@ -59,7 +59,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - shows a "Back to Normal Login" button
     - shows the Telegram Login Widget
     - checks the Telegram Auth data against the backend
-    - if data is invalid -> show error message
+    - if data is invalid -> show an error message
     - if data is valid -> takes the Jellyfin Auth Response and authenticates the user
     - loading animation
     - supports custom CSS
@@ -69,15 +69,15 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - allows setting a List of Administrator Telegram Usernames (get full Access)
     - allows forcing an external Protocol Scheme (for reverse proxies like Traefik)
     - allows Creating/Editing/Deleting a "virtual" management Group
-        - Grants access to all OR specific Libraries for non-Administrators.
-        - _Note: A user needs to be Admin OR part of at least ONE Group to Log-in._
+        - Grants access to all or specific Libraries for non-Administrators.
+        - _Note: A user needs to be Admin OR part of at least ONE Group to Log in._
         - _Important: If "Sync Usernames" is disabled, you must manually add every Telegram Username to the list for them to be able to log in._
 
 ### Requirements
 
 1. A Telegram Username is mandatory for all users who wish to use this Login method.
 2. A valid, public SSL certificate is needed for the Login Widget to work (e.g. LetsEncrypt).
-3. A Telegram Bot (token) is required to cryptograhpically validate the User Login credentials.
+3. A Telegram Bot (token) is required to cryptographically validate the User Login credentials.
 
 ## Installation
 
@@ -87,7 +87,7 @@ You can choose between three options below.
 
 1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json>
 2. install `TeleJelly` from the Plugin catalogue
-3. restart jellyfin server
+3. restart Jellyfin server
 
 ### Option 2: Download manually
 
@@ -95,25 +95,24 @@ If your sever doesn't have internet access, or you need older versions.
 
 1. Download the [Release](https://github.com/hexxone/TeleJelly/releases/) (`TeleJelly_vX.X.X.zip`) for your correct Jellyfin Server TargetAbi
 2. Extract the `.zip`-content into your jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
-3. Restart jellyfin server
+3. Restart Jellyfin server
 
 ### Option 3: Compile from source
 
 Don't trust the downloads? You can also do it by yourself.
 
 1. run command `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
-2. install [.NET6 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
-   or [.NET8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (see the Tools section below)
+2. install [.NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet) (see the [Tools section](#tools) below for the correct Version)
 3. navigate solution folder `cd ./TeleJelly`
 4. run command `dotnet publish Jellyfin.Plugin.TeleJelly -c Release -v d`
 5. you will get a file like `TeleJelly_vX.X.X-alpha.X.X.zip`
 6. extract the `.zip`-content into your jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
-7. restart jellyfin server
+7. restart Jellyfin server
 
 ## Configuration
 
 1. Make a new Bot & get the Token via [@Botfather](https://t.me/BotFather)
-2. Make sure to use the `/setdomain` command to link your jellyfin domain (needs valid SSL cert).
+2. Make sure to use the `/setdomain` command to link your Jellyfin domain (needs valid SSL cert).
 3. Go to the TeleJelly plugin configuration page and fill in the Bot-Token.
 4. (Optional) Fill in the "Server Domain and Base URL" if you want the bot to use a specific URL in messages.
 5. Add yourself into the "Administrators" list for full access or create an Administrator Group.
@@ -227,10 +226,11 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
 ### Tools
 
-- [git](https://git-scm.com/downloads)
+- [git](https://git-scm.com/downloads) if you plan to contribute
 - [Visual Studio](https://visualstudio.microsoft.com/de/downloads/) or Rider IDE
+- [.NET9](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) for Jellyfin >= 10.11
+- [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) for Jellyfin 10.9 - 10.10
 - [.NET6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) for Jellyfin <= 10.8
-- [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) for Jellyfin >= 10.9
 - [Docker](https://www.docker.com/products/docker-desktop/) for local testing
 
 ### Dependencies
@@ -247,7 +247,7 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 4. Choose to run Profile `Docker Test`
 5. Afterward Jellyfin with TeleJelly should be reachable under: <https://jellyfin.localhost:8443/>
 
-> Note: the "invalid" SSL certificate warning is normal. You can however easily get a "real" one working with traefik.
+> Note: the "invalid" SSL certificate warning is normal. You can, however, get a "real" one working with traefik with ease.
 
 ### Contributing
 
@@ -256,7 +256,7 @@ When implementing a new feature, please name your commit messages in a meaningfu
 The plugin uses "MinVer" and git-tags for semantic versioning.
 
 Most of the Versions (meta.json and manifest.json) get incremented automatically on release build,
-**but** there are some places which have to be done manually - for example in the `config.html`.
+**but** there are some places that have to be done manually - for example, in the `config.html`.
 
 When incrementing the version of Jellyfin, remember to set the correct `TargetAbi` version in `JellyfinPluginHelper`!
 
