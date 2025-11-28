@@ -1,0 +1,37 @@
+[
+  {
+    "guid": "4b71013d-00ba-470c-9e4d-0c451a435328",
+    "name": "TeleJelly",
+    "overview": "Log in to Jellyfin using Telegram",
+    "description": "Enables logging in to Jellyfin using the Telegram Login Widget as SSO provider. Allows for simple Group management. Having a Telegram Username is mandatory. A Telegram Bot is required to validate the Telegram login credentials. A valid, public domain SSL certificate is required for the Login Widget to work. This plug-in is free, open-source software. \u0027Production\u0027-usage is NOT recommended. I do not accept any responsibility for errors. Repo: https://github.com/hexxone/TeleJelly",
+    "owner": "hexxone",
+    "category": "Authentication",
+    "imageUrl": "https://github.com/hexxone/TeleJelly/blob/main/TeleJelly/thumb.jpg?raw=true",
+    "versions": [
+      {
+        "targetAbi": "10.9.0.0",
+        "checksum": "634bbcfeac202721cfc07d168faebd4c",
+        "sourceUrl": "https://github.com/hexxone/TeleJelly/releases/download/1.0.8/TeleJelly_v1.0.8.zip",
+        "timestamp": "2024-10-05T16:26:29Z",
+        "version": "1.0.8",
+        "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.8"
+      },
+      {
+        "targetAbi": "10.10.0.0",
+        "checksum": "6adc7d57c9b6d3c63801b758192e7de2",
+        "sourceUrl": "https://github.com/hexxone/TeleJelly/releases/download/1.0.9/TeleJelly_v1.0.9.zip",
+        "timestamp": "2025-11-22T16:22:27Z",
+        "version": "1.0.9",
+        "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.9"
+      },
+      {
+        "targetAbi": "10.11.0.0",
+        "checksum": "d54b2952415f580e2f0b9c42515b1e2f",
+        "sourceUrl": "https://github.com/hexxone/TeleJelly/releases/download/1.0.10/TeleJelly_v1.0.10.zip",
+        "timestamp": "2025-11-28T16:35:33Z",
+        "version": "1.0.10",
+        "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.10"
+      }
+    ]
+  }
+]
