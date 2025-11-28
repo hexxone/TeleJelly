@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
+using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -81,7 +82,6 @@ internal class CommandSearch : ICommandBase
             await botClient.SendMessage(
                 message.Chat.Id,
                 "Usage: /search <text> – please provide a search term.",
-                ParseMode.None,
                 cancellationToken: cancellationToken);
 
             return;
@@ -117,14 +117,12 @@ internal class CommandSearch : ICommandBase
             await botClient.SendMessage(
                 message.Chat.Id,
                 $"No results found for \"{queryText}\".",
-                ParseMode.None,
                 cancellationToken: cancellationToken);
             return;
         }
 
         // get results in a fancy list with details and imdb link
         var resultsToShow = results.Take(MaxResultCount).ToList();
-        var hasMore = results.Count > MaxResultCount;
 
         var sb = new StringBuilder();
 

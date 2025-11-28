@@ -1,6 +1,6 @@
 ﻿# Build stage
-ARG DOTNET_VERSION="8.0"
-ARG JELLYFIN_VERSION="10.10"
+ARG DOTNET_VERSION="9.0"
+ARG JELLYFIN_VERSION="10.11"
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build
 ARG JELLYFIN_VERSION
@@ -15,7 +15,7 @@ RUN dotnet restore
 
 # full copy + build
 COPY . .
-RUN dotnet publish Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj -c Release -v d -o /app/publish
+RUN dotnet publish Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj -c Release -o /app/publish
 
 # Final stage using official Jellyfin image
 FROM jellyfin/jellyfin:${JELLYFIN_VERSION}

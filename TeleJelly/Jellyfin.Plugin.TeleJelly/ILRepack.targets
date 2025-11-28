@@ -6,6 +6,7 @@
         <PropertyGroup>
             <FinalOutputPath Condition="'$(PublishDir)' != ''">$(PublishDir)</FinalOutputPath>
             <FinalOutputPath Condition="'$(PublishDir)' == ''">$(TargetDir)</FinalOutputPath>
+            <FinalOutputPath Condition="!$([System.IO.Path]::IsPathRooted('$(FinalOutputPath)'))">$(ProjectDir)$(FinalOutputPath)</FinalOutputPath>
         </PropertyGroup>
 
         <ItemGroup>
@@ -28,10 +29,10 @@
             InputAssemblies="@(InputAssemblies)"
             LibraryPath="@(LibraryPath)"
             TargetKind="Dll"
-            OutputFile="$(FinalOutputPath)$(TargetFileName)"
+            OutputFile="$([System.IO.Path]::Combine($(FinalOutputPath),$(TargetFileName)))"
         />
 
         <Message Text="Merged assemblies: @(InputAssemblies)" Importance="high"/>
-        <Message Text="Output written to: $(FinalOutputPath)$(TargetFileName)" Importance="high"/>
+        <Message Text="Output written to: $([System.IO.Path]::Combine($(FinalOutputPath),$(TargetFileName)))" Importance="high"/>
     </Target>
 </Project>

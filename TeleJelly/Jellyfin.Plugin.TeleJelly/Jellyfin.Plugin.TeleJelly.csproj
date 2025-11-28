@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
-        <AssemblyVersion>1.0.9.0</AssemblyVersion>
-        <FileVersion>1.0.9.0</FileVersion>
-        <Version>1.0.9.0</Version>
+        <AssemblyVersion>1.0.10.0</AssemblyVersion>
+        <FileVersion>1.0.10.0</FileVersion>
+        <Version>1.0.10.0</Version>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
         <MSBuildArgs>/property:GenerateFullPaths=true</MSBuildArgs>
@@ -32,8 +32,8 @@
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
-        <PackageReference Include="Jellyfin.Controller" Version="10.10.3"/>
-        <PackageReference Include="Jellyfin.Model" Version="10.10.3"/>
+        <PackageReference Include="Jellyfin.Controller" Version="10.11.3" />
+        <PackageReference Include="Jellyfin.Model" Version="10.11.3" />
         <PackageReference Include="Telegram.Bot" Version="22.7.5" PrivateAssets="All" />
         <PackageReference Include="MinVer" Version="6.0.0">
             <PrivateAssets>all</PrivateAssets>
@@ -55,9 +55,11 @@
         </None>
     </ItemGroup>
 
+    
     <PropertyGroup>
         <FinalOutputPath Condition="'$(PublishDir)' != ''">$(PublishDir)</FinalOutputPath>
         <FinalOutputPath Condition="'$(PublishDir)' == ''">$(TargetDir)</FinalOutputPath>
+        <FinalOutputPath Condition="!$([System.IO.Path]::IsPathRooted('$(FinalOutputPath)'))">$(ProjectDir)$(FinalOutputPath)</FinalOutputPath>
     </PropertyGroup>
 
     <Target Name="VersionTarget" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
@@ -77,6 +79,6 @@
         <Message Importance="high" Text="&#xA;      Running Jellyfin Plugin Helper...&#xA;    "/>
         <Exec Command="dotnet restore ../JellyfinPluginHelper/JellyfinPluginHelper.csproj"/>
         <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Build"/>
-        <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RunArguments=%22$(MinVerVersion)&quot; &quot;$(ProjectDir)../&quot; &quot;$(ProjectDir)$(FinalOutputPath)$(TargetFileName)&quot;"/>
+        <MSBuild Projects="../JellyfinPluginHelper/JellyfinPluginHelper.csproj" Targets="Run" Properties="RunArguments=%22$(MinVerVersion)&quot; &quot;$(ProjectDir)../&quot; &quot;$([System.IO.Path]::Combine($(FinalOutputPath),$(TargetFileName)))&quot;"/>
     </Target>
 </Project>

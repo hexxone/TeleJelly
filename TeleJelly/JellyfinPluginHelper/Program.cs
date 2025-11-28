@@ -11,11 +11,11 @@ using JellyfinPluginHelper;
 /*
  * Jellyfin Plugin Helper (JPH)
  *
- * A tool for automating the process of releasing Jellyfin plugins. This includes updating meta information,
+ * A tool for automating the process of releasing Jellyfin plugins. This includes updating meta-information,
  * packaging the plugin into a zip file, calculating file checksums, and updating the plugin manifest.
  * Designed to be used in conjunction with CI/CD pipelines, such as GitHub Actions, for seamless plugin releases.
  *
- * Author: Hexxone
+ * Author: hexxone
  * Project: TeleJelly
  * License: GPLv3
  *
@@ -25,8 +25,8 @@ using JellyfinPluginHelper;
  *  1. try to find the meta.json in the solutionDir.
  *  2. create a new ZIP release file with the freshly built DLL and meta.json.
  *  3. create a MD5 checksum for the new ZIP release file.
- *  4. create a new manifest-version with download link and checksum.
- *  5. download & update the manifest.json from an url in the solutionDir.
+ *  4. create a new manifest-version with a download link and checksum.
+ *  5. download & update the manifest.json from a url in the solutionDir.
  *
  * Afterward, you could commit the updated manifest.json to your "repository"
  * and use a gh-action like softprops/action-gh-release@v2 to automate the Release.
@@ -39,7 +39,7 @@ const string GitProject = "TeleJelly";
 const string GitManifestBranch = "dist";
 const string GitManifestPath = "manifest.json";
 
-const string TargetAbi = "10.10.0.0"; // TODO get from installed nuget version?
+const string TargetAbi = "10.11.0.0"; // TODO get from installed nuget version?
 const string ChangelogPrefix = "Automatic Release by Github Actions: ";
 
 const string ManifestUrl = $"https://raw.githubusercontent.com/{GitUser}/{GitProject}/{GitManifestBranch}/{GitManifestPath}";
