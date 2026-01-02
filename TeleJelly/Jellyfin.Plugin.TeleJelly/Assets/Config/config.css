@@ -23,14 +23,20 @@
     /* Blocks */
     --card-max: 48em;
     --gap: 1.25rem;
+    --desktop-grid-split: 1fr 1.5fr; /* Control the width ratio here */
+    --container-max-width: 100%;    /* Change to e.g. 2560px to stop growth */
 }
 
 *:disabled {
     cursor: not-allowed;
 }
 
+form {
+    max-width: 100% !important;
+}
+
 fieldset {
-    background-color: #202020;
+    background-color: #20202067;
     border-color: #000;
     border-radius: .5rem;
     padding: 1.5em;
@@ -51,8 +57,9 @@ fieldset {
     .blocks {
         display: grid;
         gap: var(--gap);
-        justify-content: center; /* center the column on wide containers */
-        grid-template-columns: auto auto;
+        grid-template-columns: var(--desktop-grid-split);
+        max-width: var(--container-max-width);
+        margin: 0 auto; /* Keeps it centered if you set a max-width */
     }
 }
 
@@ -156,9 +163,9 @@ fieldset {
 }
 
 @media (min-width: 1050px) {
-    .grid-3-columns {
+    .grid-4-columns {
         display: grid;
-        grid-template-columns: minmax(200px, 2fr) minmax(200px, 2fr) minmax(200px, 2fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 1rem;
         margin-bottom: 1rem;
     }
@@ -210,6 +217,10 @@ fieldset {
     color: var(--theme-primary-text);
 }
 
+.button-delete {
+    max-height: 5rem;
+}
+
 .button-delete:disabled {
     background: #303030;
     color: rgba(255, 255, 255, 0.6);
@@ -227,7 +238,7 @@ fieldset {
 
 .username-list {
     /*height: 100%;*/
-    min-height: 320px;
+    min-height: 360px;
     resize: vertical;
 }
 
@@ -239,3 +250,13 @@ fieldset {
 .inputContainer {
     margin-bottom: 2em;
 }
+
+.requestList {
+    max-height: 30rem;
+    overflow: auto;
+    border-radius: .5rem;
+}
+
+/*.requestList .listItem {*/
+/*    border-radius: .5rem;*/
+/*}*/

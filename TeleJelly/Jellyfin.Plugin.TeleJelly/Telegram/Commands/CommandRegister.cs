@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -28,10 +29,16 @@ internal class CommandRegister : ICommandBase
     /// <summary>
     ///     The action code to trigger for the Command.
     /// </summary>
-    public async Task Execute(TelegramBotService telegramBotService,
+    public async Task Execute(ITelegramBotService telegramBotService,
         Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
+        {
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandRegister.");
+            return;
+        }
+
         if (message.Chat.Type == ChatType.Private)
         {
             await botClient.SendMessage(
@@ -42,7 +49,7 @@ internal class CommandRegister : ICommandBase
             return;
         }
 
-        var linkedGroup = telegramBotService._config.TelegramGroups.FirstOrDefault(g =>
+        var linkedGroup = telegramBotService.Config.TelegramGroups.FirstOrDefault(g =>
             g.TelegramGroupChat != null && g.TelegramGroupChat.TelegramChatId == message.Chat.Id);
 
         if (linkedGroup != null)
@@ -74,8 +81,8 @@ internal class CommandRegister : ICommandBase
                 var response = "TeleJelly Registration Report:\n";
                 if (addedUsers.Any())
                 {
-                    TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
-                    response += $"\nNow Added Users:\n{string.Join("\n", addedUsers)}\n";
+                    TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService.Config);
+                    response += $"\nNewly Added Users:\n{string.Join("\n", addedUsers)}\n";
                 }
 
                 if (existingUsers.Any())
@@ -107,11 +114,11 @@ internal class CommandRegister : ICommandBase
                     }
                     else if (linkedGroup.TelegramGroupChat?.SyncUserNames ?? false)
                     {
-                        var baseUrl = telegramBotService._config.LoginBaseUrl;
+                        var baseUrl = telegramBotService.Config.LoginBaseUrl;
                         var serverUrl = baseUrl != null ? $"\nYou can now login here: {baseUrl}" : "";
 
                         linkedGroup.UserNames.Add(user.Username);
-                        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
+                        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService.Config);
                         await botClient.SendMessage(
                             message.Chat.Id,
                             $"Welcome @{user.Username}! You have been added to the TeleJelly group.{serverUrl}",

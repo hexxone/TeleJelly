@@ -63,6 +63,104 @@ const tgConfigPage = {
         }
     },
 
+    /** ======== ======== REQUEST MANAGEMENT ======== ======== */
+
+    loadRequests: (page) => {
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl("/api/TeleJellyConfig/GetRequests"),
+            type: "GET",
+            dataType: "json"
+        }).then((requests) => {
+            tgConfigPage.populateRequests(page, requests);
+        });
+    },
+
+    populateRequests: (page, requests) => {
+        const listContainer = page.querySelector("#RequestList");
+        listContainer.innerHTML = "";
+
+        if (!requests || requests.length === 0) {
+            listContainer.innerHTML = '<div class="listItem">No active requests.</div>';
+            return;
+        }
+
+        requests.forEach(req => {
+            const item = document.createElement("div");
+            item.className = "listItem listItem-border";
+            item.style.display = "flex";
+            item.style.alignItems = "center";
+            item.style.justifyContent = "space-between";
+            item.style.padding = "0.5em";
+
+            const info = document.createElement("div");
+            info.style.display = "flex";
+            info.style.flexDirection = "column";
+
+            const title = document.createElement("div");
+            title.style.fontWeight = "bold";
+            title.textContent = `${req.Title || "Unknown"} (${req.Year || "?"})`;
+
+            const details = document.createElement("div");
+            details.style.opacity = "0.7";
+            details.style.fontSize = "0.9em";
+            details.textContent = `IMDb: ${req.ImdbId} | User: ${req.UserDisplayName} | Date: ${new Date(req.RequestedAtUtc).toLocaleDateString()}`;
+
+            info.appendChild(title);
+            info.appendChild(details);
+            item.appendChild(info);
+
+            const delBtn = document.createElement("button");
+            delBtn.is = "emby-button";
+            delBtn.type = "button";
+            delBtn.className = "raised button-delete emby-button";
+            delBtn.textContent = "Remove";
+            delBtn.style.marginLeft = "1em";
+            delBtn.onclick = () => tgConfigPage.deleteRequest(page, req.ImdbId);
+
+            item.appendChild(delBtn);
+            listContainer.appendChild(item);
+        });
+    },
+
+    deleteRequest: (page, imdbId) => {
+        if (!confirm("Remove this request?")) return;
+
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl(`/api/TeleJellyConfig/RemoveRequest/${encodeURIComponent(imdbId)}`),
+            type: "DELETE"
+        }).then(() => {
+            tgConfigPage.loadRequests(page);
+            window.Dashboard.alert('Request removed successfully');
+        });
+    },
+
+    addRequest: (page) => {
+        const input = page.querySelector("#NewRequestImdbId");
+        const imdbId = input.value.trim();
+
+        if (!imdbId) return;
+
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl("/api/TeleJellyConfig/AddRequest"),
+            type: "POST",
+            data: JSON.stringify({imdbId}),
+            contentType: "application/json",
+            dataType: "json"
+        }).then(() => {
+            input.value = "";
+            tgConfigPage.loadRequests(page);
+            window.Dashboard.alert('Request added successfully');
+        }).catch((err) => {
+            if (err?.status === 404) {
+                window.Dashboard.alert("No metadata found for the provided IMDb ID.");
+            } else if (err?.status === 409) {
+                window.Dashboard.alert("Request already exists.");
+            } else {
+                window.Dashboard.alert("Failed to add request.");
+            }
+        });
+    },
+
 
     saveConfig: (page) => {
         return new Promise((resolve) => {
@@ -191,15 +289,22 @@ const tgConfigPage = {
 
         console.debug("Updating group data.");
 
+        const linkedText = (page.querySelector("#LinkedTelegramGroupId")?.innerText || "").trim();
+        const linkedId = linkedText && linkedText !== "None" ? Number(linkedText) : 0;
+        const hasLinkedChat = !!linkedId;
+
         const groupData = {
             GroupName: tgConfigPage.currentGroup,
             EnableAllFolders: page.querySelector("#EnableAllFolders").checked,
             EnabledFolders: tgConfigPage.serializeEnabledFolders(page),
             UserNames: tgConfigPage.parseTextList(page.querySelector("#UserNames")),
-            TelegramGroupChat: {
+            // Only include TelegramGroupChat if actually linked
+            TelegramGroupChat: hasLinkedChat ? {
+                TelegramChatId: linkedId,
                 SyncUserNames: page.querySelector("#SyncUserNames").checked,
                 NotifyNewContent: page.querySelector("#NotifyNewContent").checked,
-            }
+                AllowRequests: (page.querySelector("#AllowRequests")?.checked) ?? true,
+            } : undefined
         };
 
         tgConfigPage.modifiedGroups.set(tgConfigPage.currentGroup, groupData);
@@ -257,6 +362,55 @@ const tgConfigPage = {
             page.querySelector("#UserNames").value = groupData.UserNames.join("\r\n");
             page.querySelector("#SyncUserNames").checked = groupData.TelegramGroupChat?.SyncUserNames ?? true;
             page.querySelector("#NotifyNewContent").checked = groupData.TelegramGroupChat?.NotifyNewContent ?? true;
+            const allowReq = page.querySelector("#AllowRequests");
+            if (allowReq) allowReq.checked = groupData.TelegramGroupChat?.AllowRequests ?? true;
+
+            // Toggle Telegram controls based on link state and chat type
+            tgConfigPage.updateTelegramSettingsUI(page, groupData);
+        }
+    },
+
+    updateTelegramSettingsUI: (page, groupData) => {
+            const linkedId = groupData.TelegramGroupChat?.TelegramChatId ?? 0;
+            const hasLinked = !!linkedId;
+            const isModified = tgConfigPage.modifiedGroups.has(groupData.GroupName);
+
+            const sync = page.querySelector('#SyncUserNames');
+            const notify = page.querySelector('#NotifyNewContent');
+            const allowReq = page.querySelector('#AllowRequests');
+            const linkBtn = page.querySelector('#BotLinkCommandUrl');
+
+            // Handle the link button state
+            if (linkBtn) {
+                if (isModified) {
+                    linkBtn.classList.add('hide');
+                    linkBtn.title = 'Please save group changes before linking';
+                } else if (hasLinked) {
+                    linkBtn.classList.add('hide');
+                    linkBtn.title = 'Group is already linked';
+                } else {
+                    linkBtn.classList.remove('hide');
+                    linkBtn.title = '';
+                }
+            }
+
+            // Disable or enable controls based on link state
+            [sync, notify, allowReq].forEach(el => {
+            if (el) {
+                el.disabled = !hasLinked;
+                el.parentElement.title = hasLinked ? '' : 'Link a Telegram chat first using /link';
+            }
+        });
+
+        // If chat type is Channel or Private, enforce SyncUserNames disabled
+        const chatType = groupData.TelegramGroupChat?.ChatType;
+        const isUnsupportedSync = chatType === 'Channel' || chatType === 'Private' || chatType === 2 || chatType === 3;
+        if (sync) {
+            sync.disabled = sync.disabled || isUnsupportedSync;
+            if (isUnsupportedSync) {
+                sync.checked = false;
+                sync.parentElement.title = 'Username sync is not applicable for Channel or Private chats';
+            }
         }
     },
 
@@ -310,16 +464,17 @@ const tgConfigPage = {
                 for (let [groupName, groupData] of tgConfigPage.modifiedGroups) {
                     const groupIndex = config.TelegramGroups.findIndex(g => g.GroupName === groupName);
                     if (groupIndex !== -1) {
-                        // keep non-overridden values.
-                        config.TelegramGroups[groupIndex] = {
-                            ...config.TelegramGroups[groupIndex],
-                            ...groupData,
-                            // hacky hack
-                            TelegramGroupChat: {
-                                ...config.TelegramGroups[groupIndex].TelegramGroupChat,
+                        const current = config.TelegramGroups[groupIndex];
+                        const updated = {...current, ...groupData};
+
+                        if (groupData.TelegramGroupChat !== undefined) {
+                            updated.TelegramGroupChat = {
+                                ...(current.TelegramGroupChat || {}),
                                 ...groupData.TelegramGroupChat
-                            }
-                        };
+                            };
+                        }
+
+                        config.TelegramGroups[groupIndex] = updated;
                     }
                 }
 
@@ -496,11 +651,16 @@ export default function (view) {
 
     tgConfigPage.addTextAreaStyle(view);
     tgConfigPage.loadConfiguration(view);
+    tgConfigPage.loadRequests(view); // Load requests on startup
+
     tgConfigPage.populateFolders(view).then(() => {
         const inputs = [
             "#EnableAllFolders",
             "#UserNames",
-            ".folder-checkbox"
+            ".folder-checkbox",
+            "#SyncUserNames",
+            "#NotifyNewContent",
+            "#AllowRequests"
         ];
 
         inputs.forEach(selector => {
@@ -557,6 +717,18 @@ export default function (view) {
     view.querySelector("#DeleteGroup").addEventListener("click", (e) => {
         e.preventDefault();
         tgConfigPage.deleteGroup(view);
+    });
+
+    // Request events
+    view.querySelector("#RefreshRequests").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.loadRequests(view);
+        window.Dashboard.alert('Request list refreshed');
+    });
+
+    view.querySelector("#AddManualRequest").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.addRequest(view);
     });
 
     // Bot token validation

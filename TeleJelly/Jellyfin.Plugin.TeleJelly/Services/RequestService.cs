@@ -17,17 +17,13 @@ namespace Jellyfin.Plugin.TeleJelly.Services;
 /// </summary>
 public class RequestService
 {
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
-
     private readonly IApplicationPaths _applicationPaths;
-    private readonly ILogger<RequestService> _logger;
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
     private readonly object _lock = new();
-
-    private List<MediaRequest> _requests = [];
+    private readonly ILogger<RequestService> _logger;
     private bool _loaded;
 
-    private string RequestsFilePath =>
-        Path.Combine(_applicationPaths.PluginConfigurationsPath, $"{Constants.PluginName}.requests.json");
+    private List<MediaRequest> _requests = [];
 
     /// <summary>
     ///     Service for handling media requests, including persisting, retrieving,
@@ -38,6 +34,9 @@ public class RequestService
         _applicationPaths = applicationPaths ?? throw new ArgumentNullException(nameof(applicationPaths));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
+
+    private string RequestsFilePath =>
+        Path.Combine(_applicationPaths.PluginConfigurationsPath, $"{Constants.PluginName}.requests.json");
 
     /// <summary>
     ///     Gets a snapshot of all requests.
@@ -97,7 +96,7 @@ public class RequestService
 
         await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
 
-        bool needsSave = false;
+        var needsSave = false;
         RequestAddResult result;
 
         lock (_lock)
@@ -116,6 +115,9 @@ public class RequestService
                     _requests.Remove(existing);
                     result = RequestAddResult.Removed;
                     needsSave = true;
+
+                    _logger.LogInformation("Request '{RequestImdbId} - {RequestTitle}' has been removed by User '{UserId}'",
+                        request.ImdbId, request.Title, request.UserDisplayName);
                 }
                 else
                 {
@@ -138,6 +140,9 @@ public class RequestService
                     _requests.Add(normalized);
                     result = RequestAddResult.Added;
                     needsSave = true;
+
+                    _logger.LogInformation("Request '{RequestImdbId} - {RequestTitle}' has been added by User '{UserId}'",
+                        normalized.ImdbId, normalized.Title, normalized.UserDisplayName);
                 }
             }
         }
@@ -167,7 +172,13 @@ public class RequestService
         {
             var removedCount = _requests.RemoveAll(r =>
                 string.Equals(r.ImdbId, imdbId.Trim(), StringComparison.OrdinalIgnoreCase));
+
             needsSave = removedCount > 0;
+
+            if(needsSave)
+            {
+                _logger.LogInformation("Request '{RequestImdbId}' has been removed by System or Administrator", imdbId);
+            }
         }
 
         if (needsSave)
@@ -225,7 +236,7 @@ public class RequestService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load requests file. Starting with empty list.");
+            _logger.LogCritical(ex, "Failed to load existing requests file from disk. Starting with empty list.");
             lock (_lock)
             {
                 _requests = [];
@@ -264,7 +275,7 @@ public class RequestService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save requests to disk.");
+            _logger.LogCritical(ex, "Failed to save requests to disk. Missing permission or disk full?");
         }
     }
 
@@ -276,8 +287,6 @@ public class RequestService
             ImdbId = r.ImdbId.Trim(),
             Title = r.Title.Trim(),
             Year = r.Year,
-            TypeName = r.TypeName?.Trim(),
-            ExtraInfo = r.ExtraInfo?.Trim(),
             UserId = r.UserId.Trim(),
             UserDisplayName = r.UserDisplayName.Trim(),
             RequestedAtUtc = r.RequestedAtUtc == default ? DateTime.UtcNow : r.RequestedAtUtc.ToUniversalTime()
@@ -292,8 +301,6 @@ public class RequestService
             ImdbId = r.ImdbId,
             Title = r.Title,
             Year = r.Year,
-            TypeName = r.TypeName,
-            ExtraInfo = r.ExtraInfo,
             UserId = r.UserId,
             UserDisplayName = r.UserDisplayName,
             RequestedAtUtc = r.RequestedAtUtc

@@ -19,12 +19,13 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
     /// <param name="applicationHost"></param>
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
-        // listen for commands in the background.
-        serviceCollection.AddHostedService<TelegramBackgroundService>();
-
         // register internal helpers
+        serviceCollection.AddSingleton<ICommandProvider, DefaultCommandProvider>();
         serviceCollection.AddSingleton<TelegramBotClientWrapper>();
         serviceCollection.AddSingleton<RequestService>();
         serviceCollection.AddSingleton<NotificationService>();
+
+        // listen for commands in the background.
+        serviceCollection.AddHostedService<TelegramBackgroundService>();
     }
 }

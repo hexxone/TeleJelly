@@ -27,12 +27,11 @@ namespace Jellyfin.Plugin.TeleJelly.Services;
 /// </summary>
 public class NotificationService : IDisposable
 {
-    private readonly ILogger<NotificationService> _logger;
-    private readonly ILibraryManager _libraryManager;
-
     private readonly TelegramBotClientWrapper _botClientWrapper;
-    private readonly RequestService _requestService;
+    private readonly ILibraryManager _libraryManager;
+    private readonly ILogger<NotificationService> _logger;
     private readonly ConcurrentDictionary<Guid, DateTime> _pendingNotifications = new();
+    private readonly RequestService _requestService;
     private readonly Timer _timer;
 
     /// <summary>
@@ -51,6 +50,15 @@ public class NotificationService : IDisposable
         _libraryManager = libraryManager;
         _requestService = requestService;
         _timer = new Timer(CheckForTimeouts, null, TimeSpan.Zero, TimeSpan.FromHours(1));
+    }
+
+    /// <summary>
+    ///     Releases all resources used by the <see cref="NotificationService" />.
+    ///     This method disposes of the internal timer and performs any necessary cleanup tasks.
+    /// </summary>
+    public void Dispose()
+    {
+        _timer.Dispose();
     }
 
     /// <summary>
@@ -243,19 +251,10 @@ public class NotificationService : IDisposable
             }
             catch (Exception e)
             {
-                _logger.LogInformation("Failed to send notification for '{ItemName}' to group '{Group}'", item.Name, notifyGroup.GroupName);
+                _logger.LogError("Failed to send notification for '{ItemName}' to group '{Group}'", item.Name, notifyGroup.GroupName);
                 Console.WriteLine(e);
                 throw;
             }
         }
-    }
-
-    /// <summary>
-    ///     Releases all resources used by the <see cref="NotificationService" />.
-    ///     This method disposes of the internal timer and performs any necessary cleanup tasks.
-    /// </summary>
-    public void Dispose()
-    {
-        _timer.Dispose();
     }
 }

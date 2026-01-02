@@ -7,7 +7,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 /// <summary>
 ///     Provides a base-class for custom Telegram Bot Commands.
 /// </summary>
-internal interface ICommandBase
+public interface ICommandBase
 {
     /// <summary>
     ///     Gets what command to trigger on.
@@ -27,5 +27,5 @@ internal interface ICommandBase
     /// <param name="isAdmin"></param>
     /// <param name="cancellationToken">Bot process lifetime token.</param>
     /// <returns></returns>
-    Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken);
+    Task Execute(ITelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken);
 }

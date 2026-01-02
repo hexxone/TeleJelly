@@ -7,6 +7,11 @@ ARG JELLYFIN_VERSION
 
 WORKDIR /src
 
+# Install Node.js and minification tools
+RUN apt-get update && apt-get install -y nodejs npm && \
+    npm install -g html-minifier-terser terser clean-css-cli && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # optimized nuget restore
 COPY ["TeleJelly.sln", "./"]
 COPY ["Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj", "Jellyfin.Plugin.TeleJelly/"]
@@ -15,6 +20,12 @@ RUN dotnet restore
 
 # full copy + build
 COPY . .
+
+# Minify Assets in-place before build
+RUN find Jellyfin.Plugin.TeleJelly/Assets -name "*.css" -type f -exec sh -c 'cleancss -o "{}" "{}"' \; && \
+    find Jellyfin.Plugin.TeleJelly/Assets -name "*.js" -type f -exec sh -c 'terser "{}" -o "{}" -c -m' \; && \
+    find Jellyfin.Plugin.TeleJelly/Assets -name "*.html" -type f -exec sh -c 'html-minifier-terser --collapse-whitespace --remove-comments --minify-css --minify-js -o "{}" "{}"' \;
+
 RUN dotnet publish Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj -c Release -o /app/publish
 
 # Final stage using official Jellyfin image

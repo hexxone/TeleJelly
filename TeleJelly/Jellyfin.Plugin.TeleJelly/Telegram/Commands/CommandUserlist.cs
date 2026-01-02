@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -26,9 +27,15 @@ internal class CommandUserlist : ICommandBase
     /// <summary>
     ///     The action code to trigger for the Command.
     /// </summary>
-    public async Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
+    public async Task Execute(ITelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
+        {
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandUserlist.");
+            return;
+        }
+
         if (message.Chat.Type == ChatType.Private)
         {
             await botClient.SendMessage(
@@ -39,7 +46,7 @@ internal class CommandUserlist : ICommandBase
             return;
         }
 
-        var group = telegramBotService._config.TelegramGroups.FirstOrDefault(g => g.TelegramGroupChat?.TelegramChatId == message.Chat.Id);
+        var group = telegramBotService.Config.TelegramGroups.FirstOrDefault(g => g.TelegramGroupChat?.TelegramChatId == message.Chat.Id);
         if (group != null)
         {
             var users = string.Join("\n", group.UserNames.Select(u => $"@{u}"));

@@ -78,7 +78,7 @@
                             <pre id="ExampleBrandingCode">Please enable JavaScript.</pre>
                             <p>
                                 To set the branding, you can copy above code and apply it in the:
-                                <a class="button-link emby-button" href="/web/index.html#/dashboard/settings" id="GeneralSettingsTabUrl" target="_blank">"General" Settings tab</a>.
+                                <a class="button-link emby-button" href="/web/#/dashboard/branding" target="_blank">"Branding" Settings tab</a>.
                             </p>
                         </fieldset>
                     </form>
@@ -183,7 +183,7 @@
                             <legend><h3>Group Management</h3></legend>
 
                             <div class="group-management">
-                                <div class="grid-3-columns">
+                                <div class="grid-4-columns">
                                     <!-- Group Names Column -->
                                     <div class="group-column">
                                         <div class="column-header">Groups</div>
@@ -233,9 +233,21 @@
 
                                     <!-- Usernames Column -->
                                     <div class="group-column">
+                                        <div class="column-header">Telegram Usernames</div>
+                                        <textarea class="username-list sso-line-list emby-textarea"
+                                                  id="UserNames"
+                                                  is="emby-textarea"
+                                                  onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
+                                                  placeholder="Enter Telegram usernames, one per line"></textarea>
+                                    </div>
+
+                                    <!-- Telegram Settings Column -->
+                                    <div class="group-column">
                                         <div class="column-header">Telegram Settings</div>
                                         <span>Linked Telegram Group: </span>
                                         <span id="LinkedTelegramGroupId">None</span>
+                                        <!-- disable / hide link-button when not saved OR already linked ?  -->
+                                        <a class="button-link emby-button" href="#INVALID_BOT_TOKEN" id="BotLinkCommandUrl" target="_blank">/link group to Telegram</a>
                                         <label>
                                             <input id="SyncUserNames"
                                                    is="emby-checkbox"
@@ -249,17 +261,13 @@
                                             <span>Notify new content</span>
                                         </label>
                                         <label>
-                                            <span>Telegram Usernames</span>
-                                            <textarea class="username-list sso-line-list emby-textarea"
-                                                      id="UserNames"
-                                                      is="emby-textarea"
-                                                      onkeyup="this.value=this.value.replace('@', '').replace('https://t.me/', '')"
-                                                      placeholder="Enter Telegram usernames, one per line"></textarea>
+                                            <input id="AllowRequests"
+                                                   is="emby-checkbox"
+                                                   type="checkbox"/>
+                                            <span>Allow /request command</span>
                                         </label>
                                     </div>
                                 </div>
-
-                                <p>After creating a Group (and saving), you can <a class="button-link emby-button" href="#INVALID_BOT_TOKEN" id="BotLinkCommandUrl" target="_blank">/link it to Telegram</a></p>
 
                                 <button class="raised button-submit block emby-button"
                                         id="SaveGroupConfig"
@@ -271,6 +279,49 @@
                         </fieldset>
                     </form>
                 </div>
+
+                <!-- Request Management Section -->
+                <div class="block">
+                    <form id="RequestManagementForm">
+                        <fieldset class="verticalSection">
+                            <legend><h3>Request Management</h3></legend>
+                            <p></p>
+
+                            <div class="inputContainer">
+                                <div class="column-header">Manage active media requests</div>
+                                <div class="group-input-row">
+                                    <input class="sso-text"
+                                           id="NewRequestImdbId"
+                                           is="emby-input"
+                                           minlength="3"
+                                           placeholder="IMDb ID (e.g. tt1234567)"
+                                           type="text"/>
+                                    <button class="button-submit emby-button"
+                                            id="AddManualRequest"
+                                            is="emby-button"
+                                            type="button">
+                                        <span>Add</span>
+                                    </button>
+                                </div>
+                                <div class="fieldDescription">
+                                    Manually add a request by IMDb ID. The plugin will fetch the title and year automatically if possible.
+                                </div>
+                            </div>
+
+                            <div class="paperList requestList" id="RequestList">
+                                <!-- Requests will be dynamically inserted here -->
+                            </div>
+
+                            <button class="raised button-alt block emby-button"
+                                    id="RefreshRequests"
+                                    is="emby-button"
+                                    type="button">
+                                <span>Refresh List</span>
+                            </button>
+                        </fieldset>
+                    </form>
+                </div>
+
             </div>
         </div>
     </div>

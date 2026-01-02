@@ -33,17 +33,12 @@ window.onload = function () {
     }
 };
 
-// get data from login widget
-function onTelegramAuth(user) {
-    loadingSpinner.show();
-    teleJellyAuthenticate(user);
-}
-
 let deviceId;
 let deviceName;
 
-// send data to API Controller
-function teleJellyAuthenticate(user) {
+// get data from login widget
+function onTelegramAuth(user) {
+    loadingSpinner.show();
 
     // ======== _deviceId2 && deviceName ========
 
@@ -58,6 +53,7 @@ function teleJellyAuthenticate(user) {
         }
     }
 
+    // send data to API Controller
     fetch("{{SERVER_URL}}/sso/telegram/authenticate", {
         method: "POST",
         body: JSON.stringify(user),
@@ -67,17 +63,15 @@ function teleJellyAuthenticate(user) {
             "X-DeviceId": deviceId
         }
     }).then((response) => response.json())
-        .then((json) => teleJellyResponse(json));
-}
-
-// receive JSON response, redirect or show error.
-function teleJellyResponse(data) {
-    if (data.Ok) {
-        setCredentialsAndRedirect(data.AuthenticatedUser);
-    } else {
-        showError(data.ErrorMessage ?? "Unknown Error");
-        loadingSpinner.hide();
-    }
+        .then((data) =>{
+            // receive JSON response, redirect or show error.
+            if (data.Ok) {
+                setCredentialsAndRedirect(data.AuthenticatedUser);
+            } else {
+                showError(data.ErrorMessage ?? "Unknown Error");
+                loadingSpinner.hide();
+            }
+        });
 }
 
 function showError(message) {
@@ -148,63 +142,64 @@ function generateDeviceId2() {
     ).replace(/=/g, "1");
 }
 
+
 // Simplified code from: https://github.com/jellyfin/jellyfin-web/blob/master/src/scripts/browser.js
-function detectBrowser() {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const browser = {};
+function getDeviceName() {
+    function detectBrowser() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        const browser = {};
 
-    // Basic platform detection
-    browser.ipad = /ipad/.test(userAgent);
-    browser.iphone = /iphone/.test(userAgent);
-    browser.android = /android/.test(userAgent);
+        // Basic platform detection
+        browser.ipad = /ipad/.test(userAgent);
+        browser.iphone = /iphone/.test(userAgent);
+        browser.android = /android/.test(userAgent);
 
-    // TV platforms
-    browser.tizen = userAgent.includes('tizen') || window.tizen != null;
-    browser.web0s = userAgent.includes('netcast') || userAgent.includes('web0s');
-    browser.operaTv = userAgent.includes('tv') && userAgent.includes('opr/');
-    browser.xboxOne = userAgent.includes('xbox');
-    browser.ps4 = userAgent.includes('playstation 4');
+        // TV platforms
+        browser.tizen = userAgent.includes('tizen') || window.tizen != null;
+        browser.web0s = userAgent.includes('netcast') || userAgent.includes('web0s');
+        browser.operaTv = userAgent.includes('tv') && userAgent.includes('opr/');
+        browser.xboxOne = userAgent.includes('xbox');
+        browser.ps4 = userAgent.includes('playstation 4');
 
-    // Desktop browsers
-    const edgeRegex = /(edg|edge|edga|edgios)[ /]([\w.]+)/.test(userAgent);
-    browser.edgeChromium = /(edg|edga|edgios)[ /]([\w.]+)/.test(userAgent);
-    browser.edge = edgeRegex && !browser.edgeChromium;
-    browser.chrome = /chrome/.test(userAgent) && !edgeRegex;
-    browser.firefox = /firefox/.test(userAgent);
-    browser.opera = /opera/.test(userAgent) || /opr/.test(userAgent);
-    browser.safari = !browser.chrome && !browser.edgeChromium &&
-        !browser.edge && !browser.opera &&
-        userAgent.includes('webkit');
+        // Desktop browsers
+        const edgeRegex = /(edg|edge|edga|edgios)[ /]([\w.]+)/.test(userAgent);
+        browser.edgeChromium = /(edg|edga|edgios)[ /]([\w.]+)/.test(userAgent);
+        browser.edge = edgeRegex && !browser.edgeChromium;
+        browser.chrome = /chrome/.test(userAgent) && !edgeRegex;
+        browser.firefox = /firefox/.test(userAgent);
+        browser.opera = /opera/.test(userAgent) || /opr/.test(userAgent);
+        browser.safari = !browser.chrome && !browser.edgeChromium &&
+            !browser.edge && !browser.opera &&
+            userAgent.includes('webkit');
 
-    // iPad on iOS 13+ detection
-    if (!browser.ipad && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) {
-        browser.ipad = true;
+        // iPad on iOS 13+ detection
+        if (!browser.ipad && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) {
+            browser.ipad = true;
+        }
+
+        return browser;
     }
 
-    return browser;
-}
+    const browserName = {
+        tizen: 'Samsung Smart TV',
+        web0s: 'LG Smart TV',
+        operaTv: 'Opera TV',
+        xboxOne: 'Xbox One',
+        ps4: 'Sony PS4',
+        chrome: 'Chrome',
+        edgeChromium: 'Edge Chromium',
+        edge: 'Edge',
+        firefox: 'Firefox',
+        opera: 'Opera',
+        safari: 'Safari'
+    };
 
-const BrowserName = {
-    tizen: 'Samsung Smart TV',
-    web0s: 'LG Smart TV',
-    operaTv: 'Opera TV',
-    xboxOne: 'Xbox One',
-    ps4: 'Sony PS4',
-    chrome: 'Chrome',
-    edgeChromium: 'Edge Chromium',
-    edge: 'Edge',
-    firefox: 'Firefox',
-    opera: 'Opera',
-    safari: 'Safari'
-};
-
-function getDeviceName() {
     const browser = detectBrowser();
-    var name = 'Web Browser - Telegram SSO'; // Default device name
+    let name = 'Web Browser - Telegram SSO'; // Default device name
 
-    for (const key in BrowserName) {
+    for (const key in browserName) {
         if (browser[key]) {
-            name = BrowserName[key];
+            name = browserName[key];
             break;
         }
     }

@@ -11,36 +11,26 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.TeleJelly.Telegram;
 
 /// <summary>
-///     The TeleJelly Background service which (re-)initializes Telegram the bot-service when the botToken changes.
+///     Interface for providing Telegram commands.
 /// </summary>
-public class TelegramBackgroundService : IHostedService, IDisposable
+public interface ICommandProvider
 {
-    private readonly TeleJellyPlugin _plugin;
-    private readonly ILogger<TelegramBackgroundService> _logger;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly TelegramBotClientWrapper _botClientWrapper;
+    /// <summary>
+    ///     Gets the registered commands.
+    /// </summary>
+    ICommandBase[] GetCommands();
+}
 
-    // keep the Commands here so they don't get initialized with the BotService everytime.
+/// <summary>
+///     Default implementation of ICommandProvider that scans the assembly for commands.
+/// </summary>
+public class DefaultCommandProvider : ICommandProvider
+{
     private readonly ICommandBase[] _commands;
 
-    private string _currentToken = string.Empty;
-
-    private TelegramBotService? _botService;
-
-    /// <summary>
-    ///     Creates a new instance of the TelegramBackgroundService
-    /// </summary>
-    /// <param name="logger">Used for printing service status and events.</param>
-    /// <param name="serviceProvider">Used for instantiating the Commands with Dependency Injection.</param>
-    /// <param name="botClientWrapper"></param>
-    public TelegramBackgroundService(ILogger<TelegramBackgroundService> logger, IServiceProvider serviceProvider, TelegramBotClientWrapper botClientWrapper)
+    public DefaultCommandProvider()
     {
-        _plugin = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-        _botClientWrapper = botClientWrapper;
-
-        _commands = _plugin.GetType().Assembly.GetTypes()
+        _commands = GetType().Assembly.GetTypes()
             .Where(t =>
                 typeof(ICommandBase).IsAssignableFrom(t) &&
                 t is { IsClass: true, IsAbstract: false }
@@ -48,7 +38,49 @@ public class TelegramBackgroundService : IHostedService, IDisposable
             .Select(t => Activator.CreateInstance(t) as ICommandBase
                          ?? throw new Exception($"Failed to initialize Command: {t.FullName}"))
             .ToArray();
+    }
 
+    public ICommandBase[] GetCommands()
+    {
+        return _commands;
+    }
+}
+
+/// <summary>
+///     The TeleJelly Background service which (re-)initializes Telegram the bot-service when the botToken changes.
+/// </summary>
+public sealed class TelegramBackgroundService : IHostedService, IDisposable
+{
+    private readonly TelegramBotClientWrapper _botClientWrapper;
+    private readonly ICommandBase[] _commands;
+    private readonly ILogger<TelegramBackgroundService> _logger;
+    private readonly TeleJellyPlugin _plugin;
+
+    private readonly IServiceProvider _serviceProvider;
+
+    private TelegramBotService? _botService;
+    private Timer? _inactivityTimer;
+    private const int InactivityCheckIntervalMinutes = 30; // Check every 30 minutes
+    private const int InactivityThresholdHours = 24; // Reconfigure after 24 hours of inactivity
+
+    private string _currentToken = string.Empty;
+
+    /// <summary>
+    ///     Creates a new instance of the TelegramBackgroundService
+    /// </summary>
+    /// <param name="serviceProvider">Used for giving bot commands the possibility to resolve dependencies independently</param>
+    /// <param name="logger">Used for printing service status and events.</param>
+    /// <param name="commandProvider">Used for providing the available commands for the bot to execute</param>
+    /// <param name="botClientWrapper">Used for holding a global reference to the Telegram Bot Client</param>
+    public TelegramBackgroundService(IServiceProvider serviceProvider, ILogger<TelegramBackgroundService> logger,
+        TelegramBotClientWrapper botClientWrapper, ICommandProvider commandProvider)
+    {
+        _plugin = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
+        _logger = logger;
+        _botClientWrapper = botClientWrapper;
+        _serviceProvider = serviceProvider;
+
+        _commands = commandProvider.GetCommands();
         var commandNames = _commands.Select(c => c.Command).ToArray();
 
         // Find any duplicate command names
@@ -69,6 +101,15 @@ public class TelegramBackgroundService : IHostedService, IDisposable
     }
 
     /// <summary>
+    ///     Game-End the background service.
+    /// </summary>
+    public void Dispose()
+    {
+        DisposeBotService();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
     ///     ASP Start-hook for the Background Service
     /// </summary>
     /// <param name="cancellationToken"></param>
@@ -80,6 +121,13 @@ public class TelegramBackgroundService : IHostedService, IDisposable
 
         // Initial configuration
         ConfigureBot(_plugin.Configuration);
+
+        // Start inactivity check timer
+        _inactivityTimer = new Timer(
+            CheckForInactivity,
+            null,
+            TimeSpan.FromMinutes(InactivityCheckIntervalMinutes),
+            TimeSpan.FromMinutes(InactivityCheckIntervalMinutes));
 
         _logger.LogInformation("Telegram background service started");
 
@@ -140,8 +188,7 @@ public class TelegramBackgroundService : IHostedService, IDisposable
         try
         {
             // Create and start a new service
-            _botService = new TelegramBotService(_serviceProvider, _logger, _commands, newToken, config);
-            _botClientWrapper.Client = _botService._client;
+            _botService = new TelegramBotService(_logger, newToken, config, _serviceProvider, _botClientWrapper, _commands);
             _botService.StartAsync().ConfigureAwait(false);
             _currentToken = newToken;
         }
@@ -152,11 +199,35 @@ public class TelegramBackgroundService : IHostedService, IDisposable
         }
     }
 
+    private void CheckForInactivity(object? state)
+    {
+        if (_botService?.StartTime == null)
+        {
+            return; // Bot not running
+        }
+
+        var inactivityDuration = DateTime.UtcNow - _botService.LastActivityTime;
+        if (inactivityDuration.TotalHours < InactivityThresholdHours)
+        {
+            return; // still active in Timeframe
+        }
+
+        _logger.LogInformation(
+            "Telegram bot has been inactive for {Hours} hours. Triggering automatic reconfiguration...",
+            inactivityDuration.TotalHours);
+
+        // Trigger reconfiguration
+        ConfigureBot(_plugin.Configuration);
+    }
+
     /// <summary>
     ///     Game-End the bot.
     /// </summary>
     private void DisposeBotService()
     {
+        _inactivityTimer?.Dispose();
+        _inactivityTimer = null;
+
         if (_botService != null)
         {
             _botService.Dispose();
@@ -165,14 +236,5 @@ public class TelegramBackgroundService : IHostedService, IDisposable
         }
 
         _currentToken = string.Empty;
-    }
-
-    /// <summary>
-    ///     Game-End the background service.
-    /// </summary>
-    public void Dispose()
-    {
-        DisposeBotService();
-        GC.SuppressFinalize(this);
     }
 }

@@ -34,16 +34,16 @@ public class TelegramLoginService
 
     private static readonly DateTime _unixStart = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly TeleJellyPlugin _instance;
-
     // private readonly ILogger _logger;
     private readonly PluginConfiguration _config;
-
-    private readonly ISessionManager _sessionManager;
-    private readonly IUserManager _userManager;
     private readonly ICryptoProvider _cryptoProvider;
 
     private readonly HMACSHA256 _hmac;
+
+    private readonly TeleJellyPlugin _instance;
+
+    private readonly ISessionManager _sessionManager;
+    private readonly IUserManager _userManager;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramLoginService" /> class.

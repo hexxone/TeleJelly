@@ -17,7 +17,7 @@
             <InputAssemblies Include="@(ReferencePath)" Condition="'%(filename)' == 'Telegram.Bot'"/>
 
             <!-- 3. Vital: Directories to look for other dependencies (System.*, etc.) -->
-            <LibraryPath Include="@(ReferencePath->'%(RootDir)%(Directory)')" />
+            <LibraryPath Include="@(ReferencePath->'%(RootDir)%(Directory)')"/>
         </ItemGroup>
 
         <ILRepack

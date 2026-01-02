@@ -36,6 +36,15 @@ public class TelegramGroup
 
     /// <summary>
     ///     Gets or set the optionally linked Telegram Chat and its related settings.
+    ///     If a group is not linked to Telegram, the related settings should be disabled in the
+    ///     configuration page. The UI handles this by checking whether a chat is linked.
     /// </summary>
     public TelegramGroupChat? TelegramGroupChat { get; set; }
+
+    /// <summary>
+    ///     Gets a value indicating whether this group currently has a Telegram chat linked.
+    ///     This is a convenience property for UI logic only and is not serialized.
+    /// </summary>
+    [XmlIgnore]
+    public bool HasLinkedChat => TelegramGroupChat is { TelegramChatId: not 0 };
 }

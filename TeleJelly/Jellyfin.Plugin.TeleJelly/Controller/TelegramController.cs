@@ -29,12 +29,12 @@ public class TelegramController : ControllerBase
 {
     private static readonly string[] _entryPoints = ["index.html", "login", "login.html"];
 
+    private readonly BrandingOptions _brandingOptions;
+
     // private readonly ILogger _logger;
     private readonly TeleJellyPlugin _instance;
 
     private readonly TelegramLoginService _telegramLoginService;
-
-    private readonly BrandingOptions _brandingOptions;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TelegramController" /> class.

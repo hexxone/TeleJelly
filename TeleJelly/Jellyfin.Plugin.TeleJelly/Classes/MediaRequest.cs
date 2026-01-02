@@ -16,10 +16,6 @@ public class MediaRequest
 
     public int? Year { get; set; }
 
-    public string? TypeName { get; set; }
-
-    public string? ExtraInfo { get; set; }
-
     public string UserId { get; set; } = "unknown";
 
     public string UserDisplayName { get; set; } = "Unknown";

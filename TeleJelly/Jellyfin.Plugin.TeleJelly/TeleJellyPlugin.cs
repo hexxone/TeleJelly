@@ -19,11 +19,6 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     private readonly NotificationService _notificationService;
 
     /// <summary>
-    ///     Gets or sets the Plugin Singleton instance.
-    /// </summary>
-    public static TeleJellyPlugin? Instance { get; private set; }
-
-    /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
     /// </summary>
     /// <param name="logger">startup logger</param>
@@ -49,19 +44,23 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     }
 
     /// <summary>
+    ///     Gets or sets the Plugin Singleton instance.
+    /// </summary>
+    public static TeleJellyPlugin? Instance { get; private set; }
+
+    /// <summary>
     ///     Gets the Runtime Jellyfin Application Path provider.
     /// </summary>
     public new IApplicationPaths ApplicationPaths { get; }
 
     /// <summary>
-    ///     Gets the name of the SSO plugin.
+    ///     Releases the resources used by the <see cref="TeleJellyPlugin" /> instance, such as event handlers.
     /// </summary>
-    public override string Name => Constants.PluginName;
-
-    /// <summary>
-    ///     Gets the GUID of the SSO plugin.
-    /// </summary>
-    public override Guid Id => Constants.Id;
+    public void Dispose()
+    {
+        _libraryManager.ItemAdded -= _notificationService.OnItemAdded;
+        _libraryManager.ItemUpdated -= _notificationService.OnItemUpdated;
+    }
 
     /// <summary>
     ///     Gets the available internal web pages of this plugin.
@@ -78,11 +77,12 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
     }
 
     /// <summary>
-    ///     Releases the resources used by the <see cref="TeleJellyPlugin" /> instance, such as event handlers.
+    ///     Gets the name of the SSO plugin.
     /// </summary>
-    public void Dispose()
-    {
-        _libraryManager.ItemAdded -= _notificationService.OnItemAdded;
-        _libraryManager.ItemUpdated -= _notificationService.OnItemUpdated;
-    }
+    public override string Name => Constants.PluginName;
+
+    /// <summary>
+    ///     Gets the GUID of the SSO plugin.
+    /// </summary>
+    public override Guid Id => Constants.Id;
 }

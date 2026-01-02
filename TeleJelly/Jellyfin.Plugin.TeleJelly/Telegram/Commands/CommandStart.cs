@@ -29,9 +29,15 @@ internal class CommandStart : ICommandBase
     /// <summary>
     ///     The action code to trigger for the Command.
     /// </summary>
-    public async Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
+    public async Task Execute(ITelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
+        {
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandStart.");
+            return;
+        }
+
         switch (message.Chat.Type)
         {
             case ChatType.Group or ChatType.Supergroup:
@@ -47,12 +53,17 @@ internal class CommandStart : ICommandBase
         }
     }
 
-    private async Task HandleGroupMessage(TelegramBotService telegramBotService,
+    private async Task HandleGroupMessage(ITelegramBotService telegramBotService,
         Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
+        {
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandStart.");
+            return;
+        }
 
-        var linkedGroup = telegramBotService._config.TelegramGroups.FirstOrDefault(g =>
+        var linkedGroup = telegramBotService.Config.TelegramGroups.FirstOrDefault(g =>
             g.TelegramGroupChat != null && g.TelegramGroupChat.TelegramChatId == message.Chat.Id);
 
         // 1. If Group already linked, print info message
@@ -70,7 +81,7 @@ internal class CommandStart : ICommandBase
         {
             try
             {
-                telegramBotService._logger.LogInformation("Processing start-group parameter: Chat={ChatId} Msg='{Msg}'", message.Chat.Id, message.Text);
+                telegramBotService.Logger.LogInformation("Processing start-group parameter: Chat={ChatId} Msg='{Msg}'", message.Chat.Id, message.Text);
 
                 // fixes broken encoded input strings so they can be converted by C#
                 var parameter = message.Text.Split(' ', 2)[1];
@@ -95,7 +106,7 @@ internal class CommandStart : ICommandBase
             catch (Exception ex)
             {
                 // Log error but don't expose it to users
-                telegramBotService._logger.LogError("Error processing start parameter: {Msg}", ex.Message);
+                telegramBotService.Logger.LogError("Error processing start parameter: {Msg}", ex.Message);
             }
         }
 
@@ -106,13 +117,18 @@ internal class CommandStart : ICommandBase
             cancellationToken: cancellationToken);
     }
 
-    private async Task TryLinkGroup(TelegramBotService telegramBotService,
+    private async Task TryLinkGroup(ITelegramBotService telegramBotService,
         long chatId, string groupName, CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
+        {
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandStart.");
+            return;
+        }
 
         // Find the group by name
-        var group = telegramBotService._config.TelegramGroups.FirstOrDefault(g => g.GroupName == groupName);
+        var group = telegramBotService.Config.TelegramGroups.FirstOrDefault(g => g.GroupName == groupName);
 
         if (group == null)
         {
@@ -126,7 +142,7 @@ internal class CommandStart : ICommandBase
         group.TelegramGroupChat = new TelegramGroupChat { TelegramChatId = chatId, SyncUserNames = true, NotifyNewContent = true };
 
         // Save the configuration
-        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
+        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService.Config);
 
         await botClient.SendMessage(chatId,
             $"Successfully linked this Telegram group to TeleJelly group '{groupName}'.",

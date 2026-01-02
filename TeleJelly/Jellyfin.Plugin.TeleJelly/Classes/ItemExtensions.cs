@@ -34,15 +34,26 @@ internal static class ItemExtensions
         {
             var episodeCount = series.GetRecursiveChildren().OfType<Episode>().Count();
             var seasonCount = series.GetRecursiveChildren().OfType<Season>().Count();
-            displayText += $" [Series, {seasonCount} seasons, {episodeCount} episodes]";
+            displayText += $" [Series, {seasonCount} Seasons, {episodeCount} Episodes total]";
         }
         else if (item is Season season)
         {
             var episodeCount = season.GetRecursiveChildren().OfType<Episode>().Count();
-            displayText += $" [Season {season.IndexNumber ?? 0}, {episodeCount} episodes]";
+
+            if (!string.IsNullOrEmpty(season.SeriesName))
+            {
+                displayText = $"{season.SeriesName} - {displayText}";
+            }
+
+            displayText += $" [Season {season.IndexNumber ?? 0}, {episodeCount} Episodes]";
         }
         else if (item is Episode episode)
         {
+            if (!string.IsNullOrEmpty(episode.SeriesName))
+            {
+                displayText = $"{episode.SeriesName} - {displayText}";
+            }
+
             displayText += $" [Season {episode.ParentIndexNumber ?? 0}, episode {episode.IndexNumber ?? 0}]";
         }
 

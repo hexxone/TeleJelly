@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes;
 using Jellyfin.Plugin.TeleJelly.Services;
+using MediaBrowser.Controller.Providers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,15 +23,17 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Authorize(Policy = "RequiresElevation")]
 public class TeleJellyConfigController : ControllerBase
 {
+    private readonly IProviderManager _providerManager;
     private readonly RequestService _requestService;
 
     /// <summary>
     ///     Helper Controller for the TeleJelly configuration page.
     ///     Provides methods to validate Telegram Bot Tokens and manage stored media requests.
     /// </summary>
-    public TeleJellyConfigController(RequestService requestService)
+    public TeleJellyConfigController(RequestService requestService, IProviderManager providerManager)
     {
         _requestService = requestService ?? throw new ArgumentNullException(nameof(requestService));
+        _providerManager = providerManager ?? throw new ArgumentNullException(nameof(providerManager));
     }
 
     /// <summary>
@@ -85,4 +88,73 @@ public class TeleJellyConfigController : ControllerBase
         await _requestService.SetRequestsAsync(requests, cancellationToken).ConfigureAwait(false);
         return Ok();
     }
+
+    /// <summary>
+    ///     Adds a media request by IMDb ID, resolving metadata through Jellyfin providers.
+    /// </summary>
+    [HttpPost(nameof(AddRequest))]
+    [Produces(MediaTypeNames.Application.Json)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MediaRequest>> AddRequest([FromBody] AddRequestRequest? request, CancellationToken cancellationToken)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.ImdbId))
+        {
+            return BadRequest();
+        }
+
+        var imdbId = request.ImdbId.Trim();
+
+        var (title, year, found) = await MetadataResolver
+            .FindRemoteMetadataAsync(_providerManager, imdbId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!found)
+        {
+            return NotFound();
+        }
+
+        var mediaRequest = new MediaRequest
+        {
+            ItemId = Guid.Empty,
+            ImdbId = imdbId,
+            Title = title,
+            Year = year,
+            UserId = "Manual",
+            UserDisplayName = "Admin",
+            RequestedAtUtc = DateTime.UtcNow
+        };
+
+        var result = await _requestService
+            .TryAddRequestAsync(mediaRequest, 0, cancellationToken)
+            .ConfigureAwait(false);
+
+        return result switch
+        {
+            RequestAddResult.Duplicate => Conflict(),
+            RequestAddResult.Added => Ok(mediaRequest),
+            RequestAddResult.Removed => Ok(mediaRequest), // unlikely for manual user
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
+    }
+
+    /// <summary>
+    ///     Removes a request by IMDb ID.
+    /// </summary>
+    [HttpDelete(nameof(RemoveRequest) + "/{imdbId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RemoveRequest(string imdbId, CancellationToken cancellationToken)
+    {
+        await _requestService.RemoveRequestAsync(imdbId, cancellationToken).ConfigureAwait(false);
+        return Ok();
+    }
+}
+
+/// <summary>
+///     DTO for adding a manual request from the configuration page.
+/// </summary>
+public class AddRequestRequest
+{
+    public string ImdbId { get; set; } = string.Empty;
 }

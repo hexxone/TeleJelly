@@ -8,6 +8,7 @@ using Jellyfin.Plugin.TeleJelly.Classes;
 using Jellyfin.Plugin.TeleJelly.Services;
 using MediaBrowser.Controller.Providers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -35,210 +36,94 @@ internal class CommandRequest : ICommandBase
 
     /// <inheritdoc />
     public async Task Execute(
-        TelegramBotService telegramBotService,
+        ITelegramBotService telegramBotService,
         Message message,
         bool isAdmin,
         CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
-        var requestService = telegramBotService._serviceProvider.GetRequiredService<RequestService>();
-
-        var imdbId = GetImdbIdArgument(message.Text);
-
-        if (string.IsNullOrWhiteSpace(imdbId))
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
         {
-            // No argument: print current request list (from disk-backed service)
-            var listText = await BuildRequestListMessageAsync(requestService, cancellationToken)
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandRequest.");
+            return;
+        }
+
+        var group = telegramBotService.Config.TelegramGroups
+            .FirstOrDefault(g => g.TelegramGroupChat?.TelegramChatId == message.Chat.Id);
+
+        if (!await EnsureUserAllowedAsync(botClient, group, isAdmin, message, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var requestService = telegramBotService.ServiceProvider.GetRequiredService<RequestService>();
+
+        if (!TryExtractImdbId(message.Text, out var imdbId))
+        {
+            await HandleListRequestAsync(botClient, message.Chat.Id, group, requestService, cancellationToken)
                 .ConfigureAwait(false);
-
-            if (string.IsNullOrEmpty(listText))
-            {
-                await botClient.SendMessage(
-                    message.Chat.Id,
-                    "No requests yet. Use: /request <imdb_id>",
-                    linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            await botClient.SendMessage(
-                message.Chat.Id,
-                listText,
-                ParseMode.MarkdownV2,
-                linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                cancellationToken: cancellationToken);
             return;
         }
 
-        // We have an imdbId: try to resolve and add a new request
-        var userId = message.From?.Id.ToString(CultureInfo.InvariantCulture) ?? "unknown";
-        var userDisplayName = GetUserDisplayName(message.From);
-
-        var providerManager = telegramBotService._serviceProvider.GetRequiredService<IProviderManager>();
-
-        // Try to find metadata remotely via Jellyfin's configured providers
-        var (title, year, typeName, found) = await MetadataResolver.FindRemoteMetadataAsync(providerManager, imdbId, cancellationToken)
+        await HandleAddRequestAsync(telegramBotService, botClient, message, imdbId, requestService, cancellationToken)
             .ConfigureAwait(false);
-
-        if (!found)
-        {
-            await botClient.SendMessage(
-                message.Chat.Id,
-                $"Could not find any movie or series metadata for IMDb id \"{TelegramMarkdown.Escape(imdbId)}\".",
-                ParseMode.MarkdownV2,
-                linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Construct an extra link manually since we don't have a local item with populated ProviderIds
-        var extraInfo = $" \\- [IMDb]({TelegramMarkdown.Escape($"https://www.imdb.com/title/{imdbId}/")})";
-
-        var request = new MediaRequest
-        {
-            ItemId = Guid.Empty, // Remote item, not in library
-            ImdbId = imdbId,
-            Title = title,
-            Year = year,
-            TypeName = typeName,
-            ExtraInfo = extraInfo,
-            UserId = userId,
-            UserDisplayName = userDisplayName,
-            RequestedAtUtc = DateTime.UtcNow
-        };
-
-        var result = await requestService
-            .TryAddRequestAsync(request, MaxRequestsPerUser, cancellationToken)
-            .ConfigureAwait(false);
-
-        switch (result)
-        {
-            case RequestAddResult.UserLimitReached:
-            {
-                var msg = $"You have reached the maximum of {MaxRequestsPerUser} requests.";
-                await botClient.SendMessage(
-                    message.Chat.Id,
-                    TelegramMarkdown.Escape(msg),
-                    ParseMode.MarkdownV2,
-                    linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            case RequestAddResult.Removed:
-            {
-                var msg = $"Request for \"{title}\" removed.";
-                await botClient.SendMessage(
-                    message.Chat.Id,
-                    TelegramMarkdown.Escape(msg),
-                    ParseMode.MarkdownV2,
-                    linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            case RequestAddResult.Duplicate:
-            {
-                var msg = $"This IMDb id \"{imdbId}\" WAS already in the request list.";
-                await botClient.SendMessage(
-                    message.Chat.Id,
-                    TelegramMarkdown.Escape(msg),
-                    ParseMode.MarkdownV2,
-                    linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            case RequestAddResult.Added:
-            {
-                var safeTitle = TelegramMarkdown.Escape(title);
-                var imdbUrl = $"https://www.imdb.com/title/{imdbId}/";
-                var safeImdbUrl = TelegramMarkdown.Escape(imdbUrl);
-
-                var successText = new StringBuilder();
-                successText.AppendLine(TelegramMarkdown.Escape("Request added:"))
-                    .Append("\\- ")
-                    .Append('[')
-                    .Append(safeTitle)
-                    .Append("](")
-                    .Append(safeImdbUrl)
-                    .Append(')'); // We close the link here
-
-                // Append unified Type/Year info
-                AppendRequestInfo(successText, typeName, year);
-
-                await botClient.SendMessage(
-                    message.Chat.Id,
-                    successText.ToString(),
-                    ParseMode.MarkdownV2,
-                    linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            default:
-            {
-                var msg = "An error occurred while adding the request.";
-                await botClient.SendMessage(
-                    message.Chat.Id,
-                    TelegramMarkdown.Escape(msg),
-                    ParseMode.MarkdownV2,
-                    linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-                    cancellationToken: cancellationToken);
-                return;
-            }
-        }
     }
 
-    private static string GetImdbIdArgument(string? messageText)
+    // messageText can be:
+    // "/request"
+    // "/request@BotName"
+    // "/request tt1234567"
+    // "/request@BotName tt1234567"
+    // "/request https://www.imdb.com/title/tt1234567/"
+    // "/request@BotName https://www.imdb.com/title/tt1234567/"
+    // Extracts IMDb ID from URL patterns like:
+    // https://www.imdb.com/title/tt1234567/
+    // https://www.imdb.com/title/tt1234567
+    // https://imdb.com/title/tt1234567/
+    private static bool TryExtractImdbId(string? messageText, out string imdbId)
     {
+        imdbId = string.Empty;
         if (string.IsNullOrWhiteSpace(messageText))
         {
-            return string.Empty;
+            return false;
         }
 
-        // messageText can be:
-        // "/request"
-        // "/request@BotName"
-        // "/request tt1234567"
-        // "/request@BotName tt1234567"
-        // "/request https://www.imdb.com/title/tt1234567/"
-        // "/request@BotName https://www.imdb.com/title/tt1234567/"
         var parts = messageText.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 2)
         {
-            return string.Empty;
+            return false;
         }
 
         var argument = parts[1].Trim();
 
-        // Check if argument is a URL
-        if (Uri.TryCreate(argument, UriKind.Absolute, out var uri))
+        // check if starts with tt, otherwise only return if it's really a valid URL.
+        if (argument.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
         {
-            // Extract IMDb ID from URL patterns like:
-            // https://www.imdb.com/title/tt1234567/
-            // https://www.imdb.com/title/tt1234567
-            // https://imdb.com/title/tt1234567/
-            if (uri.Host.EndsWith("imdb.com", StringComparison.OrdinalIgnoreCase))
+            imdbId = argument;
+            return true;
+        }
+
+        if (!Uri.TryCreate(argument, UriKind.Absolute, out var uri)
+            || !uri.Host.EndsWith("imdb.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (segments[i].Equals("title", StringComparison.OrdinalIgnoreCase) &&
+                segments[i + 1].StartsWith("tt", StringComparison.OrdinalIgnoreCase))
             {
-                var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                for (var i = 0; i < segments.Length - 1; i++)
-                {
-                    if (segments[i].Equals("title", StringComparison.OrdinalIgnoreCase) &&
-                        segments[i + 1].StartsWith("tt", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return segments[i + 1];
-                    }
-                }
+                imdbId = segments[i + 1];
+                return true;
             }
         }
 
-        return argument;
+        return false;
     }
 
-    private static async Task<string?> BuildRequestListMessageAsync(
-        RequestService requestService,
-        CancellationToken cancellationToken)
+    private static async Task<string?> BuildRequestListMessageAsync(TelegramGroup? group, RequestService requestService, CancellationToken cancellationToken)
     {
         var snapshot = await requestService.GetRequestsAsync(cancellationToken).ConfigureAwait(false);
         if (snapshot.Count == 0)
@@ -253,35 +138,48 @@ internal class CommandRequest : ICommandBase
         var index = 1;
         foreach (var mediaRequest in snapshot.OrderBy(r => r.RequestedAtUtc))
         {
+            if (group != null)
+            {
+                // Don't display the request if the user is not part of the current group
+                // Check if request owner (@username) is in the allowed group list
+                var requestOwner = mediaRequest.UserDisplayName.TrimStart('@');
+                if (!group.UserNames.Contains(requestOwner, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+            }
+
             var indexPrefix = $"{index++}. ";
             sb.Append(TelegramMarkdown.Escape(indexPrefix));
 
-            // Title
-            sb.Append(TelegramMarkdown.Escape(mediaRequest.Title));
-
-            // Append unified Type/Year info
-            AppendRequestInfo(sb, mediaRequest.TypeName, mediaRequest.Year);
-
-            if (!string.IsNullOrWhiteSpace(mediaRequest.ExtraInfo))
-            {
-                // assume already escaped properly.
-                sb.Append(mediaRequest.ExtraInfo);
-            }
-
-            // Requested by + date (UTC)
-            var requestedBy = TelegramMarkdown.Escape(mediaRequest.UserDisplayName);
-            var dateText = TelegramMarkdown.Escape(mediaRequest.RequestedAtUtc.ToString("u", CultureInfo.InvariantCulture));
-            sb.AppendLine();
-            sb.Append(TelegramMarkdown.Escape("   Requested by: "))
-                .Append(requestedBy)
-                .Append(TelegramMarkdown.Escape(" at "))
-                .Append('`')
-                .Append(dateText)
-                .Append('`')
-                .AppendLine();
+            AppendMediaRequestInfo(sb, mediaRequest);
         }
 
+        sb.AppendLine();
+        sb.Append("Use\\: `/request <imdb_id_or_url>` to add more\\.");
         return sb.ToString();
+    }
+
+    private static void AppendMediaRequestInfo(StringBuilder sb, MediaRequest mediaRequest)
+    {
+        // Title with IMDB Url
+        sb.Append('[');
+        sb.Append(TelegramMarkdown.Escape(mediaRequest.Title));
+        sb.Append("](");
+        sb.Append(TelegramMarkdown.Escape($"https://www.imdb.com/title/{mediaRequest.ImdbId}/"));
+        sb.Append(')');
+
+        if (mediaRequest.Year.HasValue)
+        {
+            sb.Append(TelegramMarkdown.Escape($" ({mediaRequest.Year.Value})"));
+        }
+
+        // Put `@user` in code-block so that doesnt get notified everytime.
+        sb.Append(TelegramMarkdown.Escape(" by: "))
+            .Append('`')
+            .Append(TelegramMarkdown.Escape(mediaRequest.UserDisplayName))
+            .Append('`')
+            .AppendLine();
     }
 
     private static string GetUserDisplayName(User? user)
@@ -311,16 +209,194 @@ internal class CommandRequest : ICommandBase
         return string.IsNullOrWhiteSpace(name) ? "Unknown" : name;
     }
 
-    private static void AppendRequestInfo(StringBuilder sb, string? typeName, int? year)
+    private static async Task<bool> EnsureUserAllowedAsync(
+        ITelegramBotClient botClient,
+        TelegramGroup? group,
+        bool isAdmin,
+        Message message,
+        CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrEmpty(typeName))
+        if (isAdmin)
         {
-            sb.Append(TelegramMarkdown.Escape($" – {typeName}"));
+            return true;
         }
+
+        if (group != null)
+        {
+            // If we are in a known group, check if user is allowed.
+            var username = message.From?.Username;
+            if (string.IsNullOrEmpty(username) ||
+                !group.UserNames.Contains(username, StringComparer.OrdinalIgnoreCase))
+            {
+                await botClient.SendMessage(
+                    message.Chat.Id,
+                    "You cannot make requests in this group yet.",
+                    cancellationToken: cancellationToken);
+                return false;
+            }
+
+            return true;
+        }
+
+        // Group isn't linked yet
+        if (message.Chat.Type != ChatType.Private)
+        {
+            await botClient.SendMessage(
+                message.Chat.Id,
+                Constants.GroupWelcomeMessage,
+                cancellationToken: cancellationToken);
+            return false;
+        }
+
+        await botClient.SendMessage(
+            message.Chat.Id,
+            Constants.PrivateUserWelcomeMessage,
+            cancellationToken: cancellationToken);
+        return false;
+    }
+
+    private static Task SendMarkdownAsync(
+        ITelegramBotClient client,
+        ChatId chatId,
+        string text,
+        CancellationToken cancellationToken)
+    {
+        return client.SendMessage(
+            chatId,
+            text,
+            ParseMode.MarkdownV2,
+            linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
+            cancellationToken: cancellationToken);
+    }
+
+    private static async Task HandleListRequestAsync(
+        ITelegramBotClient botClient,
+        ChatId chatId,
+        TelegramGroup? group,
+        RequestService requestService,
+        CancellationToken cancellationToken)
+    {
+        var listText = await BuildRequestListMessageAsync(group, requestService, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(listText))
+        {
+            await botClient.SendMessage(
+                chatId,
+                "No requests yet. Use: /request <imdb_id>",
+                linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        await SendMarkdownAsync(botClient, chatId, listText, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task HandleAddRequestAsync(
+        ITelegramBotService telegramBotService,
+        ITelegramBotClient botClient,
+        Message message,
+        string imdbId,
+        RequestService requestService,
+        CancellationToken cancellationToken)
+    {
+        var userId = message.From?.Id.ToString(CultureInfo.InvariantCulture) ?? "unknown";
+        var userDisplayName = GetUserDisplayName(message.From);
+
+        var providerManager = telegramBotService.ServiceProvider.GetRequiredService<IProviderManager>();
+
+        var (title, year, found) = await MetadataResolver
+            .FindRemoteMetadataAsync(providerManager, imdbId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!found)
+        {
+            var notFound = $"Could not find any movie or series metadata for IMDb id \"{TelegramMarkdown.Escape(imdbId)}\".";
+            await SendMarkdownAsync(botClient, message.Chat.Id, notFound, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var request = new MediaRequest
+        {
+            ItemId = Guid.Empty,
+            ImdbId = imdbId,
+            Title = title,
+            Year = year,
+            UserId = userId,
+            UserDisplayName = userDisplayName,
+            RequestedAtUtc = DateTime.UtcNow
+        };
+
+        var result = await requestService
+            .TryAddRequestAsync(request, MaxRequestsPerUser, cancellationToken)
+            .ConfigureAwait(false);
+
+        switch (result)
+        {
+            case RequestAddResult.UserLimitReached:
+            {
+                var msg = $"You have reached the maximum of {MaxRequestsPerUser} requests.";
+                await SendMarkdownAsync(botClient, message.Chat.Id, TelegramMarkdown.Escape(msg), cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            case RequestAddResult.Removed:
+            {
+                var msg = $"Request for \"{title}\" removed.";
+                await SendMarkdownAsync(botClient, message.Chat.Id, TelegramMarkdown.Escape(msg), cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            case RequestAddResult.Duplicate:
+            {
+                var duplicateMsg = BuildDuplicateMessage(title, imdbId, year);
+                await SendMarkdownAsync(botClient, message.Chat.Id, duplicateMsg, cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            case RequestAddResult.Added:
+            {
+                var addedMsg = BuildAddedMessage(request);
+                await SendMarkdownAsync(botClient, message.Chat.Id, addedMsg, cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            default:
+            {
+                const string msg = "An error occurred while adding the request.";
+                await SendMarkdownAsync(botClient, message.Chat.Id, TelegramMarkdown.Escape(msg), cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+        }
+    }
+
+    private static string BuildDuplicateMessage(string title, string imdbId, int? year)
+    {
+        var sb = new StringBuilder();
+        sb.Append("The title ");
+        sb.Append('[').Append(TelegramMarkdown.Escape(title)).Append("](");
+        sb.Append(TelegramMarkdown.Escape($"https://www.imdb.com/title/{imdbId}/")).Append(')');
 
         if (year.HasValue)
         {
-            sb.Append(TelegramMarkdown.Escape($" ({year.Value})"));
+            sb.Append(TelegramMarkdown.Escape($" ({year})"));
         }
+
+        sb.Append(" was already requested by another user\\.");
+        return sb.ToString();
+    }
+
+    private static string BuildAddedMessage(MediaRequest request)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(TelegramMarkdown.Escape("📋 Request added ✅"));
+        sb.Append("\\- ");
+        AppendMediaRequestInfo(sb, request);
+        return sb.ToString();
     }
 }

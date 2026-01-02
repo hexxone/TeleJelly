@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -26,9 +27,15 @@ internal class CommandLink : ICommandBase
     /// <summary>
     ///     The action code to trigger for the Command.
     /// </summary>
-    public async Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
+    public async Task Execute(ITelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
+        {
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandLink.");
+            return;
+        }
+
         if (message.Chat.Type == ChatType.Private)
         {
             await botClient.SendMessage(
@@ -51,7 +58,7 @@ internal class CommandLink : ICommandBase
         }
 
         var groupName = parts[1];
-        var group = telegramBotService._config.TelegramGroups.FirstOrDefault(g => g.GroupName == groupName);
+        var group = telegramBotService.Config.TelegramGroups.FirstOrDefault(g => g.GroupName == groupName);
         if (group == null)
         {
             await botClient.SendMessage(
@@ -67,7 +74,7 @@ internal class CommandLink : ICommandBase
         // Manually test saving the config by:
         // 1. Linking a group using the `/link` command.
         // 2. Verifying that the plugin's configuration file is updated with the new group link.
-        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService._config);
+        TeleJellyPlugin.Instance!.SaveConfiguration(telegramBotService.Config);
 
         await botClient.SendMessage(
             message.Chat.Id,

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -33,9 +34,14 @@ internal class CommandStats : ICommandBase
     /// <summary>
     ///     The action code to trigger for the Command.
     /// </summary>
-    public async Task Execute(TelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
+    public async Task Execute(ITelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
-        var botClient = telegramBotService._client;
+        var botClient = telegramBotService.BotClientWrapper.Client;
+        if (botClient == null)
+        {
+            telegramBotService.Logger.LogError("Telegram Bot Client wrapper is null in CommandStats.");
+            return;
+        }
 
         var statsMessage = GetSystemStatsMessage(telegramBotService, isAdmin);
 
@@ -47,16 +53,16 @@ internal class CommandStats : ICommandBase
             cancellationToken: cancellationToken);
     }
 
-    private string GetSystemStatsMessage(TelegramBotService telegramBotService, bool isAdmin)
+    private string GetSystemStatsMessage(ITelegramBotService telegramBotService, bool isAdmin)
     {
-        var serverApplicationHost = telegramBotService._serviceProvider.GetRequiredService<IServerApplicationHost>();
+        var serverApplicationHost = telegramBotService.ServiceProvider.GetRequiredService<IServerApplicationHost>();
         var process = Process.GetCurrentProcess();
 
         // Calculate bot uptime - handle nullable TimeSpan
         string botUptimeText;
-        if (telegramBotService._startTime.HasValue)
+        if (telegramBotService.StartTime.HasValue)
         {
-            var botUptime = DateTime.Now - telegramBotService._startTime.Value;
+            var botUptime = DateTime.Now - telegramBotService.StartTime.Value;
             botUptimeText = FormatTimeSpan(botUptime);
         }
         else
@@ -75,7 +81,7 @@ internal class CommandStats : ICommandBase
             : 0;
 
         // add Jellyfin Public-Url to Msg if set
-        var baseUrl = telegramBotService._config.LoginBaseUrl;
+        var baseUrl = telegramBotService.Config.LoginBaseUrl;
         var serverUrl = baseUrl != null
             ? EscapeMarkdownV2("Server URL: " + baseUrl) + "\n"
             : "";
