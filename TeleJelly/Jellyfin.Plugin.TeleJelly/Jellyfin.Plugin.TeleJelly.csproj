@@ -35,6 +35,10 @@
         <PackageReference Include="Jellyfin.Controller" Version="10.11.3"/>
         <PackageReference Include="Jellyfin.Model" Version="10.11.3"/>
         <PackageReference Include="Telegram.Bot" Version="22.7.5" PrivateAssets="All"/>
+        <PackageReference Include="Transmission.API.RPC" Version="1.7.0" />
+        <PackageReference Include="My.JDownloader.Api" Version="1.0.8" />
+        <PackageReference Include="SharpCompress" Version="0.37.2" />
+        <PackageReference Include="TMDbLib" Version="2.0.0" />
         <PackageReference Include="MinVer" Version="6.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

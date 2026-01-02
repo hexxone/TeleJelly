@@ -6,6 +6,7 @@ networks:
 
 volumes:
     traefik-le:
+    downloads:
 
 services:
     traefik:
@@ -49,3 +50,32 @@ services:
             - TZ=UTC
         depends_on:
             - traefik
+
+    transmission:
+        image: linuxserver/transmission
+        environment:
+            - PUID=1000
+            - PGID=1000
+            - TZ=UTC
+            - TRANSMISSION_WEB_HOME=/combustion-release/
+        volumes:
+            - ./transmission-config:/config
+            - downloads:/downloads
+        ports:
+            - "9091:9091"
+            - "51413:51413"
+            - "51413:51413/udp"
+        networks:
+            - jellyfin-network
+        restart: unless-stopped
+
+    jdownloader:
+        image: jlesage/jdownloader-2
+        ports:
+            - "5800:5800"
+        volumes:
+            - ./jdownloader-config:/config
+            - downloads:/output
+        networks:
+            - jellyfin-network
+        restart: unless-stopped

@@ -6,11 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
+using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Jellyfin.Plugin.TeleJelly.Classes.Models;
 
 #endregion
 
@@ -44,6 +46,7 @@ internal sealed class TelegramBotService : ITelegramBotService
 {
     private readonly string _botToken;
     private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly ILibraryManager _libraryManager;
 
 
     /// <summary>
@@ -51,9 +54,11 @@ internal sealed class TelegramBotService : ITelegramBotService
     /// </summary>
     internal TelegramBotService(ILogger logger, string botToken,
         PluginConfiguration config, IServiceProvider serviceProvider,
-        TelegramBotClientWrapper botClientWrapper, ICommandBase[] commands)
+        TelegramBotClientWrapper botClientWrapper, ICommandBase[] commands,
+        ILibraryManager libraryManager)
     {
         Logger = logger;
+        _libraryManager = libraryManager;
         _botToken = botToken;
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -152,6 +157,10 @@ internal sealed class TelegramBotService : ITelegramBotService
                 // Handle commands
                 case { Type: UpdateType.Message, Message.Text: not null }:
                     await HandleBotMessage(update, cancellationToken);
+                    break;
+                // Handle callback queries from inline keyboards
+                case { Type: UpdateType.CallbackQuery, CallbackQuery: not null }:
+                    await HandleCallbackQuery(update.CallbackQuery, cancellationToken);
                     break;
             }
         }
@@ -307,6 +316,100 @@ internal sealed class TelegramBotService : ITelegramBotService
 
         // Find & Execute Bot command
         await FindAndExecuteCommand(message, commandText, cancellationToken);
+    }
+
+    private async Task HandleCallbackQuery(CallbackQuery callbackQuery, CancellationToken cancellationToken)
+    {
+        if (callbackQuery.Data == null) return;
+
+        Logger.LogInformation("Received callback query: {Data}", callbackQuery.Data);
+
+        var parts = callbackQuery.Data.Split('_');
+        if (parts.Length < 3 || parts[0] != "dl" || !Guid.TryParse(parts[1], out var downloadId))
+        {
+            await BotClientWrapper.Client.AnswerCallbackQueryAsync(callbackQuery.Id, "Invalid callback data.", cancellationToken: cancellationToken);
+            return;
+        }
+
+        var orchestrator = ServiceProvider.GetService(typeof(DownloadOrchestrator)) as DownloadOrchestrator;
+        if (orchestrator == null)
+        {
+            Logger.LogError("DownloadOrchestrator not found in service provider.");
+            await BotClientWrapper.Client.AnswerCallbackQueryAsync(callbackQuery.Id, "Internal server error.", cancellationToken: cancellationToken);
+            return;
+        }
+
+        var download = orchestrator.GetDownload(downloadId);
+        if (download == null)
+        {
+            await BotClientWrapper.Client.AnswerCallbackQueryAsync(callbackQuery.Id, "Download not found.", cancellationToken: cancellationToken);
+            return;
+        }
+
+        var action = parts[2];
+        var value = parts.Length > 3 ? parts[3] : null;
+
+        try
+        {
+            switch (action)
+            {
+                case "library":
+                    download.TargetLibraryId = value;
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingMediaType);
+
+                    var mediaTypeKeyboard = new InlineKeyboardMarkup(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData("Movie", $"dl_{download.Id}_mediatype_Movie"),
+                        InlineKeyboardButton.WithCallbackData("Series", $"dl_{download.Id}_mediatype_Series"),
+                        InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel")
+                    });
+
+                    await BotClientWrapper.Client.EditMessageTextAsync(
+                        callbackQuery.Message.Chat.Id,
+                        callbackQuery.Message.MessageId,
+                        "Please select the media type:",
+                        replyMarkup: mediaTypeKeyboard,
+                        cancellationToken: cancellationToken);
+                    break;
+
+                case "mediatype":
+                    download.MediaType = Enum.Parse<MediaType>(value);
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingPathConfirm);
+
+                    // For simplicity, we'll auto-confirm the path for now.
+                    // In a real implementation, you would ask the user to confirm or edit the path.
+                    var library = _libraryManager.GetItemById(download.TargetLibraryId);
+                    download.UserConfirmedPath = library.Path;
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
+
+                    await BotClientWrapper.Client.EditMessageTextAsync(
+                        callbackQuery.Message.Chat.Id,
+                        callbackQuery.Message.MessageId,
+                        $"Media type set. Download starting...",
+                        cancellationToken: cancellationToken);
+                    break;
+
+                case "cancel":
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Canceled);
+                     await BotClientWrapper.Client.EditMessageTextAsync(
+                        callbackQuery.Message.Chat.Id,
+                        callbackQuery.Message.MessageId,
+                        $"Download for <b>{download.Title}</b> has been canceled.",
+                        parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                        cancellationToken: cancellationToken);
+                    break;
+
+                default:
+                     await BotClientWrapper.Client.AnswerCallbackQueryAsync(callbackQuery.Id, "Unknown action.", cancellationToken: cancellationToken);
+                     break;
+            }
+            await BotClientWrapper.Client.AnswerCallbackQueryAsync(callbackQuery.Id, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error processing callback query for download {DownloadId}", downloadId);
+            await BotClientWrapper.Client.AnswerCallbackQueryAsync(callbackQuery.Id, "An error occurred.", cancellationToken: cancellationToken);
+        }
     }
 
     private async Task FindAndExecuteCommand(Message message, string commandText, CancellationToken cancellationToken)

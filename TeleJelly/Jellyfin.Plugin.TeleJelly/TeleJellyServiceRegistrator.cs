@@ -25,7 +25,19 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<RequestService>();
         serviceCollection.AddSingleton<NotificationService>();
 
+        // Download manager services
+        serviceCollection.AddSingleton<DownloadOrchestrator>();
+        serviceCollection.AddSingleton<ArchiveExtractionService>();
+        serviceCollection.AddSingleton<MediaAnalyzerService>();
+        serviceCollection.AddSingleton<PathTemplateService>();
+        serviceCollection.AddSingleton<MediaFileOrganizerService>();
+
+        // Register download clients
+        serviceCollection.AddScoped<ITorrentDownloadService, TransmissionService>();
+        serviceCollection.AddScoped<IHostedDownloadService, JDownloader2Service>();
+
         // listen for commands in the background.
         serviceCollection.AddHostedService<TelegramBackgroundService>();
+        serviceCollection.AddHostedService<DownloadManagerService>();
     }
 }

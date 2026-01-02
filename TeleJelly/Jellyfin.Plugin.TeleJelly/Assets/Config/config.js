@@ -63,6 +63,77 @@ const tgConfigPage = {
         }
     },
 
+    /** ======== ======== DOWNLOAD MANAGER ======== ======== */
+    loadDownloads: (page) => {
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl("/TeleJelly/DownloadManager/downloads"),
+            type: "GET",
+            dataType: "json"
+        }).then((downloads) => {
+            tgConfigPage.populateDownloads(page, downloads);
+        });
+    },
+
+    populateDownloads: (page, downloads) => {
+        const listContainer = page.querySelector("#DownloadList");
+        listContainer.innerHTML = "";
+
+        if (!downloads || downloads.length === 0) {
+            listContainer.innerHTML = '<div class="listItem">No active downloads.</div>';
+            return;
+        }
+
+        downloads.forEach(dl => {
+            const item = document.createElement("div");
+            item.className = "listItem listItem-border";
+            item.style.display = "flex";
+            item.style.alignItems = "center";
+            item.style.justifyContent = "space-between";
+            item.style.padding = "0.5em";
+
+            const info = document.createElement("div");
+            info.style.display = "flex";
+            info.style.flexDirection = "column";
+
+            const title = document.createElement("div");
+            title.style.fontWeight = "bold";
+            title.textContent = `${dl.Title} (${dl.Year})`;
+
+            const details = document.createElement("div");
+            details.style.opacity = "0.7";
+            details.style.fontSize = "0.9em";
+            details.textContent = `Status: ${dl.Status} | Progress: ${dl.ProgressPercentage.toFixed(1)}% | Started: ${new Date(dl.StartedAt).toLocaleString()}`;
+
+            info.appendChild(title);
+            info.appendChild(details);
+            item.appendChild(info);
+
+            const cancelBtn = document.createElement("button");
+            cancelBtn.is = "emby-button";
+            cancelBtn.type = "button";
+            cancelBtn.className = "raised button-cancel emby-button";
+            cancelBtn.textContent = "Cancel";
+            cancelBtn.style.marginLeft = "1em";
+            cancelBtn.onclick = () => tgConfigPage.cancelDownload(page, dl.Id);
+
+            item.appendChild(cancelBtn);
+            listContainer.appendChild(item);
+        });
+    },
+
+    cancelDownload: (page, downloadId) => {
+        if (!confirm("Cancel this download?")) return;
+
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl(`/TeleJelly/DownloadManager/downloads/${downloadId}/cancel`),
+            type: "POST"
+        }).then(() => {
+            tgConfigPage.loadDownloads(page);
+            window.Dashboard.alert('Download canceled.');
+        });
+    },
+
+
     /** ======== ======== REQUEST MANAGEMENT ======== ======== */
 
     loadRequests: (page) => {
@@ -651,7 +722,8 @@ export default function (view) {
 
     tgConfigPage.addTextAreaStyle(view);
     tgConfigPage.loadConfiguration(view);
-    tgConfigPage.loadRequests(view); // Load requests on startup
+    tgConfigPage.loadRequests(view);
+    tgConfigPage.loadDownloads(view);
 
     tgConfigPage.populateFolders(view).then(() => {
         const inputs = [
@@ -729,6 +801,13 @@ export default function (view) {
     view.querySelector("#AddManualRequest").addEventListener("click", (e) => {
         e.preventDefault();
         tgConfigPage.addRequest(view);
+    });
+
+    // Download manager events
+    view.querySelector("#RefreshDownloads").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.loadDownloads(view);
+        window.Dashboard.alert('Download list refreshed');
     });
 
     // Bot token validation
