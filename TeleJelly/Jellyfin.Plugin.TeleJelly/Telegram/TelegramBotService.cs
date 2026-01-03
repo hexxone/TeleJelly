@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System;
 using System.Linq;
@@ -6,11 +6,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
+using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Jellyfin.Plugin.TeleJelly.Classes.Models;
+using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Telegram.Bot.Types.ReplyMarkups;
 
 #endregion
 
@@ -44,6 +48,7 @@ internal sealed class TelegramBotService : ITelegramBotService
 {
     private readonly string _botToken;
     private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly ILibraryManager _libraryManager;
 
 
     /// <summary>
@@ -51,9 +56,11 @@ internal sealed class TelegramBotService : ITelegramBotService
     /// </summary>
     internal TelegramBotService(ILogger logger, string botToken,
         PluginConfiguration config, IServiceProvider serviceProvider,
-        TelegramBotClientWrapper botClientWrapper, ICommandBase[] commands)
+        TelegramBotClientWrapper botClientWrapper, ICommandBase[] commands,
+        ILibraryManager libraryManager)
     {
         Logger = logger;
+        _libraryManager = libraryManager;
         _botToken = botToken;
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -153,6 +160,10 @@ internal sealed class TelegramBotService : ITelegramBotService
                 case { Type: UpdateType.Message, Message.Text: not null }:
                     await HandleBotMessage(update, cancellationToken);
                     break;
+                // Handle callback queries from inline keyboards
+                case { Type: UpdateType.CallbackQuery, CallbackQuery: not null }:
+                    await HandleCallbackQuery(update.CallbackQuery, cancellationToken);
+                    break;
             }
         }
         catch (Exception ex)
@@ -182,9 +193,9 @@ internal sealed class TelegramBotService : ITelegramBotService
             if (BotClientWrapper.Client != null)
             {
                 await BotClientWrapper.Client.SendMessage(
-                    groupId,
-                    $"Warning: User '{user.FirstName} {user.LastName}' does not have a Telegram username set. " +
-                    "They need to set a username before using TeleJelly login.",
+                    chatId: groupId,
+                    text: $"Warning: User '{user.FirstName} {user.LastName}' does not have a Telegram username set. " +
+                          "They need to set a username before using TeleJelly login.",
                     cancellationToken: cancellationToken);
             }
 
@@ -202,8 +213,8 @@ internal sealed class TelegramBotService : ITelegramBotService
                     if (BotClientWrapper.Client != null)
                     {
                         await BotClientWrapper.Client.SendMessage(
-                            groupId,
-                            Constants.GroupWelcomeMessage,
+                            chatId: groupId,
+                            text: Constants.GroupWelcomeMessage,
                             cancellationToken: cancellationToken);
                     }
                 }
@@ -212,8 +223,8 @@ internal sealed class TelegramBotService : ITelegramBotService
                     if (BotClientWrapper.Client != null)
                     {
                         await BotClientWrapper.Client.SendMessage(
-                            groupId,
-                            "This group is not linked to Jellyfin. Please ask an administrator to link this group using the `/link` command.",
+                            chatId: groupId,
+                            text: "This group is not linked to Jellyfin. Please ask an administrator to link this group using the `/link` command.",
                             cancellationToken: cancellationToken);
                     }
                 }
@@ -231,8 +242,8 @@ internal sealed class TelegramBotService : ITelegramBotService
                 if (BotClientWrapper.Client != null)
                 {
                     await BotClientWrapper.Client.SendMessage(
-                        groupId,
-                        $"Welcome @{user.Username}! You have been added to the TeleJelly whitelist. {serverUrl}",
+                        chatId: groupId,
+                        text: $"Welcome @{user.Username}! You have been added to the TeleJelly whitelist. {serverUrl}",
                         cancellationToken: cancellationToken);
                 }
 
@@ -257,8 +268,8 @@ internal sealed class TelegramBotService : ITelegramBotService
                 if (BotClientWrapper.Client != null)
                 {
                     await BotClientWrapper.Client.SendMessage(
-                        groupId,
-                        message,
+                        chatId: groupId,
+                        text: message,
                         cancellationToken: cancellationToken);
                 }
 
@@ -270,8 +281,8 @@ internal sealed class TelegramBotService : ITelegramBotService
                 if (BotClientWrapper.Client != null)
                 {
                     await BotClientWrapper.Client.SendMessage(
-                        groupId,
-                        $"Removed @{user.Username} from TeleJelly whitelist",
+                        chatId: groupId,
+                        text: $"Removed @{user.Username} from TeleJelly whitelist",
                         cancellationToken: cancellationToken);
                 }
 
@@ -292,7 +303,7 @@ internal sealed class TelegramBotService : ITelegramBotService
         }
 
         var message = update.Message!;
-        if (!message.Text!.StartsWith('/'))
+        if (message.Text == null || !message.Text.StartsWith('/'))
         {
             return; // Not a command, ignore
         }
@@ -307,6 +318,119 @@ internal sealed class TelegramBotService : ITelegramBotService
 
         // Find & Execute Bot command
         await FindAndExecuteCommand(message, commandText, cancellationToken);
+    }
+
+    private async Task HandleCallbackQuery(CallbackQuery callbackQuery, CancellationToken cancellationToken)
+    {
+        if (callbackQuery.Data == null) return;
+
+        Logger.LogInformation("Received callback query: {Data}", callbackQuery.Data);
+
+        var parts = callbackQuery.Data.Split('_');
+        if (parts.Length < 3 || parts[0] != "dl" || !Guid.TryParse(parts[1], out var downloadId))
+        {
+            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Invalid callback data.", cancellationToken: cancellationToken);
+            return;
+        }
+
+        var orchestrator = ServiceProvider.GetService(typeof(DownloadOrchestrator)) as DownloadOrchestrator;
+        if (orchestrator == null)
+        {
+            Logger.LogError("DownloadOrchestrator not found in service provider.");
+            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Internal server error.", cancellationToken: cancellationToken);
+            return;
+        }
+
+        var download = orchestrator.GetDownload(downloadId);
+        if (download == null)
+        {
+            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Download not found.", cancellationToken: cancellationToken);
+            return;
+        }
+
+        var action = parts[2];
+        var value = parts.Length > 3 ? parts[3] : null;
+
+        try
+        {
+            switch (action)
+            {
+                case "library":
+                    download.TargetLibraryId = value;
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingMediaType);
+
+                    var mediaTypeKeyboard = new InlineKeyboardMarkup(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData("Movie", $"dl_{download.Id}_mediatype_Movie"),
+                        InlineKeyboardButton.WithCallbackData("Series", $"dl_{download.Id}_mediatype_Series"),
+                        InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel")
+                    });
+
+                    await BotClientWrapper.Client.EditMessageText(
+                        chatId: callbackQuery.Message!.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        text: "Please select the media type:",
+                        replyMarkup: mediaTypeKeyboard,
+                        cancellationToken: cancellationToken);
+                    break;
+
+                // TODO should we maybe select the "MediaType" first and only afterwards the "library"?
+                //   .. this way we could narrow down the available libraries based on the selected media type.
+                //   .. any maybe even have a single one remaining we can automatically "force" select.
+                case "mediatype":
+                    download.MediaType = Enum.Parse<MediaType>(value!);
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingPathConfirm);
+
+                    // For simplicity, we auto-confirm the path for now.
+                    // TODO fix the "auto confirm" and actually let the user confirm the path with a separate step.
+                    //   .. also trigger to Start the download if everything is ready. Doesnt seem like thats happening.
+
+                    var library = _libraryManager.GetItemById(download.TargetLibraryId!);
+                    if (library?.Path != null)
+                    {
+                        download.UserConfirmedPath = library.Path;
+                        await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
+
+                        await BotClientWrapper.Client.EditMessageText(
+                            chatId: callbackQuery.Message!.Chat.Id,
+                            messageId: callbackQuery.Message.MessageId,
+                            text: $"Media type set. Download starting...",
+                            cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Failed,
+                            "Target library not found or path is missing.");
+
+                        await BotClientWrapper.Client.EditMessageText(
+                            chatId: callbackQuery.Message!.Chat.Id,
+                            messageId: callbackQuery.Message.MessageId,
+                            text: "Error: Target library not found or path is missing.",
+                            cancellationToken: cancellationToken);
+                    }
+                    break;
+
+                case "cancel":
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Canceled);
+                     await BotClientWrapper.Client.EditMessageText(
+                        chatId: callbackQuery.Message!.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        text: $"Download for <b>{download.Title}</b> has been canceled.",
+                        parseMode: ParseMode.Html,
+                        cancellationToken: cancellationToken);
+                    break;
+
+                default:
+                     await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Unknown action.", cancellationToken: cancellationToken);
+                     break;
+            }
+            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error processing callback query for download {DownloadId}", downloadId);
+            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "An error occurred.", cancellationToken: cancellationToken);
+        }
     }
 
     private async Task FindAndExecuteCommand(Message message, string commandText, CancellationToken cancellationToken)
@@ -330,8 +454,8 @@ internal sealed class TelegramBotService : ITelegramBotService
                     if (BotClientWrapper.Client != null)
                     {
                         await BotClientWrapper.Client.SendMessage(
-                            message.Chat.Id,
-                            "You are not an administrator.",
+                            chatId: message.Chat.Id,
+                            text: "You are not an administrator.",
                             cancellationToken: cancellationToken);
                     }
 
@@ -345,7 +469,7 @@ internal sealed class TelegramBotService : ITelegramBotService
 
             if (!commandFound && BotClientWrapper.Client != null)
             {
-                await BotClientWrapper.Client.SendMessage(message.Chat.Id, "Unknown command.", cancellationToken: cancellationToken);
+                await BotClientWrapper.Client.SendMessage(chatId: message.Chat.Id, text: "Unknown command.", cancellationToken: cancellationToken);
             }
         }
         catch (Exception e)

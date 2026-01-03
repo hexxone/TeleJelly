@@ -27,5 +27,5 @@ public interface ICommandBase
     /// <param name="isAdmin"></param>
     /// <param name="cancellationToken">Bot process lifetime token.</param>
     /// <returns></returns>
-    Task Execute(ITelegramBotService telegramBotService, Message message, bool isAdmin, CancellationToken cancellationToken);
+    Task Execute(ITelegramBotService botService, Message message, bool isAdmin, CancellationToken cancellationToken);
 }

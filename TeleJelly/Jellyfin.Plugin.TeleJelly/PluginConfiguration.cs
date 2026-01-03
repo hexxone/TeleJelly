@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Xml.Serialization;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 using Jellyfin.Plugin.TeleJelly.Telegram;
 using MediaBrowser.Model.Plugins;
 
@@ -64,4 +65,6 @@ public class PluginConfiguration : BasePluginConfiguration
     [XmlArray("TelegramGroups")]
     [XmlArrayItem(typeof(TelegramGroup), ElementName = "TelegramGroups")]
     public List<TelegramGroup> TelegramGroups { get; set; } = [];
+
+    public DownloadManagerSettings DownloadManager { get; set; } = new();
 }
