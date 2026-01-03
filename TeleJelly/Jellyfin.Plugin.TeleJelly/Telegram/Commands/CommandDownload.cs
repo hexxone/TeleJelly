@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using MediaBrowser.Controller.Library;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
+using Jellyfin.Plugin.TeleJelly.Telegram.Bot;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
 {
@@ -27,13 +29,13 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
 
         public async Task Execute(ITelegramBotService botService, Message message, bool isAdmin, CancellationToken cancellationToken)
         {
-            var args = message.Text.Split(' ', 3);
+            var args = message.Text?.Split(' ', 3) ?? new string[0];
             if (args.Length < 2)
             {
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    "<b>Usage:</b> /download &lt;imdb_id&gt; [link_or_magnet]",
-                    parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                    chatId: message.Chat.Id,
+                    text: "<b>Usage:</b> /download &lt;imdb_id&gt; [link_or_magnet]",
+                    parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -44,8 +46,17 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
             if (!imdbId.StartsWith("tt"))
             {
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    "Invalid IMDB ID. It should start with 'tt'.",
+                    chatId: message.Chat.Id,
+                    text: "Invalid IMDB ID. It should start with 'tt'.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
+            if (message.From == null)
+            {
+                await botService.BotClientWrapper.Client.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    text: "Cannot identify user.",
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -54,31 +65,32 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
             {
                 var download = await _orchestrator.BeginDownloadWorkflow(imdbId, message.Chat.Id, message.From.Id, link);
 
-                // Start interactive workflow - Step 1: Select Library
                 var libraries = _libraryManager.GetUserRootFolder().Children.ToArray();
                 if (!libraries.Any())
                 {
-                    await botService.BotClientWrapper.Client.SendTextMessageAsync(message.Chat.Id, "No libraries configured in Jellyfin.", cancellationToken: cancellationToken);
+                    await botService.BotClientWrapper.Client.SendTextMessageAsync(chatId: message.Chat.Id, text: "No libraries configured in Jellyfin.", cancellationToken: cancellationToken);
                     return;
                 }
 
-                var keyboardButtons = libraries.Select(lib =>
-                    InlineKeyboardButton.WithCallbackData(lib.Name, $"dl_{download.Id}_library_{lib.Id}"));
+                var keyboardButtons = libraries
+                    .Select(lib => InlineKeyboardButton.WithCallbackData(lib.Name ?? "Unnamed Library", $"dl_{download.Id}_library_{lib.Id}"))
+                    .ToList();
+                keyboardButtons.Add(InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel"));
 
-                var keyboard = new InlineKeyboardMarkup(keyboardButtons.Append(InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel")));
+                var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    $"Starting download for <b>{download.Title} ({download.Year})</b>.\n\nPlease select the destination library:",
-                    parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                    chatId: message.Chat.Id,
+                    text: $"Starting download for <b>{download.Title} ({download.Year})</b>.\n\nPlease select the destination library:",
+                    parseMode: ParseMode.Html,
                     replyMarkup: keyboard,
                     cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    $"Failed to start download: {ex.Message}",
+                    chatId: message.Chat.Id,
+                    text: $"Failed to start download: {ex.Message}",
                     cancellationToken: cancellationToken);
             }
         }

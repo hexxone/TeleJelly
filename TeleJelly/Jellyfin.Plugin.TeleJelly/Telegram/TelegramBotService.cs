@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System;
 using System.Linq;
@@ -13,6 +13,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
+using Telegram.Bot.Types.ReplyMarkups;
 
 #endregion
 
@@ -115,7 +116,7 @@ internal sealed class TelegramBotService : ITelegramBotService
                 cancellationToken: _cancellationTokenSource.Token
             );
 
-            BotInfo = await BotClientWrapper.Client.GetMe();
+            BotInfo = await BotClientWrapper.Client.GetMeAsync();
             Logger.LogInformation("Telegram Bot listening as @{UserName}", BotInfo.Username);
             StartTime = DateTime.UtcNow;
             LastActivityTime = DateTime.UtcNow;
@@ -190,10 +191,10 @@ internal sealed class TelegramBotService : ITelegramBotService
         {
             if (BotClientWrapper.Client != null)
             {
-                await BotClientWrapper.Client.SendMessage(
-                    groupId,
-                    $"Warning: User '{user.FirstName} {user.LastName}' does not have a Telegram username set. " +
-                    "They need to set a username before using TeleJelly login.",
+                await BotClientWrapper.Client.SendTextMessageAsync(
+                    chatId: groupId,
+                    text: $"Warning: User '{user.FirstName} {user.LastName}' does not have a Telegram username set. " +
+                          "They need to set a username before using TeleJelly login.",
                     cancellationToken: cancellationToken);
             }
 
@@ -210,9 +211,9 @@ internal sealed class TelegramBotService : ITelegramBotService
                 {
                     if (BotClientWrapper.Client != null)
                     {
-                        await BotClientWrapper.Client.SendMessage(
-                            groupId,
-                            Constants.GroupWelcomeMessage,
+                        await BotClientWrapper.Client.SendTextMessageAsync(
+                            chatId: groupId,
+                            text: Constants.GroupWelcomeMessage,
                             cancellationToken: cancellationToken);
                     }
                 }
@@ -220,9 +221,9 @@ internal sealed class TelegramBotService : ITelegramBotService
                 {
                     if (BotClientWrapper.Client != null)
                     {
-                        await BotClientWrapper.Client.SendMessage(
-                            groupId,
-                            "This group is not linked to Jellyfin. Please ask an administrator to link this group using the `/link` command.",
+                        await BotClientWrapper.Client.SendTextMessageAsync(
+                            chatId: groupId,
+                            text: "This group is not linked to Jellyfin. Please ask an administrator to link this group using the `/link` command.",
                             cancellationToken: cancellationToken);
                     }
                 }
@@ -239,9 +240,9 @@ internal sealed class TelegramBotService : ITelegramBotService
                 telegramGroup.UserNames.Add(user.Username);
                 if (BotClientWrapper.Client != null)
                 {
-                    await BotClientWrapper.Client.SendMessage(
-                        groupId,
-                        $"Welcome @{user.Username}! You have been added to the TeleJelly whitelist. {serverUrl}",
+                    await BotClientWrapper.Client.SendTextMessageAsync(
+                        chatId: groupId,
+                        text: $"Welcome @{user.Username}! You have been added to the TeleJelly whitelist. {serverUrl}",
                         cancellationToken: cancellationToken);
                 }
 
@@ -265,9 +266,9 @@ internal sealed class TelegramBotService : ITelegramBotService
                 var message = $"The bot has been removed from the group '{telegramGroup.GroupName}' and the link has been removed.\n\n{adminMentions}";
                 if (BotClientWrapper.Client != null)
                 {
-                    await BotClientWrapper.Client.SendMessage(
-                        groupId,
-                        message,
+                    await BotClientWrapper.Client.SendTextMessageAsync(
+                        chatId: groupId,
+                        text: message,
                         cancellationToken: cancellationToken);
                 }
 
@@ -278,9 +279,9 @@ internal sealed class TelegramBotService : ITelegramBotService
             {
                 if (BotClientWrapper.Client != null)
                 {
-                    await BotClientWrapper.Client.SendMessage(
-                        groupId,
-                        $"Removed @{user.Username} from TeleJelly whitelist",
+                    await BotClientWrapper.Client.SendTextMessageAsync(
+                        chatId: groupId,
+                        text: $"Removed @{user.Username} from TeleJelly whitelist",
                         cancellationToken: cancellationToken);
                 }
 
@@ -301,7 +302,7 @@ internal sealed class TelegramBotService : ITelegramBotService
         }
 
         var message = update.Message!;
-        if (!message.Text!.StartsWith('/'))
+        if (message.Text == null || !message.Text.StartsWith('/'))
         {
             return; // Not a command, ignore
         }
@@ -365,37 +366,48 @@ internal sealed class TelegramBotService : ITelegramBotService
                     });
 
                     await BotClientWrapper.Client.EditMessageTextAsync(
-                        callbackQuery.Message.Chat.Id,
-                        callbackQuery.Message.MessageId,
-                        "Please select the media type:",
+                        chatId: callbackQuery.Message!.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        text: "Please select the media type:",
                         replyMarkup: mediaTypeKeyboard,
                         cancellationToken: cancellationToken);
                     break;
 
                 case "mediatype":
-                    download.MediaType = Enum.Parse<MediaType>(value);
+                    download.MediaType = Enum.Parse<MediaType>(value!);
                     await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingPathConfirm);
 
                     // For simplicity, we'll auto-confirm the path for now.
-                    // In a real implementation, you would ask the user to confirm or edit the path.
-                    var library = _libraryManager.GetItemById(download.TargetLibraryId);
-                    download.UserConfirmedPath = library.Path;
-                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
+                    var library = _libraryManager.GetItemById(download.TargetLibraryId!);
+                    if (library?.Path != null)
+                    {
+                        download.UserConfirmedPath = library.Path;
+                        await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
 
-                    await BotClientWrapper.Client.EditMessageTextAsync(
-                        callbackQuery.Message.Chat.Id,
-                        callbackQuery.Message.MessageId,
-                        $"Media type set. Download starting...",
-                        cancellationToken: cancellationToken);
+                        await BotClientWrapper.Client.EditMessageTextAsync(
+                            chatId: callbackQuery.Message!.Chat.Id,
+                            messageId: callbackQuery.Message.MessageId,
+                            text: $"Media type set. Download starting...",
+                            cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "Target library not found or path is missing.");
+                        await BotClientWrapper.Client.EditMessageTextAsync(
+                            chatId: callbackQuery.Message!.Chat.Id,
+                            messageId: callbackQuery.Message.MessageId,
+                            text: "Error: Target library not found or path is missing.",
+                            cancellationToken: cancellationToken);
+                    }
                     break;
 
                 case "cancel":
                     await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Canceled);
                      await BotClientWrapper.Client.EditMessageTextAsync(
-                        callbackQuery.Message.Chat.Id,
-                        callbackQuery.Message.MessageId,
-                        $"Download for <b>{download.Title}</b> has been canceled.",
-                        parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                        chatId: callbackQuery.Message!.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        text: $"Download for <b>{download.Title}</b> has been canceled.",
+                        parseMode: ParseMode.Html,
                         cancellationToken: cancellationToken);
                     break;
 
@@ -432,9 +444,9 @@ internal sealed class TelegramBotService : ITelegramBotService
                 {
                     if (BotClientWrapper.Client != null)
                     {
-                        await BotClientWrapper.Client.SendMessage(
-                            message.Chat.Id,
-                            "You are not an administrator.",
+                        await BotClientWrapper.Client.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            text: "You are not an administrator.",
                             cancellationToken: cancellationToken);
                     }
 
@@ -448,7 +460,7 @@ internal sealed class TelegramBotService : ITelegramBotService
 
             if (!commandFound && BotClientWrapper.Client != null)
             {
-                await BotClientWrapper.Client.SendMessage(message.Chat.Id, "Unknown command.", cancellationToken: cancellationToken);
+                await BotClientWrapper.Client.SendTextMessageAsync(chatId: message.Chat.Id, text: "Unknown command.", cancellationToken: cancellationToken);
             }
         }
         catch (Exception e)

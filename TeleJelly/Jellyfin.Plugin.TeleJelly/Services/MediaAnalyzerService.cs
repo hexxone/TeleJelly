@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Microsoft.Extensions.Logging;
 using TMDbLib.Client;
 using TMDbLib.Objects.Find;
 using TMDbLib.Objects.General;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 
 namespace Jellyfin.Plugin.TeleJelly.Services
 {
@@ -25,7 +26,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 _logger.LogWarning("TMDb API key is not configured. Metadata fetching will be disabled.");
-                _tmdbClient = null;
+                _tmdbClient = new TMDbClient("placeholder", false); // Disabled client
             }
             else
             {
@@ -69,8 +70,14 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             return Task.FromResult(groups.ToArray());
         }
 
-        public async Task<(string Title, int? Year, MediaType MediaType)> GetMetadataFromImdbId(string imdbId)
+        public async Task<(string? Title, int? Year, Jellyfin.Plugin.TeleJelly.Classes.Models.MediaType MediaType)> GetMetadataFromImdbId(string imdbId)
         {
+            if (string.IsNullOrWhiteSpace(_tmdbClient.ApiKey) || _tmdbClient.ApiKey == "placeholder")
+            {
+                _logger.LogWarning("TMDb API key is not configured. Cannot fetch metadata.");
+                return (null, null, Jellyfin.Plugin.TeleJelly.Classes.Models.MediaType.Unknown);
+            }
+
             _logger.LogInformation("Fetching metadata for IMDB ID: {ImdbId}", imdbId);
             FindContainer result = await _tmdbClient.FindAsync(FindExternalSource.Imdb, imdbId);
 
@@ -78,18 +85,18 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             {
                 var movie = result.MovieResults.First();
                 _logger.LogInformation("Found movie: {Title} ({Year})", movie.Title, movie.ReleaseDate?.Year);
-                return (movie.Title, movie.ReleaseDate?.Year, MediaType.Movie);
+                return (movie.Title, movie.ReleaseDate?.Year, Jellyfin.Plugin.TeleJelly.Classes.Models.MediaType.Movie);
             }
 
             if (result.TvResults.Any())
             {
                 var tvShow = result.TvResults.First();
                 _logger.LogInformation("Found series: {Name} ({Year})", tvShow.Name, tvShow.FirstAirDate?.Year);
-                return (tvShow.Name, tvShow.FirstAirDate?.Year, MediaType.Series);
+                return (tvShow.Name, tvShow.FirstAirDate?.Year, Jellyfin.Plugin.TeleJelly.Classes.Models.MediaType.Series);
             }
 
             _logger.LogWarning("No movie or series found for IMDB ID: {ImdbId}", imdbId);
-            return (null, null, MediaType.Unknown);
+            return (null, null, Jellyfin.Plugin.TeleJelly.Classes.Models.MediaType.Unknown);
         }
 
         public Task<(int? Season, int? Episode)> ExtractSeasonAndEpisode(string fileName)
@@ -99,8 +106,8 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             var match = regex.Match(fileName);
             if (match.Success)
             {
-                var season = int.Parse(match.Groups[2].Value);
-                var episode = int.Parse(match.Groups[4].Value);
+                var season = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+                var episode = int.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);
                 _logger.LogInformation("Extracted Season {Season}, Episode {Episode} from {FileName}", season, episode, fileName);
                 return Task.FromResult(((int?)season, (int?)episode));
             }

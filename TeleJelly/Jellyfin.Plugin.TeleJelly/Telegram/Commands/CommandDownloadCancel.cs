@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Jellyfin.Plugin.TeleJelly.Telegram.Bot;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
 {
@@ -21,13 +23,13 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
 
         public async Task Execute(ITelegramBotService botService, Message message, bool isAdmin, CancellationToken cancellationToken)
         {
-            var args = message.Text.Split(' ', 2);
+            var args = message.Text?.Split(' ', 2) ?? new string[0];
             if (args.Length < 2 || !Guid.TryParse(args[1], out var downloadId))
             {
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    "<b>Usage:</b> /download_cancel &lt;download_id&gt;",
-                    parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                    chatId: message.Chat.Id,
+                    text: "<b>Usage:</b> /download_cancel &lt;download_id&gt;",
+                    parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -36,8 +38,8 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
             if (download == null || download.ChatId != message.Chat.Id)
             {
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    "Download not found.",
+                    chatId: message.Chat.Id,
+                    text: "Download not found.",
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -47,16 +49,16 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
                 await _orchestrator.UpdateDownloadStatus(downloadId, Classes.Models.DownloadStatus.Canceled);
 
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    $"Successfully canceled download for <b>{download.Title}</b>.",
-                    parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                    chatId: message.Chat.Id,
+                    text: $"Successfully canceled download for <b>{download.Title}</b>.",
+                    parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    $"Failed to cancel download: {ex.Message}",
+                    chatId: message.Chat.Id,
+                    text: $"Failed to cancel download: {ex.Message}",
                     cancellationToken: cancellationToken);
             }
         }

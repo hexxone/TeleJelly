@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -6,6 +7,8 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Jellyfin.Plugin.TeleJelly.Telegram.Bot;
 
 namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
 {
@@ -31,8 +34,8 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
             if (!downloads.Any())
             {
                 await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                    message.Chat.Id,
-                    "No active or recent downloads.",
+                    chatId: message.Chat.Id,
+                    text: "No active or recent downloads.",
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -43,24 +46,29 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands
 
             foreach (var download in downloads)
             {
-                var eta = download.Status == Classes.Models.DownloadStatus.Downloading ?
-                    $" (ETA: {TimeSpan.FromMinutes(download.ProgressPercentage > 0 ? (100 - download.ProgressPercentage) / download.ProgressPercentage * (DateTime.UtcNow - download.StartedAt).TotalMinutes : 0):hh\\:mm})" : "";
+                var etaString = "";
+                if (download.Status == Classes.Models.DownloadStatus.Downloading && download.ProgressPercentage > 0)
+                {
+                    var remainingMinutes = (100 - download.ProgressPercentage) / download.ProgressPercentage * (DateTime.UtcNow - download.StartedAt).TotalMinutes;
+                    var eta = TimeSpan.FromMinutes(remainingMinutes);
+                    etaString = $" (ETA: {eta:hh\\:mm})";
+                }
 
-                sb.AppendLine($"<b>{download.Title} ({download.Year})</b>");
-                sb.AppendLine($"Status: <i>{download.Status}</i> {download.ProgressPercentage:F1}%{eta}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"<b>{download.Title} ({download.Year})</b>");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"Status: <i>{download.Status}</i> {download.ProgressPercentage:F1}%{etaString}");
                 if (!string.IsNullOrEmpty(download.ErrorMessage))
                 {
-                    sb.AppendLine($"Error: <pre>{download.ErrorMessage}</pre>");
+                    sb.AppendLine(CultureInfo.InvariantCulture, $"Error: <pre>{download.ErrorMessage}</pre>");
                 }
-                sb.AppendLine($"Started: {download.StartedAt:g}");
-                sb.AppendLine($"ID: <code>{download.Id}</code>");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"Started: {download.StartedAt:g}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"ID: <code>{download.Id}</code>");
                 sb.AppendLine("---");
             }
 
             await botService.BotClientWrapper.Client.SendTextMessageAsync(
-                message.Chat.Id,
-                sb.ToString(),
-                parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                chatId: message.Chat.Id,
+                text: sb.ToString(),
+                parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
         }
     }

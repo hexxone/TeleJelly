@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -57,16 +58,16 @@ namespace Jellyfin.Plugin.TeleJelly.Services
 
             // Apply static variables
             sb.Replace("{title}", sanitize(download.Title));
-            sb.Replace("{year}", download.Year?.ToString() ?? string.Empty);
+            sb.Replace("{year}", download.Year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty);
             sb.Replace("{imdbId}", download.ImdbId);
             sb.Replace("{filename}", sanitize(Path.GetFileNameWithoutExtension(originalFileName)));
             sb.Replace("{ext}", Path.GetExtension(originalFileName));
 
             // Handle formatted variables like {season:00}
-            sb.Replace("{season:00}", download.Season?.ToString("00") ?? string.Empty);
-            sb.Replace("{season}", download.Season?.ToString() ?? string.Empty);
-            sb.Replace("{episode:00}", download.Episode?.ToString("00") ?? string.Empty);
-            sb.Replace("{episode}", download.Episode?.ToString() ?? string.Empty);
+            sb.Replace("{season:00}", download.Season?.ToString("00", CultureInfo.InvariantCulture) ?? string.Empty);
+            sb.Replace("{season}", download.Season?.ToString(CultureInfo.InvariantCulture) ?? string.Empty);
+            sb.Replace("{episode:00}", download.Episode?.ToString("00", CultureInfo.InvariantCulture) ?? string.Empty);
+            sb.Replace("{episode}", download.Episode?.ToString(CultureInfo.InvariantCulture) ?? string.Empty);
 
             var resultPath = sb.ToString();
 

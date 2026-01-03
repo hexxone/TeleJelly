@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Microsoft.Extensions.Logging;
@@ -14,37 +15,42 @@ namespace Jellyfin.Plugin.TeleJelly.Services
     {
         private readonly ILogger<MediaFileOrganizerService> _logger;
         private readonly ILibraryManager _libraryManager;
+        private readonly IItemManager _itemManager;
 
-        public MediaFileOrganizerService(ILogger<MediaFileOrganizerService> logger, ILibraryManager libraryManager)
+        public MediaFileOrganizerService(ILogger<MediaFileOrganizerService> logger, ILibraryManager libraryManager, IItemManager itemManager)
         {
             _logger = logger;
             _libraryManager = libraryManager;
+            _itemManager = itemManager;
         }
 
-        public async Task MoveFilesToDestinationAsync(MediaFileGroup[] groups, string destinationDirectory, IProgress<int> progress, CancellationToken ct)
+        public async Task MoveFilesToDestinationAsync(MediaFileGroup[] groups, string destinationDirectory, IProgress<int>? progress, CancellationToken ct)
         {
             _logger.LogInformation("Organizing {NumGroups} file groups to destination: {Destination}", groups.Length, destinationDirectory);
+            progress ??= new Progress<int>();
+
             await EnsureDirectoryExistsAsync(destinationDirectory);
 
-            var totalFiles = groups.Sum(g => 1 + g.SubtitleFiles.Count);
+            var totalFiles = groups.Sum(g => (g.VideoFile != null ? 1 : 0) + g.SubtitleFiles.Count);
             var movedFiles = 0;
 
             foreach (var group in groups)
             {
                 ct.ThrowIfCancellationRequested();
 
-                // Move Video File
-                await MoveFileWithConflictHandling(group.VideoFile.Path, destinationDirectory, ct);
-                movedFiles++;
-                progress?.Report(movedFiles * 100 / totalFiles);
+                if (group.VideoFile != null)
+                {
+                    await MoveFileWithConflictHandling(group.VideoFile.Path, destinationDirectory, ct);
+                    movedFiles++;
+                    progress.Report(movedFiles * 100 / totalFiles);
+                }
 
-                // Move Subtitle Files
                 foreach (var subtitleFile in group.SubtitleFiles)
                 {
                     ct.ThrowIfCancellationRequested();
                     await MoveFileWithConflictHandling(subtitleFile.Path, destinationDirectory, ct);
                     movedFiles++;
-                    progress?.Report(movedFiles * 100 / totalFiles);
+                    progress.Report(movedFiles * 100 / totalFiles);
                 }
             }
             _logger.LogInformation("File organization complete.");
@@ -92,7 +98,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             var library = _libraryManager.GetItemById(libraryId) as Folder;
             if (library != null)
             {
-                _libraryManager.ValidatePath(library.Path);
+                _itemManager.ValidateLibrary(library, new Progress<double>(), CancellationToken.None);
             }
             else
             {

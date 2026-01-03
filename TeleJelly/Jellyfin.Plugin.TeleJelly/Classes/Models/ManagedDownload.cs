@@ -7,18 +7,18 @@ namespace Jellyfin.Plugin.TeleJelly.Classes.Models
     {
         public Guid Id { get; set; }
         public long ChatId { get; set; }
-        public string UserId { get; set; }
-        public string LinkOrMagnet { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public string? LinkOrMagnet { get; set; }
         public DownloadStatus Status { get; set; }
         public string? ErrorMessage { get; set; }
-        public string ImdbId { get; set; }
-        public string Title { get; set; }
+        public string ImdbId { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
         public int? Year { get; set; }
         public MediaType MediaType { get; set; }
         public int? Season { get; set; }
         public int? Episode { get; set; }
         public string? ServiceDownloadId { get; set; }
-        public string ServiceName { get; set; }
+        public string? ServiceName { get; set; }
         public DownloadServiceType ServiceType { get; set; }
         public double ProgressPercentage { get; set; }
         public DateTime StartedAt { get; set; }

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using JDownloader.Models.DownloadsV2;
 using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using MediaBrowser.Controller.Configuration;
@@ -48,12 +50,12 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             _persistencePath = Path.Combine(_configurationManager.ApplicationPaths.DataPath, "TeleJelly_Downloads.json");
         }
 
-        public async Task<ManagedDownload> BeginDownloadWorkflow(string imdbId, long chatId, long userId, string link = null)
+        public async Task<ManagedDownload> BeginDownloadWorkflow(string imdbId, long chatId, long userId, string? link = null)
         {
             var metadata = await _mediaAnalyzer.GetMetadataFromImdbId(imdbId);
-            if (metadata.MediaType == MediaType.Unknown)
+            if (metadata.MediaType == Classes.Models.MediaType.Unknown || metadata.Title == null)
             {
-                throw new Exception($"Could not find metadata for IMDB ID: {imdbId}");
+                throw new Exception($"Could not find valid metadata for IMDB ID: {imdbId}");
             }
 
             var download = new ManagedDownload
@@ -64,7 +66,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services
                 Year = metadata.Year,
                 MediaType = metadata.MediaType,
                 ChatId = chatId,
-                UserId = userId.ToString(),
+                UserId = userId.ToString(CultureInfo.InvariantCulture),
                 LinkOrMagnet = link,
                 Status = DownloadStatus.AwaitingLibrary,
                 StartedAt = DateTime.UtcNow
@@ -77,7 +79,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             return download;
         }
 
-        public async Task UpdateDownloadStatus(Guid id, DownloadStatus newStatus, string errorMessage = null)
+        public async Task UpdateDownloadStatus(Guid id, DownloadStatus newStatus, string? errorMessage = null)
         {
             if (_downloads.TryGetValue(id, out var download))
             {
@@ -87,7 +89,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services
             }
         }
 
-        public ManagedDownload GetDownload(Guid id) => _downloads.GetValueOrDefault(id);
+        public ManagedDownload? GetDownload(Guid id) => _downloads.GetValueOrDefault(id);
         public IEnumerable<ManagedDownload> GetAllDownloads() => _downloads.Values;
 
         public async Task ProcessAllDownloadsAsync(CancellationToken stoppingToken)
@@ -127,37 +129,33 @@ namespace Jellyfin.Plugin.TeleJelly.Services
 
         private async Task CheckDownloadProgress(ManagedDownload download, CancellationToken ct)
         {
+            if (string.IsNullOrEmpty(download.ServiceDownloadId) || string.IsNullOrEmpty(download.ServiceName)) return;
+
             if (download.ServiceType == DownloadServiceType.Torrent)
             {
                 var service = _torrentServices.FirstOrDefault(s => s.ServiceName == download.ServiceName);
-                if (service != null)
+                if (service != null && await service.GetProgressAsync(download.ServiceDownloadId, ct) is Transmission.API.RPC.Entity.TorrentInfo progress)
                 {
-                    var progress = await service.GetProgressAsync(download.ServiceDownloadId, ct) as Transmission.API.RPC.Entity.TorrentInfo;
-                    if (progress != null)
+                    download.ProgressPercentage = progress.PercentDone * 100;
+                    if (progress.PercentDone >= 1 && !string.IsNullOrEmpty(progress.DownloadDir))
                     {
-                        download.ProgressPercentage = progress.PercentDone * 100;
-                        if (progress.PercentDone >= 1)
-                        {
-                            download.OriginalDownloadPath = progress.DownloadDir;
-                            await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
-                        }
+                        download.OriginalDownloadPath = progress.DownloadDir;
+                        await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
                     }
                 }
             }
             else // Hosted
             {
                 var service = _hostedServices.FirstOrDefault(s => s.ServiceName == download.ServiceName);
-                if (service != null)
+                if (service != null && await service.GetProgressAsync(download.ServiceDownloadId, ct) is FilePackage progress)
                 {
-                    var progress = await service.GetProgressAsync(download.ServiceDownloadId, ct) as My.JDownloader.Api.Models.DownloadsV2.Response.FilePackageResponse;
-                    if (progress != null)
+                    if (progress.BytesTotal > 0)
+                        download.ProgressPercentage = (double)progress.BytesLoaded / progress.BytesTotal * 100;
+
+                    if (progress.Status == "Finished" && !string.IsNullOrEmpty(progress.SaveTo))
                     {
-                        download.ProgressPercentage = progress.BytesLoaded / (double)progress.BytesTotal * 100;
-                        if (progress.Finished)
-                        {
-                            download.OriginalDownloadPath = progress.SaveTo;
-                            await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
-                        }
+                        download.OriginalDownloadPath = progress.SaveTo;
+                        await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
                     }
                 }
             }
@@ -165,6 +163,12 @@ namespace Jellyfin.Plugin.TeleJelly.Services
 
         private async Task ExtractFiles(ManagedDownload download, CancellationToken ct)
         {
+            if (string.IsNullOrEmpty(download.OriginalDownloadPath))
+            {
+                await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "Original download path is missing.");
+                return;
+            }
+
             var archives = await _archiveExtractor.DetectArchivesAsync(download.OriginalDownloadPath);
             if (archives.Any())
             {
@@ -173,11 +177,17 @@ namespace Jellyfin.Plugin.TeleJelly.Services
                 Directory.CreateDirectory(extractionPath);
                 download.CurrentStagingPath = extractionPath;
 
-                var passwords = new[] { "password", "123456" }; // Placeholder, should come from config
+                var config = (_configurationManager as PluginConfiguration)!.DownloadManager.Extraction;
+                var passwords = config.Passwords.ToArray();
 
                 foreach (var archive in archives)
                 {
-                    await _archiveExtractor.ExtractArchiveAsync(archive.FullName, extractionPath, passwords, null, ct);
+                    var success = await _archiveExtractor.ExtractArchiveAsync(archive.FullName, extractionPath, passwords, new Progress<int>(), ct);
+                    if (!success)
+                    {
+                        await UpdateDownloadStatus(download.Id, DownloadStatus.ExtractionFailed, $"Failed to extract {archive.Name}.");
+                        return;
+                    }
                 }
 
                 await UpdateDownloadStatus(download.Id, DownloadStatus.Analyzing);
@@ -191,10 +201,17 @@ namespace Jellyfin.Plugin.TeleJelly.Services
 
         private async Task AnalyzeFiles(ManagedDownload download, CancellationToken ct)
         {
+            if (string.IsNullOrEmpty(download.CurrentStagingPath))
+            {
+                await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "Staging path is missing.");
+                return;
+            }
+
             var fileGroups = await _mediaAnalyzer.AnalyzeAndGroupFilesAsync(download.CurrentStagingPath);
             download.AnalyzedFiles = fileGroups;
 
-            var (season, episode) = await _mediaAnalyzer.ExtractSeasonAndEpisode(fileGroups.FirstOrDefault()?.VideoFile.Path ?? download.Title);
+            var mainVideoFile = fileGroups.FirstOrDefault()?.VideoFile?.Path;
+            var (season, episode) = await _mediaAnalyzer.ExtractSeasonAndEpisode(mainVideoFile ?? download.Title);
             download.Season = season;
             download.Episode = episode;
 
@@ -203,14 +220,23 @@ namespace Jellyfin.Plugin.TeleJelly.Services
 
         private async Task OrganizeFiles(ManagedDownload download, CancellationToken ct)
         {
-            var librarySettings = new LibrarySettings(); // Placeholder
+            if (download.AnalyzedFiles == null || !download.AnalyzedFiles.Any() || string.IsNullOrEmpty(download.TargetLibraryId))
+            {
+                await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "No files to organize or target library not set.");
+                return;
+            }
+
+            var config = (_configurationManager as PluginConfiguration)!;
+            var librarySettings = config.LibrarySettings.GetValueOrDefault(download.TargetLibraryId) ?? new LibrarySettings();
+            var mainVideoFile = download.AnalyzedFiles.FirstOrDefault()?.VideoFile?.Path;
+
             var finalPath = await _pathTemplater.ApplyTemplateAsync(
                 librarySettings.PathTemplate,
                 download,
                 download.FilledPathVariables ?? new Dictionary<string, string>(),
-                download.AnalyzedFiles.FirstOrDefault()?.VideoFile.Path ?? download.Title);
+                mainVideoFile ?? download.Title);
 
-            await _fileOrganizer.MoveFilesToDestinationAsync(download.AnalyzedFiles, finalPath, null, ct);
+            await _fileOrganizer.MoveFilesToDestinationAsync(download.AnalyzedFiles, finalPath, new Progress<int>(), ct);
             _fileOrganizer.TriggerLibraryScan(download.TargetLibraryId);
 
             download.CompletedAt = DateTime.UtcNow;
@@ -227,7 +253,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services
                     var json = await File.ReadAllTextAsync(_persistencePath);
                     var restored = JsonSerializer.Deserialize<IEnumerable<ManagedDownload>>(json);
 
-                    foreach (var download in restored)
+                    foreach (var download in restored!)
                     {
                         // Don't restore completed/failed downloads from a week ago
                         if ((download.Status == DownloadStatus.Completed || download.Status == DownloadStatus.Failed) &&

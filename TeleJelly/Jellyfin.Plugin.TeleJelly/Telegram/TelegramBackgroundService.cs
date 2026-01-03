@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 using MediaBrowser.Model.Plugins;
+using MediaBrowser.Controller.Library;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -188,7 +190,9 @@ public sealed class TelegramBackgroundService : IHostedService, IDisposable
         try
         {
             // Create and start a new service
-            _botService = new TelegramBotService(_logger, newToken, config, _serviceProvider, _botClientWrapper, _commands);
+            var logger = _serviceProvider.GetRequiredService<ILogger<TelegramBotService>>();
+            var libraryManager = _serviceProvider.GetRequiredService<ILibraryManager>();
+            _botService = new TelegramBotService(logger, newToken, config, _serviceProvider, _botClientWrapper, _commands, libraryManager);
             _botService.StartAsync().ConfigureAwait(false);
             _currentToken = newToken;
         }
