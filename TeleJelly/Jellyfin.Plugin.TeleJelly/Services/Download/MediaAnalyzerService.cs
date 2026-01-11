@@ -9,108 +9,114 @@ using Microsoft.Extensions.Logging;
 using TMDbLib.Client;
 using TMDbLib.Objects.Find;
 
-namespace Jellyfin.Plugin.TeleJelly.Services.Download
+namespace Jellyfin.Plugin.TeleJelly.Services.Download;
+
+public class MediaAnalyzerService
 {
-    public class MediaAnalyzerService
+    private readonly ILogger<MediaAnalyzerService> _logger;
+    private readonly TMDbClient _tmdbClient;
+
+    public MediaAnalyzerService(ILogger<MediaAnalyzerService> logger, PluginConfiguration config)
     {
-        private readonly ILogger<MediaAnalyzerService> _logger;
-        private readonly TMDbClient _tmdbClient;
-
-        public MediaAnalyzerService(ILogger<MediaAnalyzerService> logger, PluginConfiguration config)
+        _logger = logger;
+        var apiKey = config.DownloadManager.TmdbApiKey;
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
-            _logger = logger;
-            var apiKey = config.DownloadManager.TmdbApiKey;
-            if (string.IsNullOrWhiteSpace(apiKey))
+            _logger.LogWarning("TMDb API key is not configured. Metadata fetching will be disabled.");
+            _tmdbClient = new TMDbClient("placeholder", false); // Disabled client
+        }
+        else
+        {
+            _tmdbClient = new TMDbClient(apiKey);
+        }
+    }
+
+    public Task<MediaFileGroup[]> AnalyzeAndGroupFilesAsync(string directoryPath)
+    {
+        var videoExtensions = new[] { ".mkv", ".mp4", ".avi", ".mov" };
+        var subtitleExtensions = new[] { ".srt", ".sub", ".ass" };
+
+        var files = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories);
+
+        var analyzedFiles = files.Select(f =>
+        {
+            var ext = Path.GetExtension(f).ToLowerInvariant();
+            var fileType = AnalyzedFileType.Other;
+            if (videoExtensions.Contains(ext))
             {
-                _logger.LogWarning("TMDb API key is not configured. Metadata fetching will be disabled.");
-                _tmdbClient = new TMDbClient("placeholder", false); // Disabled client
+                fileType = AnalyzedFileType.Video;
             }
-            else
+            else if (subtitleExtensions.Contains(ext))
             {
-                _tmdbClient = new TMDbClient(apiKey);
+                fileType = AnalyzedFileType.Subtitle;
             }
+
+            return new AnalyzedFile { Path = f, SizeBytes = new FileInfo(f).Length, FileType = fileType };
+        }).ToList();
+
+        var videoFiles = analyzedFiles.Where(f => f.FileType == AnalyzedFileType.Video).ToList();
+        var subtitleFiles = analyzedFiles.Where(f => f.FileType == AnalyzedFileType.Subtitle).ToList();
+
+        var groups = new List<MediaFileGroup>();
+
+        foreach (var video in videoFiles)
+        {
+            var group = new MediaFileGroup { VideoFile = video };
+            var videoBaseName = Path.GetFileNameWithoutExtension(video.Path);
+
+            group.SubtitleFiles.AddRange(
+                subtitleFiles.Where(s => Path.GetFileNameWithoutExtension(s.Path).StartsWith(videoBaseName))
+            );
+
+            groups.Add(group);
         }
 
-        public Task<MediaFileGroup[]> AnalyzeAndGroupFilesAsync(string directoryPath)
+        return Task.FromResult(groups.ToArray());
+    }
+
+    public async Task<(string? Title, int? Year, MediaType MediaType)> GetMetadataFromImdbId(string imdbId)
+    {
+        if (string.IsNullOrWhiteSpace(_tmdbClient.ApiKey) || _tmdbClient.ApiKey == "placeholder")
         {
-            var videoExtensions = new[] { ".mkv", ".mp4", ".avi", ".mov" };
-            var subtitleExtensions = new[] { ".srt", ".sub", ".ass" };
-
-            var files = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories);
-
-            var analyzedFiles = files.Select(f =>
-            {
-                var ext = Path.GetExtension(f).ToLowerInvariant();
-                var fileType = AnalyzedFileType.Other;
-                if (videoExtensions.Contains(ext)) fileType = AnalyzedFileType.Video;
-                else if (subtitleExtensions.Contains(ext)) fileType = AnalyzedFileType.Subtitle;
-                return new AnalyzedFile { Path = f, SizeBytes = new FileInfo(f).Length, FileType = fileType };
-            }).ToList();
-
-            var videoFiles = analyzedFiles.Where(f => f.FileType == AnalyzedFileType.Video).ToList();
-            var subtitleFiles = analyzedFiles.Where(f => f.FileType == AnalyzedFileType.Subtitle).ToList();
-
-            var groups = new List<MediaFileGroup>();
-
-            foreach (var video in videoFiles)
-            {
-                var group = new MediaFileGroup { VideoFile = video };
-                var videoBaseName = Path.GetFileNameWithoutExtension(video.Path);
-
-                group.SubtitleFiles.AddRange(
-                    subtitleFiles.Where(s => Path.GetFileNameWithoutExtension(s.Path).StartsWith(videoBaseName))
-                );
-
-                groups.Add(group);
-            }
-
-            return Task.FromResult(groups.ToArray());
+            _logger.LogWarning("TMDb API key is not configured. Cannot fetch metadata.");
+            return (null, null, MediaType.Unknown);
         }
 
-        public async Task<(string? Title, int? Year, Classes.Models.MediaType MediaType)> GetMetadataFromImdbId(string imdbId)
+        _logger.LogInformation("Fetching metadata for IMDB ID: {ImdbId}", imdbId);
+        var result = await _tmdbClient.FindAsync(FindExternalSource.Imdb, imdbId);
+
+        if (result.MovieResults.Any())
         {
-            if (string.IsNullOrWhiteSpace(_tmdbClient.ApiKey) || _tmdbClient.ApiKey == "placeholder")
-            {
-                _logger.LogWarning("TMDb API key is not configured. Cannot fetch metadata.");
-                return (null, null, Classes.Models.MediaType.Unknown);
-            }
-
-            _logger.LogInformation("Fetching metadata for IMDB ID: {ImdbId}", imdbId);
-            FindContainer result = await _tmdbClient.FindAsync(FindExternalSource.Imdb, imdbId);
-
-            if (result.MovieResults.Any())
-            {
-                var movie = result.MovieResults.First();
-                _logger.LogInformation("Found movie: {Title} ({Year})", movie.Title, movie.ReleaseDate?.Year);
-                return (movie.Title, movie.ReleaseDate?.Year, Classes.Models.MediaType.Movie);
-            }
-
-            if (result.TvResults.Any())
-            {
-                var tvShow = result.TvResults.First();
-                _logger.LogInformation("Found series: {Name} ({Year})", tvShow.Name, tvShow.FirstAirDate?.Year);
-                return (tvShow.Name, tvShow.FirstAirDate?.Year, Classes.Models.MediaType.Series);
-            }
-
-            _logger.LogWarning("No movie or series found for IMDB ID: {ImdbId}", imdbId);
-            return (null, null, Classes.Models.MediaType.Unknown);
+            var movie = result.MovieResults.First();
+            _logger.LogInformation("Found movie: {Title} ({Year})", movie.Title, movie.ReleaseDate?.Year);
+            return (movie.Title, movie.ReleaseDate?.Year, MediaType.Movie);
         }
 
-        public Task<(int? Season, int? Episode)> ExtractSeasonAndEpisode(string fileName)
+        if (result.TvResults.Any())
         {
-            // Regex for S01E01, 1x01, Season 1 Episode 1, etc.
-            var regex = new Regex(@"(S|Season)?(\d{1,2})(E|x|Episode)(\d{1,2})", RegexOptions.IgnoreCase);
-            var match = regex.Match(fileName);
-            if (match.Success)
-            {
-                var season = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
-                var episode = int.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);
-                _logger.LogInformation("Extracted Season {Season}, Episode {Episode} from {FileName}", season, episode, fileName);
-                return Task.FromResult(((int?)season, (int?)episode));
-            }
-
-            _logger.LogDebug("Could not extract season and episode from {FileName}", fileName);
-            return Task.FromResult<(int?, int?)>((null, null));
+            var tvShow = result.TvResults.First();
+            _logger.LogInformation("Found series: {Name} ({Year})", tvShow.Name, tvShow.FirstAirDate?.Year);
+            return (tvShow.Name, tvShow.FirstAirDate?.Year, MediaType.Series);
         }
+
+        _logger.LogWarning("No movie or series found for IMDB ID: {ImdbId}", imdbId);
+        return (null, null, MediaType.Unknown);
+    }
+
+    public Task<(int? Season, int? Episode)> ExtractSeasonAndEpisode(string fileName)
+    {
+        // Regex for S01E01, 1x01, Season 1 Episode 1, etc.
+        var regex = new Regex(@"(S|Season)?(\d{1,2})(E|x|Episode)(\d{1,2})", RegexOptions.IgnoreCase);
+        var match = regex.Match(fileName);
+        if (match.Success)
+        {
+            var season = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            var episode = int.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);
+            _logger.LogInformation("Extracted Season {Season}, Episode {Episode} from {FileName}", season, episode, fileName);
+            return Task.FromResult(((int?)season, (int?)episode));
+        }
+
+        _logger.LogDebug("Could not extract season and episode from {FileName}", fileName);
+        return Task.FromResult<(int?, int?)>((null, null));
     }
 }

@@ -71,7 +71,8 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - allows Creating/Editing/Deleting a "virtual" management Group
         - Grants access to all or specific Libraries for non-Administrators.
         - _Note: A user needs to be Admin OR part of at least ONE Group to Log in._
-        - _Important: If "Sync Usernames" is disabled, you must manually add every Telegram Username to the list for them to be able to log in._
+        - _Important: If "Sync Usernames" is disabled, you must manually add every Telegram Username to the list for
+          them to be able to log in._
 
 ### Requirements
 
@@ -93,7 +94,8 @@ You can choose between three options below.
 
 If your sever doesn't have internet access, or you need older versions.
 
-1. Download the [Release](https://github.com/hexxone/TeleJelly/releases/) (`TeleJelly_vX.X.X.zip`) for your correct Jellyfin Server TargetAbi
+1. Download the [Release](https://github.com/hexxone/TeleJelly/releases/) (`TeleJelly_vX.X.X.zip`) for your correct
+   Jellyfin Server TargetAbi
 2. Extract the `.zip`-content into your jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
 3. Restart Jellyfin server
 
@@ -102,7 +104,8 @@ If your sever doesn't have internet access, or you need older versions.
 Don't trust the downloads? You can also do it by yourself.
 
 1. run command `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
-2. install [.NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet) (see the [Tools section](#tools) below for the correct Version)
+2. install [.NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet) (see the [Tools section](#tools) below for the
+   correct Version)
 3. navigate solution folder `cd ./TeleJelly`
 4. run command `dotnet publish Jellyfin.Plugin.TeleJelly -c Release -v d`
 5. you will get a file like `TeleJelly_vX.X.X-alpha.X.X.zip`
@@ -117,7 +120,8 @@ Don't trust the downloads? You can also do it by yourself.
 4. (Optional) Fill in the "Server Domain and Base URL" if you want the bot to use a specific URL in messages.
 5. Add yourself into the "Administrators" list for full access or create an Administrator Group.
 6. Now you should be able to log in via Telegram by visiting `/sso/Telegram`.
-7. You may also include this link in the Login "Branding" via Markdown or HTML. The configuration page provides a **ready-to-copy code snippet** for this. See screenshots below.
+7. You may also include this link in the Login "Branding" via Markdown or HTML. The configuration page provides a *
+   *ready-to-copy code snippet** for this. See screenshots below.
 
 ### Group Setup & Linking
 
@@ -135,25 +139,30 @@ checkbox is **activated** on the configuration page and a **valid bot token** is
 
 If the checkbox is **not activated**, you can still log in with configured groups, but nothing else will work.
 
-> **Troubleshooting:** If the bot stops responding, you can restart the background service by unchecking `Enable bot service` -> Save -> checking it again -> Save.
+> **Troubleshooting:** If the bot stops responding, you can restart the background service by unchecking
+`Enable bot service` -> Save -> checking it again -> Save.
 
 ### Bot Events
 
 If a Telegram-group is successfully linked to a TeleJelly-group, the bot will listen for chat events:
 
-- User joins chat && `Sync Usernames` enabled -> User gets added to TeleJelly group automatically if he has a Username set.
-- User left chat && `Sync Usernames` enabled -> User gets removed from TeleJelly group automatically if he has a Username set.
+- User joins chat && `Sync Usernames` enabled -> User gets added to TeleJelly group automatically if he has a Username
+  set.
+- User left chat && `Sync Usernames` enabled -> User gets removed from TeleJelly group automatically if he has a
+  Username set.
 
 ### Bot Notifications
 
-If a Telegram-group is successfully linked to a TeleJelly-group **AND** `Notify New Content` is enabled, the bot can send a notification if new Content is being 
+If a Telegram-group is successfully linked to a TeleJelly-group **AND** `Notify New Content` is enabled, the bot can
+send a notification if new Content is being
 added to the Jellyfin server.
 
 This currently includes: `Movies`, `Series`, `Seasons`, `Episodes`.
 
 If "new content" is being detected, the bot will check if the Metadata is already complete (IMDb, Banner, etc.).
-- If the metadata is complete, the bot sends a "rich" notification with all important info about the Item to all Groups 
-that have access to the Item.
+
+- If the metadata is complete, the bot sends a "rich" notification with all important info about the Item to all Groups
+  that have access to the Item.
 - If the metadata is not complete, wait for 24 hours before sending the notification anyway with incomplete metadata.
 
 ### Bot Commands
@@ -247,7 +256,8 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 4. Choose to run Profile `Docker Test`
 5. Afterward Jellyfin with TeleJelly should be reachable under: <https://jellyfin.localhost:8443/>
 
-> Note: the "invalid" SSL certificate warning is normal. You can, however, get a "real" one working with traefik with ease.
+> Note: the "invalid" SSL certificate warning is normal. You can, however, get a "real" one working with traefik with
+> ease.
 
 ### Contributing
 
@@ -264,13 +274,16 @@ When incrementing the version of Jellyfin, remember to set the correct `TargetAb
 
 ### Release Process
 
-This project uses a GitHub Actions workflow for automated releases (`dotnetcore.yml`). Here is how it ties into the release cycle:
+This project uses a GitHub Actions workflow for automated releases (`dotnetcore.yml`). Here is how it ties into the
+release cycle:
 
-1.  **Trigger**: The workflow is triggered manually via the **Actions** tab on GitHub.
-2.  **Versioning**: It uses `MinVer` to calculate the version number based on the latest Git tag in the history.
-3.  **Build**: The plugin is compiled using the .NET 8 SDK.
-4.  **Repository Update**: It automatically updates the `manifest.json` in the orphaned `dist` branch. This allows Jellyfin instances to see the new version immediately via the repository URL.
-5.  **GitHub Release**: Finally, it creates a new Release entry on GitHub, drafts the changelog, and attaches the compiled `.zip` file for manual download.
+1. **Trigger**: The workflow is triggered manually via the **Actions** tab on GitHub.
+2. **Versioning**: It uses `MinVer` to calculate the version number based on the latest Git tag in the history.
+3. **Build**: The plugin is compiled using the .NET 8 SDK.
+4. **Repository Update**: It automatically updates the `manifest.json` in the orphaned `dist` branch. This allows
+   Jellyfin instances to see the new version immediately via the repository URL.
+5. **GitHub Release**: Finally, it creates a new Release entry on GitHub, drafts the changelog, and attaches the
+   compiled `.zip` file for manual download.
 
 ## Licensing
 

@@ -3,9 +3,9 @@
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <RootNamespace>Jellyfin.Plugin.TeleJelly</RootNamespace>
-        <AssemblyVersion>1.0.10.0</AssemblyVersion>
-        <FileVersion>1.0.10.0</FileVersion>
-        <Version>1.0.10.0</Version>
+        <AssemblyVersion>1.0.12.0</AssemblyVersion>
+        <FileVersion>1.0.12.0</FileVersion>
+        <Version>1.0.12.0</Version>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
         <MSBuildArgs>/property:GenerateFullPaths=true</MSBuildArgs>
@@ -34,11 +34,11 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
         <PackageReference Include="Jellyfin.Controller" Version="10.11.3"/>
         <PackageReference Include="Jellyfin.Model" Version="10.11.3"/>
-        <PackageReference Include="Telegram.Bot" Version="22.8.1" PrivateAssets="All" />
-        <PackageReference Include="Transmission.API.RPC" Version="2.1.2" />
-        <PackageReference Include="JDownloader.NET" Version="1.2.1" />
-        <PackageReference Include="SharpCompress" Version="0.42.1" />
-        <PackageReference Include="TMDbLib" Version="2.3.0" />
+        <PackageReference Include="Telegram.Bot" Version="22.8.1" PrivateAssets="All"/>
+        <PackageReference Include="Transmission.API.RPC" Version="2.1.2"/>
+        <PackageReference Include="JDownloader.NET" Version="1.2.1"/>
+        <PackageReference Include="SharpCompress" Version="0.42.1"/>
+        <PackageReference Include="TMDbLib" Version="2.3.0"/>
         <PackageReference Include="MinVer" Version="6.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -175,7 +175,7 @@ public class RequestService
 
             needsSave = removedCount > 0;
 
-            if(needsSave)
+            if (needsSave)
             {
                 _logger.LogInformation("Request '{RequestImdbId}' has been removed by System or Administrator", imdbId);
             }

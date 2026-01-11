@@ -24,7 +24,7 @@
     --card-max: 48em;
     --gap: 1.25rem;
     --desktop-grid-split: 1fr 1.5fr; /* Control the width ratio here */
-    --container-max-width: 100%;    /* Change to e.g. 2560px to stop growth */
+    --container-max-width: 100%; /* Change to e.g. 2560px to stop growth */
 }
 
 *:disabled {

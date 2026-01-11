@@ -63,7 +63,7 @@ function onTelegramAuth(user) {
             "X-DeviceId": deviceId
         }
     }).then((response) => response.json())
-        .then((data) =>{
+        .then((data) => {
             // receive JSON response, redirect or show error.
             if (data.Ok) {
                 setCredentialsAndRedirect(data.AuthenticatedUser);

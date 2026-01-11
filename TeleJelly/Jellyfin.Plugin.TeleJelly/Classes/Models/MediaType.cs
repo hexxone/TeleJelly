@@ -1,10 +1,9 @@
-namespace Jellyfin.Plugin.TeleJelly.Classes.Models
+namespace Jellyfin.Plugin.TeleJelly.Classes.Models;
+
+public enum MediaType
 {
-    public enum MediaType
-    {
-        Unknown,
-        Movie,
-        Series,
-        Episode
-    }
+    Unknown,
+    Movie,
+    Series,
+    Episode
 }

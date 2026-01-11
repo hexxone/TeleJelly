@@ -442,31 +442,31 @@ const tgConfigPage = {
     },
 
     updateTelegramSettingsUI: (page, groupData) => {
-            const linkedId = groupData.TelegramGroupChat?.TelegramChatId ?? 0;
-            const hasLinked = !!linkedId;
-            const isModified = tgConfigPage.modifiedGroups.has(groupData.GroupName);
+        const linkedId = groupData.TelegramGroupChat?.TelegramChatId ?? 0;
+        const hasLinked = !!linkedId;
+        const isModified = tgConfigPage.modifiedGroups.has(groupData.GroupName);
 
-            const sync = page.querySelector('#SyncUserNames');
-            const notify = page.querySelector('#NotifyNewContent');
-            const allowReq = page.querySelector('#AllowRequests');
-            const linkBtn = page.querySelector('#BotLinkCommandUrl');
+        const sync = page.querySelector('#SyncUserNames');
+        const notify = page.querySelector('#NotifyNewContent');
+        const allowReq = page.querySelector('#AllowRequests');
+        const linkBtn = page.querySelector('#BotLinkCommandUrl');
 
-            // Handle the link button state
-            if (linkBtn) {
-                if (isModified) {
-                    linkBtn.classList.add('hide');
-                    linkBtn.title = 'Please save group changes before linking';
-                } else if (hasLinked) {
-                    linkBtn.classList.add('hide');
-                    linkBtn.title = 'Group is already linked';
-                } else {
-                    linkBtn.classList.remove('hide');
-                    linkBtn.title = '';
-                }
+        // Handle the link button state
+        if (linkBtn) {
+            if (isModified) {
+                linkBtn.classList.add('hide');
+                linkBtn.title = 'Please save group changes before linking';
+            } else if (hasLinked) {
+                linkBtn.classList.add('hide');
+                linkBtn.title = 'Group is already linked';
+            } else {
+                linkBtn.classList.remove('hide');
+                linkBtn.title = '';
             }
+        }
 
-            // Disable or enable controls based on link state
-            [sync, notify, allowReq].forEach(el => {
+        // Disable or enable controls based on link state
+        [sync, notify, allowReq].forEach(el => {
             if (el) {
                 el.disabled = !hasLinked;
                 el.parentElement.title = hasLinked ? '' : 'Link a Telegram chat first using /link';

@@ -1,7 +1,8 @@
 ﻿name: TeleJelly-debug
 
 networks:
-    jellyfin-network:
+    default:
+        name: jellyfin-network
         driver: bridge
 
 volumes:
@@ -20,14 +21,19 @@ services:
             - --certificatesresolvers.myresolver.acme.tlschallenge=true
             - --certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}
             - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.traefik-ui.rule=Host(`traefik.${SERVER_HOST}`)
+            - traefik.http.routers.traefik-ui.entrypoints=websecure
+            - traefik.http.routers.traefik-ui.tls=true
+            # TODO rate-limiting example..
+            - traefik.http.services.traefik-ui.loadbalancer.server.port=8080
         ports:
             - "8800:80"
             - "8443:443"
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - traefik-le:/letsencrypt
-        networks:
-            - jellyfin-network
 
     jellyfin:
         build:
@@ -37,12 +43,11 @@ services:
                 DOTNET_VERSION: "9.0"
                 JELLYFIN_VERSION: "10.11"
         volumes:
-            - ./jellyfin-media:/media
-        networks:
-            - jellyfin-network
+            - ./docker-example/jellyfin-media:/media
+            - downloads:/downloads
         labels:
             - traefik.enable=true
-            - traefik.http.routers.jellyfin.rule=Host(`${JELLYFIN_HOST}`)
+            - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${SERVER_HOST}`)
             - traefik.http.routers.jellyfin.entrypoints=websecure
             - traefik.http.routers.jellyfin.tls=true
             - traefik.http.services.jellyfin.loadbalancer.server.port=8096
@@ -59,23 +64,29 @@ services:
             - TZ=UTC
             - TRANSMISSION_WEB_HOME=/combustion-release/
         volumes:
-            - ./transmission-config:/config
-            - downloads:/downloads
-        ports:
-            - "9091:9091"
-            - "51413:51413"
-            - "51413:51413/udp"
-        networks:
-            - jellyfin-network
+            - ./docker-example/transmission-config:/config
+            - downloads/transmission:/downloads
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.jellyfin.rule=Host(`transmission.${SERVER_HOST}`)
+            - traefik.http.routers.jellyfin.entrypoints=websecure
+            - traefik.http.routers.jellyfin.tls=true
+            - traefik.http.services.jellyfin.loadbalancer.server.port=9091
+# TODO what are 51XXX ports? needed for RPC? or actually web-ui?
+#        ports:
+#            - "9091:9091"
+#            - "51413:51413"
+#            - "51413:51413/udp"
         restart: unless-stopped
 
     jdownloader:
         image: jlesage/jdownloader-2
-        ports:
-            - "5800:5800"
+# TODO has web-ui ? needs traefik ?
+#        ports:
+#            - "5800:5800"
         volumes:
-            - ./jdownloader-config:/config
-            - downloads:/output
+            - ./docker-example/jdownloader-config:/config
+            - downloads/jdownloader2:/output
         networks:
             - jellyfin-network
         restart: unless-stopped

@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
-using MediaBrowser.Model.Plugins;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -53,6 +53,8 @@ public class DefaultCommandProvider : ICommandProvider
 /// </summary>
 public sealed class TelegramBackgroundService : IHostedService, IDisposable
 {
+    private const int InactivityCheckIntervalMinutes = 30; // Check every 30 minutes
+    private const int InactivityThresholdHours = 24; // Reconfigure after 24 hours of inactivity
     private readonly TelegramBotClientWrapper _botClientWrapper;
     private readonly ICommandBase[] _commands;
     private readonly ILogger<TelegramBackgroundService> _logger;
@@ -61,11 +63,9 @@ public sealed class TelegramBackgroundService : IHostedService, IDisposable
     private readonly IServiceProvider _serviceProvider;
 
     private TelegramBotService? _botService;
-    private Timer? _inactivityTimer;
-    private const int InactivityCheckIntervalMinutes = 30; // Check every 30 minutes
-    private const int InactivityThresholdHours = 24; // Reconfigure after 24 hours of inactivity
 
     private string _currentToken = string.Empty;
+    private Timer? _inactivityTimer;
 
     /// <summary>
     ///     Creates a new instance of the TelegramBackgroundService

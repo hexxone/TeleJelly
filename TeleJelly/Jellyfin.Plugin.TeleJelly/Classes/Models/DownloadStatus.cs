@@ -1,22 +1,21 @@
-namespace Jellyfin.Plugin.TeleJelly.Classes.Models
+namespace Jellyfin.Plugin.TeleJelly.Classes.Models;
+
+public enum DownloadStatus
 {
-    public enum DownloadStatus
-    {
-        Pending,
-        AwaitingMediaType,
-        AwaitingSeason,
-        AwaitingLibrary,
-        AwaitingSearchResult,
-        AwaitingPathVars,
-        AwaitingPathConfirm,
-        Downloading,
-        Extracting,
-        ExtractionFailed,
-        Analyzing,
-        Organizing,
-        Completed,
-        Canceled,
-        Failed,
-        Stalled
-    }
+    Pending,
+    AwaitingMediaType,
+    AwaitingSeason,
+    AwaitingLibrary,
+    AwaitingSearchResult,
+    AwaitingPathVars,
+    AwaitingPathConfirm,
+    Downloading,
+    Extracting,
+    ExtractionFailed,
+    Analyzing,
+    Organizing,
+    Completed,
+    Canceled,
+    Failed,
+    Stalled
 }
