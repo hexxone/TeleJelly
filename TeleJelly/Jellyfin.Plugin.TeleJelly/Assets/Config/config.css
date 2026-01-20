@@ -27,12 +27,23 @@
     --container-max-width: 100%; /* Change to e.g. 2560px to stop growth */
 }
 
+/* Utility classes */
+.hide {
+    display: none !important;
+}
+
+.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 *:disabled {
     cursor: not-allowed;
 }
 
 form {
     max-width: 100% !important;
+    display: flex;
 }
 
 fieldset {
@@ -60,6 +71,22 @@ fieldset {
         grid-template-columns: var(--desktop-grid-split);
         max-width: var(--container-max-width);
         margin: 0 auto; /* Keeps it centered if you set a max-width */
+        align-items: stretch; /* Make blocks fill their row height */
+    }
+
+    /* Ensure blocks and their contents stretch to fill available height */
+    .blocks > .block {
+        height: 100%;
+    }
+
+    .blocks > .block > form {
+        height: 100%;
+    }
+
+    .blocks > .block > form > fieldset {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 }
 
@@ -255,6 +282,30 @@ fieldset {
     max-height: 30rem;
     overflow: auto;
     border-radius: .5rem;
+}
+
+/* Telegram Settings Sections */
+.telegram-link-section,
+.telegram-linked-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.telegram-link-section .fieldDescription {
+    margin: 0;
+    opacity: 0.8;
+}
+
+.telegram-linked-section .linked-info {
+    padding: 0.5rem;
+    background: var(--theme-input-background);
+    border-radius: 4px;
+    border: 1px solid var(--theme-primary-border);
+}
+
+.telegram-linked-section #UnlinkGroup {
+    margin-top: auto;
 }
 
 /*.requestList .listItem {*/

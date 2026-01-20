@@ -14,21 +14,10 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 public class MediaAnalyzerService
 {
     private readonly ILogger<MediaAnalyzerService> _logger;
-    private readonly TMDbClient _tmdbClient;
 
-    public MediaAnalyzerService(ILogger<MediaAnalyzerService> logger, PluginConfiguration config)
+    public MediaAnalyzerService(ILogger<MediaAnalyzerService> logger)
     {
         _logger = logger;
-        var apiKey = config.DownloadManager.TmdbApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            _logger.LogWarning("TMDb API key is not configured. Metadata fetching will be disabled.");
-            _tmdbClient = new TMDbClient("placeholder", false); // Disabled client
-        }
-        else
-        {
-            _tmdbClient = new TMDbClient(apiKey);
-        }
     }
 
     public Task<MediaFileGroup[]> AnalyzeAndGroupFilesAsync(string directoryPath)
@@ -76,14 +65,17 @@ public class MediaAnalyzerService
 
     public async Task<(string? Title, int? Year, MediaType MediaType)> GetMetadataFromImdbId(string imdbId)
     {
-        if (string.IsNullOrWhiteSpace(_tmdbClient.ApiKey) || _tmdbClient.ApiKey == "placeholder")
+        var apiKey = TeleJellyPlugin.Instance?.Configuration.DownloadManager.TmdbApiKey;
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             _logger.LogWarning("TMDb API key is not configured. Cannot fetch metadata.");
             return (null, null, MediaType.Unknown);
         }
 
+        using var tmdbClient = new TMDbClient(apiKey);
+
         _logger.LogInformation("Fetching metadata for IMDB ID: {ImdbId}", imdbId);
-        var result = await _tmdbClient.FindAsync(FindExternalSource.Imdb, imdbId);
+        var result = await tmdbClient.FindAsync(FindExternalSource.Imdb, imdbId);
 
         if (result.MovieResults.Any())
         {

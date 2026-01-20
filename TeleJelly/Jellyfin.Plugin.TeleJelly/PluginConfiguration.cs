@@ -38,6 +38,13 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool EnableBotService { get; set; } = true;
 
     /// <summary>
+    ///     Gets or sets a value indicating whether inline queries are enabled.
+    ///     When enabled, users can search for media directly in any Telegram chat by typing @BotUsername query.
+    ///     Only users who are part of a group or admins can use this feature.
+    /// </summary>
+    public bool EnableInlineQueries { get; set; }
+
+    /// <summary>
     ///     Gets or sets a value indicating the List of users to grant admin permissions.
     ///     Be careful! Usernames in Telegram can be sold, bought and changed easily.
     /// </summary>

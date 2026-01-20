@@ -1,9 +1,11 @@
 #region
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.TeleJelly.Classes;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
@@ -14,6 +16,7 @@ using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
 
 #endregion
@@ -163,6 +166,10 @@ internal sealed class TelegramBotService : ITelegramBotService
                 // Handle callback queries from inline keyboards
                 case { Type: UpdateType.CallbackQuery, CallbackQuery: not null }:
                     await HandleCallbackQuery(update.CallbackQuery, cancellationToken);
+                    break;
+                // Handle inline queries for media search
+                case { Type: UpdateType.InlineQuery, InlineQuery: not null }:
+                    await HandleInlineQuery(update.InlineQuery, cancellationToken);
                     break;
             }
         }
@@ -431,6 +438,119 @@ internal sealed class TelegramBotService : ITelegramBotService
             Logger.LogError(ex, "Error processing callback query for download {DownloadId}", downloadId);
             await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "An error occurred.", cancellationToken: cancellationToken);
         }
+    }
+
+    private async Task HandleInlineQuery(InlineQuery inlineQuery, CancellationToken cancellationToken)
+    {
+        // Check if inline queries are enabled
+        if (!Config.EnableInlineQueries)
+        {
+            Logger.LogDebug("Inline queries are disabled, ignoring query from @{Username}", inlineQuery.From.Username);
+            await BotClientWrapper.Client.AnswerInlineQuery(
+                inlineQuery.Id,
+                [],
+                cacheTime: 300,
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var username = inlineQuery.From.Username;
+        Logger.LogDebug("Received inline query from @{Username}: {Query}", username, inlineQuery.Query);
+
+        // Create search service
+        var searchService = new MediaSearchService(_libraryManager);
+
+        // Check if user is authorized (admin or member of any group)
+        if (!searchService.IsUserAuthorizedForInlineQuery(Config, username))
+        {
+            Logger.LogInformation("Unauthorized inline query from @{Username}", username);
+            await BotClientWrapper.Client.AnswerInlineQuery(
+                inlineQuery.Id,
+                [],
+                cacheTime: 300,
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Get user's library access
+        var (allowAllLibraries, allowedLibraryIds) = searchService.GetUserLibraryAccess(Config, username);
+
+        // Perform search
+        var queryText = inlineQuery.Query.Trim();
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            await BotClientWrapper.Client.AnswerInlineQuery(
+                inlineQuery.Id,
+                [],
+                cacheTime: 10,
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var searchResult = searchService.Search(queryText, allowedLibraryIds, allowAllLibraries, maxResults: 20);
+
+        if (searchResult.Items.Count == 0)
+        {
+            await BotClientWrapper.Client.AnswerInlineQuery(
+                inlineQuery.Id,
+                [],
+                cacheTime: 60,
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Build inline query results
+        var baseUrl = Config.LoginBaseUrl;
+        var results = new List<InlineQueryResult>();
+
+        foreach (var item in searchResult.Items)
+        {
+            var itemUrl = MediaSearchService.GetJellyfinItemUrl(baseUrl, item.Id);
+            var year = item.ProductionYear?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "N/A";
+            var title = item.Name ?? "Unknown";
+
+            // Create button text: "Watch <Title> (<Year>) in Jellyfin"
+            var buttonText = $"Watch {title} ({year}) in Jellyfin";
+
+            // Create description with media info
+            var description = item.GetDisplayText();
+
+            // Create inline keyboard with the link button
+            InlineKeyboardMarkup? replyMarkup = null;
+            if (!string.IsNullOrWhiteSpace(itemUrl))
+            {
+                replyMarkup = new InlineKeyboardMarkup(
+                    InlineKeyboardButton.WithUrl(buttonText, itemUrl));
+            }
+
+            // Create article result
+            var resultId = $"search_{item.Id:N}";
+            var articleResult = new InlineQueryResultArticle
+            {
+                Id = resultId,
+                Title = $"{title} ({year})",
+                Description = description,
+                InputMessageContent = new InputTextMessageContent
+                {
+                    MessageText = !string.IsNullOrWhiteSpace(itemUrl)
+                        ? $"Watch [{title} ({year})]({itemUrl}) in Jellyfin"
+                        : $"{title} ({year})",
+                    ParseMode = ParseMode.Markdown,
+                    LinkPreviewOptions = new LinkPreviewOptions { IsDisabled = true }
+                },
+                ReplyMarkup = replyMarkup
+            };
+
+            results.Add(articleResult);
+        }
+
+        await BotClientWrapper.Client.AnswerInlineQuery(
+            inlineQuery.Id,
+            results,
+            cacheTime: 60,
+            cancellationToken: cancellationToken);
+
+        Logger.LogDebug("Answered inline query with {Count} results for @{Username}", results.Count, username);
     }
 
     private async Task FindAndExecuteCommand(Message message, string commandText, CancellationToken cancellationToken)

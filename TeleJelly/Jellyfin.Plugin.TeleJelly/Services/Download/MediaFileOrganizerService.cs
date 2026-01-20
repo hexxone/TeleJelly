@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
@@ -94,7 +93,7 @@ public class MediaFileOrganizerService
     public void TriggerLibraryScan(string libraryId)
     {
         _logger.LogInformation("Triggering Jellyfin library scan for library {LibraryId}", libraryId);
-        var library = _libraryManager.GetLi;
+        var library = _libraryManager.GetItemById(libraryId);
         if (library != null)
         {
             _libraryManager.QueueLibraryScan();

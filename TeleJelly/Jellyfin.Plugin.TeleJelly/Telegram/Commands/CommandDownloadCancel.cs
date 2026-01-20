@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -23,10 +24,17 @@ public class CommandDownloadCancel : ICommandBase
 
     public async Task Execute(ITelegramBotService botService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
+        var client = botService.BotClientWrapper.Client;
+        if (client == null)
+        {
+            botService.Logger.LogError("Telegram Bot Client wrapper is null in CommandLink.");
+            return;
+        }
+
         var args = message.Text?.Split(' ', 2) ?? [];
         if (args.Length < 2 || !Guid.TryParse(args[1], out var downloadId))
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 "<b>Usage:</b> /download_cancel &lt;download_id&gt;",
                 ParseMode.Html,
@@ -37,7 +45,7 @@ public class CommandDownloadCancel : ICommandBase
         var download = _orchestrator.GetDownload(downloadId);
         if (download == null || download.ChatId != message.Chat.Id)
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 "Download not found.",
                 cancellationToken: cancellationToken);
@@ -48,7 +56,7 @@ public class CommandDownloadCancel : ICommandBase
         {
             await _orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Canceled);
 
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 $"Successfully canceled download for <b>{download.Title}</b>.",
                 ParseMode.Html,
@@ -56,7 +64,7 @@ public class CommandDownloadCancel : ICommandBase
         }
         catch (Exception ex)
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 $"Failed to cancel download: {ex.Message}",
                 cancellationToken: cancellationToken);

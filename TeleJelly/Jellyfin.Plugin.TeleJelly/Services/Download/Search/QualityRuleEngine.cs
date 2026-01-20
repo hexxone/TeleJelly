@@ -15,17 +15,25 @@ public class QualityRuleEngine
         double score = 0;
 
         // 1. Resolution (Highest Weight)
-        var resIndex = Array.IndexOf(profile.PreferredResolutions, result.Resolution);
+        var strings = profile.PreferredResolutions.ToArray();
+        var resIndex = Array.IndexOf(strings, result.Resolution);
         if (resIndex != -1)
         {
             // Give more points to resolutions higher in the preference list
-            score += (profile.PreferredResolutions.Length - resIndex) * 1000;
+            score += (strings.Length - resIndex) * 1000;
         }
 
         // 2. Codec & HDR
-        if (profile.PreferredCodecs.Contains(result.Codec))
+        if (result.Codec != null)
         {
-            score += 500;
+            if (profile.PreferredCodecs.Contains(result.Codec))
+            {
+                score += 500;
+            }
+            else
+            {
+                score += 50;
+            }
         }
 
         if (!string.IsNullOrEmpty(result.HDR) && profile.PreferredHDR.Contains(result.HDR))
@@ -34,13 +42,15 @@ public class QualityRuleEngine
         }
 
         // 3. Size Limits (Hard Requirement)
-        if (result.Resolution != null && profile.MaxFileSizeByResolution.TryGetValue(result.Resolution, out var maxSize))
+        if (result.Resolution != null && profile.MaxFileSizeByResolution.FirstOrDefault(r => r.Resolution == result.Resolution) is {} found)
         {
-            if (result.FileSizeBytes > maxSize)
+            if (result.FileSizeBytes > found.Bytes)
             {
                 return 0; // Disqualify
             }
         }
+
+        // TODO size minimum requirements
 
         // 4. Seeders (Reliability)
         score += Math.Min(result.Seeders * 10, 500);

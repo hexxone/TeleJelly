@@ -34,6 +34,42 @@ const tgConfigPage = {
         page.querySelector("#TgAdministrators").value = config.AdminUserNames?.join("\r\n") || "";
         page.querySelector("#ForcedUrlScheme").value = config.ForcedUrlScheme || "none";
         page.querySelector("#EnableBotService").checked = config.EnableBotService ?? true;
+        page.querySelector("#EnableInlineQueries").checked = config.EnableInlineQueries ?? false;
+
+        // Update Telegram Login-Page URL (use LoginBaseUrl if set, otherwise current origin)
+        tgConfigPage.updateLoginUrl(page, config.LoginBaseUrl);
+    },
+
+    updateLoginUrl: (page, loginBaseUrl) => {
+        const baseUrl = loginBaseUrl && loginBaseUrl.trim().length > 0
+            ? loginBaseUrl.trim()
+            : window.location.origin;
+        const loginUrl = `${baseUrl}/sso/Telegram`;
+
+        page.querySelector("#SSOTelegramLoginUrl").href = loginUrl;
+        page.querySelector("#SSOTelegramLoginUrl").innerText = loginUrl;
+
+        // Also update the branding widget
+        const brandingWidget = `
+<form action="${loginUrl}">
+<button is="emby-button" style="display:flex;flex-direction:row;width:auto;" class="block emby-button raised button-submit">
+Sign in with Telegram
+<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" style="max-height:4.20em;">
+    <defs>
+        <linearGradient gradientUnits="userSpaceOnUse" x2="120" y1="240" x1="120" id="linear-gradient">
+            <stop stop-color="#1d93d2" offset="0"></stop>
+            <stop stop-color="#38b0e3" offset="1"></stop>
+        </linearGradient>
+    </defs>
+    <title>Telegram_logo</title>
+    <circle fill="url(#linear-gradient)" r="120" cy="120" cx="120"></circle>
+    <path fill="#fff" d="M81.486,130.178,52.2,120.636s-3.5-1.42-2.373-4.64c.232-.664.7-1.229,2.1-2.2,6.489-4.523,120.106-45.36,120.106-45.36s3.208-1.081,5.1-.362a2.766,2.766,0,0,1,1.885,2.055,9.357,9.357,0,0,1,.254,2.585c-.009.752-.1,1.449-.169,2.542-.692,11.165-21.4,94.493-21.4,94.493s-1.239,4.876-5.678,5.043A8.13,8.13,0,0,1,146.1,172.5c-8.711-7.493-38.819-27.727-45.472-32.177a1.27,1.27,0,0,1-.546-.9c-.093-.469.417-1.05.417-1.05s52.426-46.6,53.821-51.492c.108-.379-.3-.566-.848-.4-3.482,1.281-63.844,39.4-70.506,43.607A3.21,3.21,0,0,1,81.486,130.178Z"></path>
+</svg>
+</button>
+</form>`;
+
+        page.querySelector("#ExampleBranding").innerHTML = brandingWidget;
+        page.querySelector("#ExampleBrandingCode").innerHTML = brandingWidget.replace(/>/g, "&gt;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
     },
 
 
@@ -169,7 +205,21 @@ const tgConfigPage = {
 
             const title = document.createElement("div");
             title.style.fontWeight = "bold";
-            title.textContent = `${req.Title || "Unknown"} (${req.Year || "?"})`;
+
+            // Create clickable IMDB link for the title
+            if (req.ImdbId) {
+                const titleLink = document.createElement("a");
+                titleLink.href = `https://www.imdb.com/title/${req.ImdbId}/`;
+                titleLink.target = "_blank";
+                titleLink.rel = "noopener noreferrer";
+                titleLink.textContent = `${req.Title || "Unknown"} (${req.Year || "?"})`;
+                titleLink.style.color = "inherit";
+                titleLink.style.textDecoration = "underline";
+                titleLink.style.textDecorationColor = "rgba(255, 255, 255, 0.5)";
+                title.appendChild(titleLink);
+            } else {
+                title.textContent = `${req.Title || "Unknown"} (${req.Year || "?"})`;
+            }
 
             const details = document.createElement("div");
             details.style.opacity = "0.7";
@@ -248,6 +298,7 @@ const tgConfigPage = {
                 config.AdminUserNames = tgConfigPage.parseTextList(page.querySelector("#TgAdministrators"));
                 config.ForcedUrlScheme = page.querySelector("#ForcedUrlScheme").value || "none";
                 config.EnableBotService = page.querySelector("#EnableBotService").checked;
+                config.EnableInlineQueries = page.querySelector("#EnableInlineQueries").checked;
 
                 // save it
                 window.ApiClient.updatePluginConfiguration(
@@ -446,43 +497,71 @@ const tgConfigPage = {
         const hasLinked = !!linkedId;
         const isModified = tgConfigPage.modifiedGroups.has(groupData.GroupName);
 
+        const notLinkedSection = page.querySelector('#TelegramNotLinkedSection');
+        const linkedSection = page.querySelector('#TelegramLinkedSection');
         const sync = page.querySelector('#SyncUserNames');
         const notify = page.querySelector('#NotifyNewContent');
         const allowReq = page.querySelector('#AllowRequests');
         const linkBtn = page.querySelector('#BotLinkCommandUrl');
 
-        // Handle the link button state
-        if (linkBtn) {
-            if (isModified) {
-                linkBtn.classList.add('hide');
-                linkBtn.title = 'Please save group changes before linking';
-            } else if (hasLinked) {
-                linkBtn.classList.add('hide');
-                linkBtn.title = 'Group is already linked';
-            } else {
-                linkBtn.classList.remove('hide');
-                linkBtn.title = '';
-            }
+        // Toggle visibility between linked and not-linked sections
+        if (hasLinked) {
+            notLinkedSection?.classList.add('hide');
+            linkedSection?.classList.remove('hide');
+        } else {
+            notLinkedSection?.classList.remove('hide');
+            linkedSection?.classList.add('hide');
         }
 
-        // Disable or enable controls based on link state
-        [sync, notify, allowReq].forEach(el => {
-            if (el) {
-                el.disabled = !hasLinked;
-                el.parentElement.title = hasLinked ? '' : 'Link a Telegram chat first using /link';
+        // Handle the link button state (only relevant when not linked)
+        if (linkBtn && !hasLinked) {
+            if (isModified) {
+                linkBtn.classList.add('disabled');
+                linkBtn.title = 'Please save group changes before linking';
+                linkBtn.style.pointerEvents = 'none';
+            } else {
+                linkBtn.classList.remove('disabled');
+                linkBtn.title = '';
+                linkBtn.style.pointerEvents = '';
             }
-        });
+        }
 
         // If chat type is Channel or Private, enforce SyncUserNames disabled
         const chatType = groupData.TelegramGroupChat?.ChatType;
         const isUnsupportedSync = chatType === 'Channel' || chatType === 'Private' || chatType === 2 || chatType === 3;
         if (sync) {
-            sync.disabled = sync.disabled || isUnsupportedSync;
+            sync.disabled = isUnsupportedSync;
             if (isUnsupportedSync) {
                 sync.checked = false;
                 sync.parentElement.title = 'Username sync is not applicable for Channel or Private chats';
+            } else {
+                sync.parentElement.title = '';
             }
         }
+    },
+
+    unlinkGroup: (page) => {
+        if (!tgConfigPage.currentGroup) {
+            window.Dashboard.alert('Please select a group first');
+            return Promise.resolve();
+        }
+
+        if (!confirm(`Are you sure you want to unlink the Telegram chat from group "${tgConfigPage.currentGroup}"?\n\nThis will remove the connection but keep the group settings.`)) {
+            return Promise.resolve();
+        }
+
+        return window.ApiClient.ajax({
+            url: window.ApiClient.getUrl(`/api/TeleJellyConfig/UnlinkGroup/${encodeURIComponent(tgConfigPage.currentGroup)}`),
+            type: "POST"
+        }).then(() => {
+            // Clear the modified groups cache for this group to force reload
+            tgConfigPage.modifiedGroups.delete(tgConfigPage.currentGroup);
+            // Reload the configuration to reflect the changes
+            tgConfigPage.loadConfiguration(page);
+            window.Dashboard.alert('Group unlinked successfully');
+        }).catch((err) => {
+            window.Dashboard.alert('Failed to unlink group: ' + (err.message || 'Unknown error'));
+        });
     },
 
     deleteGroup: (page) => {
@@ -748,13 +827,16 @@ export default function (view) {
         tgConfigPage.toggleTokenFunction(e);
     });
 
-    // Trim LoginBaseUrl on change
+    // Trim LoginBaseUrl on change and update login URL
     view.querySelector("#LoginBaseUrl").addEventListener("change", (e) => {
-        const ref = view.querySelectorAll('#LoginBaseUrl');
-        const inputValue = ref?.value;
-        if (inputValue?.endsWith("/")) {
-            ref.value = inputValue.substring(0, inputValue.length - 1);
+        const input = view.querySelector('#LoginBaseUrl');
+        let inputValue = input?.value?.trim() || '';
+        if (inputValue.endsWith("/")) {
+            inputValue = inputValue.substring(0, inputValue.length - 1);
+            input.value = inputValue;
         }
+        // Update the login URL display in real-time
+        tgConfigPage.updateLoginUrl(view, inputValue);
     });
 
     // Basic configuration event
@@ -791,6 +873,11 @@ export default function (view) {
         tgConfigPage.deleteGroup(view);
     });
 
+    view.querySelector("#UnlinkGroup").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.unlinkGroup(view);
+    });
+
     // Request events
     view.querySelector("#RefreshRequests").addEventListener("click", (e) => {
         e.preventDefault();
@@ -818,32 +905,8 @@ export default function (view) {
         debounce = setTimeout(() => tgTokenHelper.validateToken(view, inputElement.value), 250);
     });
 
-    // login URL
-    const loginUrl = window.ApiClient.getUrl("/sso/Telegram");
-    view.querySelector("#SSOTelegramLoginUrl").href = loginUrl;
-    view.querySelector("#SSOTelegramLoginUrl").innerText = loginUrl;
-
-    // Branding
-    const brandingWidget = `
-<form action="${loginUrl}">
-<button is="emby-button" style="display:flex;flex-direction:row;width:auto;" class="block emby-button raised button-submit">
-Sign in with Telegram
-<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" style="max-height:4.20em;">
-    <defs>
-        <linearGradient gradientUnits="userSpaceOnUse" x2="120" y1="240" x1="120" id="linear-gradient">
-            <stop stop-color="#1d93d2" offset="0"></stop>
-            <stop stop-color="#38b0e3" offset="1"></stop>
-        </linearGradient>
-    </defs>
-    <title>Telegram_logo</title>
-    <circle fill="url(#linear-gradient)" r="120" cy="120" cx="120"></circle>
-    <path fill="#fff" d="M81.486,130.178,52.2,120.636s-3.5-1.42-2.373-4.64c.232-.664.7-1.229,2.1-2.2,6.489-4.523,120.106-45.36,120.106-45.36s3.208-1.081,5.1-.362a2.766,2.766,0,0,1,1.885,2.055,9.357,9.357,0,0,1,.254,2.585c-.009.752-.1,1.449-.169,2.542-.692,11.165-21.4,94.493-21.4,94.493s-1.239,4.876-5.678,5.043A8.13,8.13,0,0,1,146.1,172.5c-8.711-7.493-38.819-27.727-45.472-32.177a1.27,1.27,0,0,1-.546-.9c-.093-.469.417-1.05.417-1.05s52.426-46.6,53.821-51.492c.108-.379-.3-.566-.848-.4-3.482,1.281-63.844,39.4-70.506,43.607A3.21,3.21,0,0,1,81.486,130.178Z"></path>
-</svg>
-</button>
-</form>`;
-
-    view.querySelector("#ExampleBranding").innerHTML = brandingWidget;
-    view.querySelector("#ExampleBrandingCode").innerHTML = brandingWidget.replace(/>/g, "&gt;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    // Note: Login URL and branding widget are now set dynamically in populateConfiguration
+    // based on LoginBaseUrl value via updateLoginUrl()
 
     window.Dashboard.hideLoadingMsg();
 }

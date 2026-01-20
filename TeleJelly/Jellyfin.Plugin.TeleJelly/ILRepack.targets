@@ -13,8 +13,10 @@
             <!-- 1. The Plugin DLL itself -->
             <InputAssemblies Include="$(TargetPath)"/>
 
-            <!-- 2. ONLY Telegram.Bot (using ReferencePath to get implementation assembly) -->
-            <InputAssemblies Include="@(ReferencePath)" Condition="'%(filename)' == 'Telegram.Bot'"/>
+            <!-- 2. ONLY Telegram.Bot; JDownloader (System.Text.Json; System.IO.Pipelines); Transmission.API.RPC (using ReferencePath to get implementation assembly) -->
+            <InputAssemblies
+                Include="@(ReferencePath)"
+                Condition="'%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'JDownloader' Or '%(filename)' == 'Transmission.API.RPC' Or '%(filename)' == 'System.Text.Json' Or '%(filename)' == 'System.IO.Pipelines'"/>
 
             <!-- 3. Vital: Directories to look for other dependencies (System.*, etc.) -->
             <LibraryPath Include="@(ReferencePath->'%(RootDir)%(Directory)')"/>

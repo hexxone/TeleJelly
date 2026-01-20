@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -26,14 +27,21 @@ public class CommandDownloadStatus : ICommandBase
 
     public async Task Execute(ITelegramBotService botService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
+        var client = botService.BotClientWrapper.Client;
+        if (client == null)
+        {
+            botService.Logger.LogError("Telegram Bot Client wrapper is null in CommandLink.");
+            return;
+        }
+
         var downloads = _orchestrator.GetAllDownloads()
             .Where(d => d.ChatId == message.Chat.Id)
             .OrderByDescending(d => d.StartedAt)
-            .Take(10); // Limit to 10 most recent downloads
+            .Take(10).ToArray(); // Limit to 10 most recent downloads
 
         if (!downloads.Any())
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 "No active or recent downloads.",
                 cancellationToken: cancellationToken);
@@ -66,7 +74,7 @@ public class CommandDownloadStatus : ICommandBase
             sb.AppendLine("---");
         }
 
-        await botService.BotClientWrapper.Client.SendMessage(
+        await client.SendMessage(
             message.Chat.Id,
             sb.ToString(),
             ParseMode.Html,

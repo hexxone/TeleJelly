@@ -120,6 +120,21 @@
                                 </div>
                             </div>
 
+                            <!-- Enable Inline Queries -->
+                            <div class="inputContainer">
+                                <label>
+                                    <input id="EnableInlineQueries"
+                                           is="emby-checkbox"
+                                           type="checkbox"/>
+                                    <span>Enable Inline Queries</span>
+                                </label>
+                                <div class="fieldDescription">
+                                    When enabled, users can search for media directly in any Telegram chat by typing @BotUsername query.
+                                    Only users who are part of a group or admins can use this feature.
+                                    Each user can only see media from libraries they have access to.
+                                </div>
+                            </div>
+
                             <!-- LoginBaseUrl -->
                             <div class="inputContainer">
                                 <div>
@@ -244,28 +259,44 @@
                                     <!-- Telegram Settings Column -->
                                     <div class="group-column">
                                         <div class="column-header">Telegram Settings</div>
-                                        <span>Linked Telegram Group: </span>
-                                        <span id="LinkedTelegramGroupId">None</span>
-                                        <!-- disable / hide link-button when not saved OR already linked ?  -->
-                                        <a class="button-link emby-button" href="#INVALID_BOT_TOKEN" id="BotLinkCommandUrl" target="_blank">/link group to Telegram</a>
-                                        <label>
-                                            <input id="SyncUserNames"
-                                                   is="emby-checkbox"
-                                                   type="checkbox"/>
-                                            <span>Sync Usernames</span>
-                                        </label>
-                                        <label>
-                                            <input id="NotifyNewContent"
-                                                   is="emby-checkbox"
-                                                   type="checkbox"/>
-                                            <span>Notify new content</span>
-                                        </label>
-                                        <label>
-                                            <input id="AllowRequests"
-                                                   is="emby-checkbox"
-                                                   type="checkbox"/>
-                                            <span>Allow /request command</span>
-                                        </label>
+
+                                        <!-- Shown when NOT linked -->
+                                        <div id="TelegramNotLinkedSection" class="telegram-link-section">
+                                            <p class="fieldDescription">This group is not linked to any Telegram chat. Click the button below to link it.</p>
+                                            <a class="raised button-submit emby-button" href="#INVALID_BOT_TOKEN" id="BotLinkCommandUrl" target="_blank">/link group to Telegram</a>
+                                        </div>
+
+                                        <!-- Shown when linked -->
+                                        <div id="TelegramLinkedSection" class="telegram-linked-section hide">
+                                            <div class="linked-info">
+                                                <span>Linked Telegram Group ID: </span>
+                                                <span id="LinkedTelegramGroupId">None</span>
+                                            </div>
+                                            <label>
+                                                <input id="SyncUserNames"
+                                                       is="emby-checkbox"
+                                                       type="checkbox"/>
+                                                <span>Sync Usernames</span>
+                                            </label>
+                                            <label>
+                                                <input id="NotifyNewContent"
+                                                       is="emby-checkbox"
+                                                       type="checkbox"/>
+                                                <span>Notify new content</span>
+                                            </label>
+                                            <label>
+                                                <input id="AllowRequests"
+                                                       is="emby-checkbox"
+                                                       type="checkbox"/>
+                                                <span>Allow /request command</span>
+                                            </label>
+                                            <button class="raised button-delete emby-button"
+                                                    id="UnlinkGroup"
+                                                    is="emby-button"
+                                                    type="button">
+                                                <span>Unlink from Telegram</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 

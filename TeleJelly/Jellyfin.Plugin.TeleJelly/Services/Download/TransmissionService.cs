@@ -13,17 +13,18 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
 public class TransmissionService : ITorrentDownloadService
 {
-    private readonly TransmissionSettings _config;
+    private static TransmissionSettings? Config => TeleJellyPlugin.Instance?.Configuration.DownloadManager.TorrentServices.Transmission;
+
     private readonly ILogger _logger;
 
-    public TransmissionService(ILogger<TransmissionService> logger, PluginConfiguration config)
+    public TransmissionService(ILogger<TransmissionService> logger)
     {
         _logger = logger;
-        _config = config.DownloadManager.TorrentServices.Transmission;
     }
 
     public string ServiceName => "Transmission";
-    public bool IsEnabled => _config.Enabled;
+
+    public bool IsEnabled => Config?.Enabled ?? false;
 
     public bool CanHandle(string linkOrMagnet)
     {
@@ -139,7 +140,7 @@ public class TransmissionService : ITorrentDownloadService
 
     private Client GetClient()
     {
-        var url = $"http://{_config.Host}:{_config.Port}/transmission/rpc";
-        return new Client(url, null, _config.Username, _config.Password);
+        var url = $"http://{Config.Host}:{Config.Port}/transmission/rpc";
+        return new Client(url, null, Config.Username, Config.Password);
     }
 }

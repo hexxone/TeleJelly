@@ -6,8 +6,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Data.Enums;
-using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.TeleJelly.Classes;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -111,15 +109,7 @@ internal class CommandSearch : ICommandBase
         CancellationToken cancellationToken, TelegramGroup? group, ITelegramBotClient botClient)
     {
         var libraryManager = telegramBotService.ServiceProvider.GetRequiredService<ILibraryManager>();
-
-        var allowAllLibraries = group?.EnableAllFolders ?? isAdmin;
-
-        var allowedLibraries = allowAllLibraries
-            ? libraryManager.RootFolder.Children
-                .Select(f => f.Id.ToString("N"))
-                .ToList()
-            : group?.EnabledFolders
-              ?? [];
+        var searchService = new MediaSearchService(libraryManager);
 
         // get search params and search for them ignoring casing
         var queryText = GetSearchQuery(message.Text);
@@ -134,33 +124,14 @@ internal class CommandSearch : ICommandBase
             return (queryText, null);
         }
 
-        var query = new InternalItemsQuery
-        {
-            SearchTerm = queryText,
-            Recursive = true,
-            Limit = MaxResultCount + 1, // fetch one extra to detect "more results"
-            IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
-            IsVirtualItem = false,
-            OrderBy =
-            [
-                (ItemSortBy.DateLastContentAdded, SortOrder.Descending),
-                (ItemSortBy.DateCreated, SortOrder.Descending)
-            ]
-        };
+        // Determine library access
+        var allowAllLibraries = group?.EnableAllFolders ?? isAdmin;
+        var allowedLibraries = group?.EnabledFolders ?? [];
 
-        if (!allowAllLibraries && allowedLibraries.Count > 0)
-        {
-            query.AncestorIds = allowedLibraries
-                .Select(idStr => Guid.TryParse(idStr, out var id) ? id : Guid.Empty)
-                .Where(id => id != Guid.Empty)
-                .ToArray();
-        }
+        // Use the shared search service
+        var searchResult = searchService.Search(queryText, allowedLibraries, allowAllLibraries, MaxResultCount);
 
-        var queryResult = libraryManager.GetItemsResult(query);
-
-        var results = queryResult.Items.ToList();
-
-        return (queryText, results);
+        return (queryText, searchResult.Items);
     }
 
     private static void AppendSearchResultInfos(int index, StringBuilder sb, BaseItem item, string? baseUrl)

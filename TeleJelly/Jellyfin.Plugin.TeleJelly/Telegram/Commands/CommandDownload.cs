@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
 using MediaBrowser.Controller.Library;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -27,10 +28,17 @@ public class CommandDownload : ICommandBase
 
     public async Task Execute(ITelegramBotService botService, Message message, bool isAdmin, CancellationToken cancellationToken)
     {
+        var client = botService.BotClientWrapper.Client;
+        if (client == null)
+        {
+            botService.Logger.LogError("Telegram Bot Client wrapper is null in CommandLink.");
+            return;
+        }
+
         var args = message.Text?.Split(' ', 3) ?? [];
         if (args.Length < 2)
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 "<b>Usage:</b> /download &lt;imdb_id&gt; [link_or_magnet]",
                 ParseMode.Html,
@@ -43,7 +51,7 @@ public class CommandDownload : ICommandBase
 
         if (!imdbId.StartsWith("tt"))
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 "Invalid IMDB ID. It should start with 'tt'.",
                 cancellationToken: cancellationToken);
@@ -52,7 +60,7 @@ public class CommandDownload : ICommandBase
 
         if (message.From == null)
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 "Cannot identify user.",
                 cancellationToken: cancellationToken);
@@ -66,7 +74,7 @@ public class CommandDownload : ICommandBase
             var libraries = _libraryManager.GetUserRootFolder().Children.ToArray();
             if (!libraries.Any())
             {
-                await botService.BotClientWrapper.Client.SendMessage(message.Chat.Id, "No libraries configured in Jellyfin.", cancellationToken: cancellationToken);
+                await client.SendMessage(message.Chat.Id, "No libraries configured in Jellyfin.", cancellationToken: cancellationToken);
                 return;
             }
 
@@ -77,7 +85,7 @@ public class CommandDownload : ICommandBase
 
             var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 $"Starting download for <b>{download.Title} ({download.Year})</b>.\n\nPlease select the destination library:",
                 ParseMode.Html,
@@ -86,7 +94,7 @@ public class CommandDownload : ICommandBase
         }
         catch (Exception ex)
         {
-            await botService.BotClientWrapper.Client.SendMessage(
+            await client.SendMessage(
                 message.Chat.Id,
                 $"Failed to start download: {ex.Message}",
                 cancellationToken: cancellationToken);

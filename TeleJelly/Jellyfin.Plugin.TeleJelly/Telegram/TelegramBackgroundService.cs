@@ -13,42 +13,6 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.TeleJelly.Telegram;
 
 /// <summary>
-///     Interface for providing Telegram commands.
-/// </summary>
-public interface ICommandProvider
-{
-    /// <summary>
-    ///     Gets the registered commands.
-    /// </summary>
-    ICommandBase[] GetCommands();
-}
-
-/// <summary>
-///     Default implementation of ICommandProvider that scans the assembly for commands.
-/// </summary>
-public class DefaultCommandProvider : ICommandProvider
-{
-    private readonly ICommandBase[] _commands;
-
-    public DefaultCommandProvider()
-    {
-        _commands = GetType().Assembly.GetTypes()
-            .Where(t =>
-                typeof(ICommandBase).IsAssignableFrom(t) &&
-                t is { IsClass: true, IsAbstract: false }
-            )
-            .Select(t => Activator.CreateInstance(t) as ICommandBase
-                         ?? throw new Exception($"Failed to initialize Command: {t.FullName}"))
-            .ToArray();
-    }
-
-    public ICommandBase[] GetCommands()
-    {
-        return _commands;
-    }
-}
-
-/// <summary>
 ///     The TeleJelly Background service which (re-)initializes Telegram the bot-service when the botToken changes.
 /// </summary>
 public sealed class TelegramBackgroundService : IHostedService, IDisposable

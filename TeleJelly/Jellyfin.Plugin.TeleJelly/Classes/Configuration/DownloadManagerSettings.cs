@@ -22,7 +22,7 @@ public class DownloadManagerSettings
     public List<string> WhitelistUsernames { get; set; } = [];
     public bool TriggerLibraryScanAfterOrganize { get; set; } = true;
     public bool AutoAddToJellyfinLibrary { get; set; } = true;
-    public Dictionary<string, LibrarySettings> LibrarySettings { get; set; } = new();
+    public List<LibrarySettings> LibrarySettings { get; set; } = [];
 }
 
 public class TorrentServicesSettings
@@ -106,24 +106,32 @@ public class LibrarySettings
 public class DynamicPathVariable
 {
     public string Name { get; set; } = "";
-    public string[] Options { get; set; } = [];
+    public List<string> Options { get; set; } = [];
     public string? DefaultValue { get; set; }
 }
 
 public class QualityProfile
 {
-    public string[] PreferredResolutions { get; set; } = ["2160p", "1080p", "720p"];
+    public List<string> PreferredResolutions { get; set; } = ["2160p", "1080p", "720p"];
 
-    public Dictionary<string, long> MaxFileSizeByResolution { get; set; } = new() { { "2160p", 50L * 1024 * 1024 * 1024 }, { "1080p", 20L * 1024 * 1024 * 1024 }, { "720p", 10L * 1024 * 1024 * 1024 } };
+    public List<ResolutionSettings> MaxFileSizeByResolution { get; set; } = [new() { Resolution = "2160p", Bytes = 50L * 1024 * 1024 * 1024 }, new() { Resolution = "1080p", Bytes = 20L * 1024 * 1024 * 1024 }, new() { Resolution = "720p", Bytes = 10L * 1024 * 1024 * 1024 }];
 
-    public Dictionary<string, long> MinFileSizeByResolution { get; set; } = new() { { "2160p", 15L * 1024 * 1024 * 1024 }, { "1080p", 5L * 1024 * 1024 * 1024 }, { "720p", 2L * 1024 * 1024 * 1024 } };
+    public List<ResolutionSettings> MinFileSizeByResolution { get; set; } = [new() { Resolution = "2160p", Bytes = 15L * 1024 * 1024 * 1024 }, new() { Resolution = "1080p", Bytes = 5L * 1024 * 1024 * 1024 }, new() { Resolution = "720p", Bytes = 2L * 1024 * 1024 * 1024 }];
 
-    public string[] RequiredAudioLanguages { get; set; } = ["ger", "eng"];
-    public string[] PreferredAudioLanguages { get; set; } = ["ger", "eng"];
-    public string[] RequiredSubtitleLanguages { get; set; } = ["ger", "eng"];
-    public string[] PreferredSubtitleLanguages { get; set; } = ["ger", "eng"];
-    public string[] PreferredCodecs { get; set; } = ["H.265", "H.264"];
-    public string[] PreferredHDR { get; set; } = ["Dolby Vision", "HDR10", "SDR"];
-    public string[] PreferredSources { get; set; } = ["BluRay", "WEB-DL", "WEBRip"];
-    public int MinimumSeeders { get; set; } = 5;
+    public List<string> RequiredAudioLanguages { get; set; } = ["ger", "eng"];
+    public List<string> PreferredAudioLanguages { get; set; } = ["ger", "eng"];
+    public List<string> RequiredSubtitleLanguages { get; set; } = ["ger", "eng"];
+    public List<string> PreferredSubtitleLanguages { get; set; } = ["ger", "eng"];
+    public List<string> PreferredCodecs { get; set; } = ["H.265", "H.264"];
+    public List<string> PreferredHDR { get; set; } = ["Dolby Vision", "HDR10", "SDR"];
+    public List<string> PreferredSources { get; set; } = ["BluRay", "WEB-DL", "WEBRip"];
+
+    public int MinimumSeeders { get; set; } = 3;
+}
+
+public class ResolutionSettings
+{
+    public string Resolution { get; set; } = "";
+
+    public long Bytes { get; set; }
 }

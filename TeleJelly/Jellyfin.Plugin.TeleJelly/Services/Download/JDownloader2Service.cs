@@ -13,20 +13,21 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
 public class JDownloader2Service : IHostedDownloadService
 {
+    private static JDownloader2Settings? Config => TeleJellyPlugin.Instance?.Configuration.DownloadManager.HostedServices.JDownloader2;
+
     private readonly JDownloaderClient _client;
-    private readonly JDownloader2Settings _config;
     private readonly ILogger _logger;
     private DeviceData? _device;
 
-    public JDownloader2Service(ILogger<JDownloader2Service> logger, PluginConfiguration config)
+    public JDownloader2Service(ILogger<JDownloader2Service> logger)
     {
         _logger = logger;
-        _config = config.DownloadManager.HostedServices.JDownloader2;
         _client = new JDownloaderClient(new JDownloaderClientOptions { AppKey = "TeleJelly" });
     }
 
     public string ServiceName => "JDownloader2";
-    public bool IsEnabled => _config.Enabled;
+
+    public bool IsEnabled => Config?.Enabled ?? false;
 
     public bool CanHandle(string linkOrFile)
     {
@@ -142,17 +143,22 @@ public class JDownloader2Service : IHostedDownloadService
             return _device;
         }
 
-        await _client.Connect(_config.Email, _config.Password);
+        if (Config == null)
+        {
+            throw new Exception("No JDownloader API configured.");
+        }
+
+        await _client.Connect(Config.Email, Config.Password);
         if (!_client.IsConnected)
         {
             throw new Exception("Failed to connect to My.JDownloader API. Check email and password.");
         }
 
         var devices = await _client.ListDevices();
-        _device = devices.Devices.FirstOrDefault(d => d.Name == _config.DeviceName);
+        _device = devices.Devices.FirstOrDefault(d => d.Name == Config.DeviceName);
         if (_device == null)
         {
-            throw new Exception($"JDownloader device '{_config.DeviceName}' not found.");
+            throw new Exception($"JDownloader device '{Config.DeviceName}' not found.");
         }
 
         _client.SetWorkingDevice(_device);

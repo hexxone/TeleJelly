@@ -248,7 +248,7 @@ public class DownloadOrchestrator
         }
 
         var config = TeleJellyPlugin.Instance!.Configuration.DownloadManager;
-        var librarySettings = config.LibrarySettings.GetValueOrDefault(download.TargetLibraryId) ?? new LibrarySettings();
+        var librarySettings = config.LibrarySettings.FirstOrDefault(l => l.LibraryId == download.TargetLibraryId) ?? new LibrarySettings();
         var mainVideoFile = download.AnalyzedFiles.FirstOrDefault()?.VideoFile?.Path;
 
         var finalPath = await _pathTemplater.ApplyTemplateAsync(

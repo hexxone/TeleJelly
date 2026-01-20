@@ -37,6 +37,7 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Bot Interaction](#bot-interaction)
+  - [Inline Search](#inline-search)
 - [Known issues](#known-issues)
 - [Demo Video](#demo-video)
 - [Screenshots](#screenshots)
@@ -178,6 +179,40 @@ If "new content" is being detected, the bot will check if the Metadata is alread
 
 **Notice:** Certain commands like `/link` are only available to TeleJelly "Admins" or might give additional info to
 "Admins" like the `/stats` command.
+
+### Inline Search
+
+The bot supports inline queries, allowing users to search for media directly in any Telegram chat by typing `@YourBotUsername search query`.
+
+#### Setup
+
+To enable inline search, you need to configure it in **two places**:
+
+1. **BotFather**: Send `/setinline` to [@BotFather](https://t.me/BotFather), select your bot, and set a placeholder text (e.g., "Search for movies and series...").
+2. **TeleJelly Settings**: Enable the "Enable Inline Queries" checkbox on the TeleJelly configuration page and save.
+
+#### How It Works
+
+- Users type `@YourBotUsername` followed by a search query in any Telegram chat
+- Results appear as inline suggestions with title, year, and media type
+- Clicking a result sends a message with a "Watch in Jellyfin" button linking to the media
+
+#### Permissions
+
+- Only users who are **Admins** or **members of at least one TeleJelly group** can use inline search
+- Each user only sees media from libraries they have access to (based on their group memberships)
+- Unauthorized users receive no results
+
+#### Security Considerations
+
+> **Important:** When inline search is enabled, authorized users can search and share Jellyfin media links in **any** Telegram chat - including private chats, other groups, and channels that are **not linked** to TeleJelly.
+>
+> This means:
+> - Media titles and Jellyfin URLs may be visible to people outside your TeleJelly-managed groups
+> - Users could accidentally or intentionally share your server's media catalog with outsiders
+> - The inline search works globally across Telegram, not just in linked groups
+>
+> **Only enable this feature if you trust all users in your TeleJelly groups** and understand that they can share search results anywhere on Telegram.
 
 ## Known issues
 

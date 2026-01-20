@@ -149,6 +149,37 @@ public class TeleJellyConfigController : ControllerBase
         await _requestService.RemoveRequestAsync(imdbId, cancellationToken).ConfigureAwait(false);
         return Ok();
     }
+
+    /// <summary>
+    ///     Unlinks a Telegram chat from a TeleJelly group.
+    /// </summary>
+    /// <param name="groupName">The name of the group to unlink.</param>
+    /// <returns>Success status.</returns>
+    [HttpPost(nameof(UnlinkGroup) + "/{groupName}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult UnlinkGroup(string groupName)
+    {
+        var config = TeleJellyPlugin.Instance?.Configuration;
+        if (config == null)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "Plugin configuration not available");
+        }
+
+        var group = config.TelegramGroups?.Find(g => g.GroupName == groupName);
+        if (group == null)
+        {
+            return NotFound($"Group '{groupName}' not found");
+        }
+
+        // Unlink by clearing the TelegramGroupChat
+        group.TelegramGroupChat = null;
+
+        // Save the configuration
+        TeleJellyPlugin.Instance!.SaveConfiguration(config);
+
+        return Ok();
+    }
 }
 
 /// <summary>

@@ -65,13 +65,14 @@ services:
             - TRANSMISSION_WEB_HOME=/combustion-release/
         volumes:
             - ./docker-example/transmission-config:/config
-            - downloads/transmission:/downloads
+            - downloads:/downloads
         labels:
             - traefik.enable=true
             - traefik.http.routers.jellyfin.rule=Host(`transmission.${SERVER_HOST}`)
             - traefik.http.routers.jellyfin.entrypoints=websecure
             - traefik.http.routers.jellyfin.tls=true
             - traefik.http.services.jellyfin.loadbalancer.server.port=9091
+# TODO Add & use "gluetun"
 # TODO what are 51XXX ports? needed for RPC? or actually web-ui?
 #        ports:
 #            - "9091:9091"
@@ -81,12 +82,11 @@ services:
 
     jdownloader:
         image: jlesage/jdownloader-2
+# TODO Add & use "gluetun"
 # TODO has web-ui ? needs traefik ?
 #        ports:
 #            - "5800:5800"
         volumes:
             - ./docker-example/jdownloader-config:/config
-            - downloads/jdownloader2:/output
-        networks:
-            - jellyfin-network
+            - downloads:/output
         restart: unless-stopped
