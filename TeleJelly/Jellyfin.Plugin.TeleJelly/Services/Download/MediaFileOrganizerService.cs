@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
-public class MediaFileOrganizerService
+internal sealed class MediaFileOrganizerService
 {
     private readonly ILibraryManager _libraryManager;
     private readonly ILogger<MediaFileOrganizerService> _logger;

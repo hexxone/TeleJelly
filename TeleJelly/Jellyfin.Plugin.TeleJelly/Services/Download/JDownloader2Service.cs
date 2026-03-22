@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
-public class JDownloader2Service : IHostedDownloadService
+internal sealed class JDownloader2Service : IHostedDownloadService
 {
     private static JDownloader2Settings? Config => TeleJellyPlugin.Instance?.Configuration.DownloadManager.HostedServices.JDownloader2;
 

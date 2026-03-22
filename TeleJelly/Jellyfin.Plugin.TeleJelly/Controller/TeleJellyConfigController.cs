@@ -24,13 +24,13 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 public class TeleJellyConfigController : ControllerBase
 {
     private readonly IProviderManager _providerManager;
-    private readonly RequestService _requestService;
+    private readonly IRequestService _requestService;
 
     /// <summary>
     ///     Helper Controller for the TeleJelly configuration page.
     ///     Provides methods to validate Telegram Bot Tokens and manage stored media requests.
     /// </summary>
-    public TeleJellyConfigController(RequestService requestService, IProviderManager providerManager)
+    public TeleJellyConfigController(IRequestService requestService, IProviderManager providerManager)
     {
         _requestService = requestService ?? throw new ArgumentNullException(nameof(requestService));
         _providerManager = providerManager ?? throw new ArgumentNullException(nameof(providerManager));

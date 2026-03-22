@@ -11,14 +11,18 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 public interface ITorrentDownloadService
 {
     string ServiceName { get; }
+    // TODO unused ??
     DownloadServiceType ServiceType => DownloadServiceType.Torrent;
     bool IsEnabled { get; }
 
     bool CanHandle(string linkOrMagnet);
     Task<string> AddDownloadAsync(string linkOrMagnet, CancellationToken ct);
     Task<object?> GetProgressAsync(string downloadId, CancellationToken ct);
+    // TODO unused ??
     Task<string?> GetDownloadDirectoryAsync(string downloadId, CancellationToken ct);
+    // TODO unused ??
     Task<FileInfo[]> GetCompletedFilesAsync(string downloadId, CancellationToken ct);
+    // TODO unused ??
     Task RemoveDownloadAsync(string downloadId, bool deleteFiles, CancellationToken ct);
     Task<bool> TestConnectionAsync(CancellationToken ct);
 }

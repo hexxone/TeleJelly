@@ -12,9 +12,9 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
 public class CommandDownloadCancel : ICommandBase
 {
-    private readonly DownloadOrchestrator _orchestrator;
+    private readonly IDownloadOrchestrator _orchestrator;
 
-    public CommandDownloadCancel(DownloadOrchestrator orchestrator)
+    public CommandDownloadCancel(IDownloadOrchestrator orchestrator)
     {
         _orchestrator = orchestrator;
     }

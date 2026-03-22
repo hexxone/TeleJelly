@@ -11,7 +11,7 @@ using TMDbLib.Objects.Find;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
-public class MediaAnalyzerService
+internal sealed class MediaAnalyzerService
 {
     private readonly ILogger<MediaAnalyzerService> _logger;
 

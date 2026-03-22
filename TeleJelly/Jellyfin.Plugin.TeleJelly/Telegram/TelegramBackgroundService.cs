@@ -15,7 +15,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram;
 /// <summary>
 ///     The TeleJelly Background service which (re-)initializes Telegram the bot-service when the botToken changes.
 /// </summary>
-public sealed class TelegramBackgroundService : IHostedService, IDisposable
+internal sealed class TelegramBackgroundService : IHostedService, IDisposable
 {
     private const int InactivityCheckIntervalMinutes = 30; // Check every 30 minutes
     private const int InactivityThresholdHours = 24; // Reconfigure after 24 hours of inactivity

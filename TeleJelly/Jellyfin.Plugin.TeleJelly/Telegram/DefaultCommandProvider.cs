@@ -8,7 +8,7 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram;
 /// <summary>
 ///     Default implementation of ICommandProvider that scans the assembly for commands.
 /// </summary>
-public class DefaultCommandProvider : ICommandProvider
+internal class DefaultCommandProvider : ICommandProvider
 {
     private readonly ICommandBase[] _commands;
 

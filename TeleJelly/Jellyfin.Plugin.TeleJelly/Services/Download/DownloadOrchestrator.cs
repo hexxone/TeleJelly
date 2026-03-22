@@ -16,11 +16,22 @@ using Transmission.API.RPC.Entity;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
+public interface IDownloadOrchestrator
+{
+    Task<ManagedDownload> BeginDownloadWorkflow(string imdbId, long chatId, long userId, string? link = null);
+    Task UpdateDownloadStatus(Guid id, DownloadStatus newStatus, string? errorMessage = null);
+    ManagedDownload? GetDownload(Guid id);
+    IEnumerable<ManagedDownload> GetAllDownloads();
+    Task ProcessAllDownloadsAsync(CancellationToken stoppingToken);
+    Task<bool> InitiateDownloadAsync(Guid downloadId, CancellationToken ct);
+    Task RestoreDownloadsAsync(CancellationToken ct);
+}
+
 /// <summary>
 ///     TODO make this 100% thread and "kill" safe.
 ///     TODO The process should be able to crash at any time externally and should still be able to recover.
 /// </summary>
-public class DownloadOrchestrator
+internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 {
     private readonly ArchiveExtractionService _archiveExtractor;
     private readonly IServerConfigurationManager _configurationManager;
@@ -33,6 +44,7 @@ public class DownloadOrchestrator
     private readonly PathTemplateService _pathTemplater;
     private readonly string _persistencePath;
     private readonly IEnumerable<ITorrentDownloadService> _torrentServices;
+    private readonly IServiceHealthMonitor _healthMonitor;
 
     public DownloadOrchestrator(
         ILogger<DownloadOrchestrator> logger,
@@ -42,7 +54,8 @@ public class DownloadOrchestrator
         MediaAnalyzerService mediaAnalyzer,
         PathTemplateService pathTemplater,
         MediaFileOrganizerService fileOrganizer,
-        IServerConfigurationManager configurationManager)
+        IServerConfigurationManager configurationManager,
+        IServiceHealthMonitor healthMonitor)
     {
         _logger = logger;
         _torrentServices = torrentServices;
@@ -52,6 +65,7 @@ public class DownloadOrchestrator
         _pathTemplater = pathTemplater;
         _fileOrganizer = fileOrganizer;
         _configurationManager = configurationManager;
+        _healthMonitor = healthMonitor;
         _persistencePath = Path.Combine(_configurationManager.ApplicationPaths.DataPath, "TeleJelly_Downloads.json");
     }
 
@@ -149,29 +163,101 @@ public class DownloadOrchestrator
         if (download.ServiceType == DownloadServiceType.Torrent)
         {
             var service = _torrentServices.FirstOrDefault(s => s.ServiceName == download.ServiceName);
-            if (service != null && await service.GetProgressAsync(download.ServiceDownloadId, ct) is TorrentInfo progress)
+            if (service == null)
             {
-                download.ProgressPercentage = progress.PercentDone * 100;
-                if (progress.PercentDone >= 1 && !string.IsNullOrEmpty(progress.DownloadDir))
+                return;
+            }
+
+            var progress = await service.GetProgressAsync(download.ServiceDownloadId, ct);
+            if (progress == null)
+            {
+                return;
+            }
+
+            // Use reflection to handle different progress object types (Transmission, qBittorrent, etc.)
+            var progressType = progress.GetType();
+
+            // Try to get progress percentage (property names: PercentDone, Progress)
+            var percentProperty = progressType.GetProperty("PercentDone") ?? progressType.GetProperty("Progress");
+            if (percentProperty != null)
+            {
+                var percentValue = Convert.ToDouble(percentProperty.GetValue(progress), System.Globalization.CultureInfo.InvariantCulture);
+                download.ProgressPercentage = percentValue * 100;
+            }
+
+            // Try to get download directory (property names: DownloadDir, SavePath)
+            var dirProperty = progressType.GetProperty("DownloadDir") ?? progressType.GetProperty("SavePath");
+            if (dirProperty != null)
+            {
+                var dirValue = dirProperty.GetValue(progress) as string;
+
+                // Check if download is complete
+                if (percentProperty != null)
                 {
-                    download.OriginalDownloadPath = progress.DownloadDir;
-                    await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
+                    var percentValue = Convert.ToDouble(percentProperty.GetValue(progress), System.Globalization.CultureInfo.InvariantCulture);
+                    if (percentValue >= 1.0 && !string.IsNullOrEmpty(dirValue))
+                    {
+                        download.OriginalDownloadPath = dirValue;
+                        await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
+                    }
                 }
             }
         }
         else // Hosted
         {
             var service = _hostedServices.FirstOrDefault(s => s.ServiceName == download.ServiceName);
-            if (service != null && await service.GetProgressAsync(download.ServiceDownloadId, ct) is FilePackage progress)
+            if (service == null)
             {
-                if (progress.BytesTotal > 0)
-                {
-                    download.ProgressPercentage = (double)progress.BytesLoaded / progress.BytesTotal * 100;
-                }
+                return;
+            }
 
-                if (progress.Status == "Finished" && !string.IsNullOrEmpty(progress.SaveTo))
+            var progress = await service.GetProgressAsync(download.ServiceDownloadId, ct);
+            if (progress == null)
+            {
+                return;
+            }
+
+            var progressType = progress.GetType();
+
+            // Calculate progress percentage from bytes
+            var bytesTotalProp = progressType.GetProperty("BytesTotal") ?? progressType.GetProperty("Size");
+            var bytesLoadedProp = progressType.GetProperty("BytesLoaded");
+            var linksDoneProp = progressType.GetProperty("LinksDone");
+            var linksProp = progressType.GetProperty("Links");
+
+            if (bytesTotalProp != null && bytesLoadedProp != null)
+            {
+                // JDownloader2 style: BytesTotal / BytesLoaded
+                var bytesTotal = Convert.ToInt64(bytesTotalProp.GetValue(progress), System.Globalization.CultureInfo.InvariantCulture);
+                var bytesLoaded = Convert.ToInt64(bytesLoadedProp.GetValue(progress), System.Globalization.CultureInfo.InvariantCulture);
+                if (bytesTotal > 0)
                 {
-                    download.OriginalDownloadPath = progress.SaveTo;
+                    download.ProgressPercentage = (double)bytesLoaded / bytesTotal * 100;
+                }
+            }
+            else if (linksDoneProp != null && linksProp != null)
+            {
+                // PyLoad style: Links / LinksDone
+                var links = Convert.ToInt32(linksProp.GetValue(progress), System.Globalization.CultureInfo.InvariantCulture);
+                var linksDone = Convert.ToInt32(linksDoneProp.GetValue(progress), System.Globalization.CultureInfo.InvariantCulture);
+                if (links > 0)
+                {
+                    download.ProgressPercentage = (double)linksDone / links * 100;
+                }
+            }
+
+            // Check if download is finished
+            var statusProp = progressType.GetProperty("Status");
+            var folderProp = progressType.GetProperty("SaveTo") ?? progressType.GetProperty("Folder");
+
+            if (statusProp != null && folderProp != null)
+            {
+                var status = statusProp.GetValue(progress) as string;
+                var folder = folderProp.GetValue(progress) as string;
+
+                if (status == "Finished" && !string.IsNullOrEmpty(folder))
+                {
+                    download.OriginalDownloadPath = folder;
                     await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
                 }
             }
@@ -262,6 +348,108 @@ public class DownloadOrchestrator
 
         download.CompletedAt = DateTime.UtcNow;
         await UpdateDownloadStatus(download.Id, DownloadStatus.Completed);
+    }
+
+    public async Task<bool> InitiateDownloadAsync(Guid downloadId, CancellationToken ct)
+    {
+        if (!_downloads.TryGetValue(downloadId, out var download))
+        {
+            _logger.LogError("Download {DownloadId} not found", downloadId);
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(download.LinkOrMagnet))
+        {
+            _logger.LogError("Download {DownloadId} has no link or magnet", downloadId);
+            await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "No download link specified");
+            return false;
+        }
+
+        var serviceType = IsHostedDownload(download.LinkOrMagnet)
+            ? DownloadServiceType.Hosted
+            : DownloadServiceType.Torrent;
+
+        var selectedService = SelectServiceForDownload(download.LinkOrMagnet, serviceType);
+        if (selectedService == null)
+        {
+            _logger.LogError("No available service found for download {DownloadId}", downloadId);
+            await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "No download service available");
+            return false;
+        }
+
+        try
+        {
+            string serviceDownloadId;
+            if (serviceType == DownloadServiceType.Torrent)
+            {
+                var torrentService = selectedService as ITorrentDownloadService;
+                serviceDownloadId = await torrentService!.AddDownloadAsync(download.LinkOrMagnet, ct);
+                _logger.LogInformation("Started torrent download with {ServiceName}: {DownloadId}", torrentService.ServiceName, serviceDownloadId);
+            }
+            else
+            {
+                var hostedService = selectedService as IHostedDownloadService;
+                serviceDownloadId = await hostedService!.AddDownloadAsync(download.LinkOrMagnet, ct);
+                _logger.LogInformation("Started hosted download with {ServiceName}: {DownloadId}", hostedService.ServiceName, serviceDownloadId);
+            }
+
+            download.ServiceDownloadId = serviceDownloadId;
+            download.ServiceName = serviceType == DownloadServiceType.Torrent
+                ? (selectedService as ITorrentDownloadService)!.ServiceName
+                : (selectedService as IHostedDownloadService)!.ServiceName;
+            download.ServiceType = serviceType;
+
+            await UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initiate download {DownloadId} with service {ServiceName}",
+                downloadId, selectedService);
+            await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, $"Failed to start download: {ex.Message}");
+            return false;
+        }
+    }
+
+    private object? SelectServiceForDownload(string linkOrMagnet, DownloadServiceType serviceType)
+    {
+        if (serviceType == DownloadServiceType.Torrent)
+        {
+            var availableServices = _healthMonitor.GetAvailableTorrentServices()
+                .Where(s => s.IsEnabled && s.CanHandle(linkOrMagnet))
+                .ToList();
+
+            if (availableServices.Any())
+            {
+                var selected = availableServices.First();
+                _logger.LogInformation("Selected torrent service: {ServiceName}", selected.ServiceName);
+                return selected;
+            }
+        }
+        else
+        {
+            var availableServices = _healthMonitor.GetAvailableHostedServices()
+                .Where(s => s.IsEnabled && s.CanHandle(linkOrMagnet))
+                .ToList();
+
+            if (availableServices.Any())
+            {
+                var selected = availableServices.First();
+                _logger.LogInformation("Selected hosted service: {ServiceName}", selected.ServiceName);
+                return selected;
+            }
+        }
+
+        _logger.LogWarning("No available {ServiceType} service found for link: {Link}", serviceType, linkOrMagnet);
+        return null;
+    }
+
+    private bool IsHostedDownload(string linkOrMagnet)
+    {
+        return !string.IsNullOrEmpty(linkOrMagnet) &&
+               Uri.TryCreate(linkOrMagnet, UriKind.Absolute, out var uri) &&
+               (uri.Scheme == "http" || uri.Scheme == "https") &&
+               !linkOrMagnet.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task RestoreDownloadsAsync(CancellationToken ct)

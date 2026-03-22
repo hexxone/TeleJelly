@@ -5,6 +5,7 @@ using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 
+// TODO unused ??
 public class SearchOrchestrator
 {
     private readonly IEnumerable<ISearchProvider> _providers;
@@ -16,6 +17,7 @@ public class SearchOrchestrator
         _qualityEngine = qualityEngine;
     }
 
+    // TODO unused ??
     public async Task<SearchResult?> FindBestMatch(string query, QualityProfile profile, CancellationToken ct)
     {
         var allResults = new List<SearchResult>();

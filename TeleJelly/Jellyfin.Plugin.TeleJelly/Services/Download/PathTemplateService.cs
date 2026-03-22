@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
-public class PathTemplateService
+internal sealed class PathTemplateService
 {
     private readonly ILogger<PathTemplateService> _logger;
 

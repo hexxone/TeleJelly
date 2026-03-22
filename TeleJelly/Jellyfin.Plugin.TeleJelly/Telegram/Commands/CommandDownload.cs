@@ -15,9 +15,9 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 public class CommandDownload : ICommandBase
 {
     private readonly ILibraryManager _libraryManager;
-    private readonly DownloadOrchestrator _orchestrator;
+    private readonly IDownloadOrchestrator _orchestrator;
 
-    public CommandDownload(DownloadOrchestrator orchestrator, ILibraryManager libraryManager)
+    public CommandDownload(IDownloadOrchestrator orchestrator, ILibraryManager libraryManager)
     {
         _orchestrator = orchestrator;
         _libraryManager = libraryManager;

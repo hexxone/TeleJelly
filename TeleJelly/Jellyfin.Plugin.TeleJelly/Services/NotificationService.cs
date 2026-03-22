@@ -18,6 +18,32 @@ using Telegram.Bot.Types.Enums;
 
 namespace Jellyfin.Plugin.TeleJelly.Services;
 
+public interface INotificationService
+{
+    /// <summary>
+    ///     Handles logic triggered when a library item's metadata or properties are updated.
+    ///     This method processes updates to ensure notifications are sent if the metadata
+    ///     is complete and removes associated pending notifications if applicable.
+    /// </summary>
+    /// <param name="sender">The source of the event, typically the library manager.</param>
+    /// <param name="e">The event data containing details about the updated item.</param>
+    void OnItemUpdated(object? sender, ItemChangeEventArgs e);
+
+    /// <summary>
+    ///     Handles the event when a new item is added to the library. This method checks the item's metadata
+    ///     for completeness and, if complete, sends a notification using a Telegram bot integration.
+    ///     If the metadata is incomplete, the item is added to a collection of pending notifications for further processing.
+    /// </summary>
+    /// <param name="sender">
+    ///     The source of the event, typically the library manager that triggered the item addition event.
+    /// </param>
+    /// <param name="e">
+    ///     An instance of <see cref="ItemChangeEventArgs" /> that contains information about the item
+    ///     that was added, including its metadata and identifier.
+    /// </param>
+    void OnItemAdded(object? sender, ItemChangeEventArgs e);
+}
+
 /// <summary>
 ///     Provides functionality to handle notifications related to item updates and additions.
 ///     This service monitors changes to library items, checks the completeness of metadata,
@@ -25,7 +51,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services;
 ///     notifications are managed effectively, including handling pending notifications and
 ///     timing out incomplete notifications.
 /// </summary>
-public class NotificationService : IDisposable
+internal sealed class NotificationService : IDisposable, INotificationService
 {
     private readonly TelegramBotClientWrapper _botClientWrapper;
     private readonly ILibraryManager _libraryManager;

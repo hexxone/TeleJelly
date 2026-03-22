@@ -13,10 +13,10 @@ namespace Jellyfin.Plugin.TeleJelly;
 /// <summary>
 ///     Main SSO plugin class.
 /// </summary>
-public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages, IDisposable
+public sealed class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWebPages, IDisposable
 {
     private readonly ILibraryManager _libraryManager;
-    private readonly NotificationService _notificationService;
+    private readonly INotificationService _notificationService;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TeleJellyPlugin" /> class.
@@ -31,7 +31,7 @@ public class TeleJellyPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasWeb
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
         ILibraryManager libraryManager,
-        NotificationService notificationService)
+        INotificationService notificationService)
         : base(applicationPaths, xmlSerializer)
     {
         ApplicationPaths = applicationPaths;

@@ -11,11 +11,37 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Services;
 
+public interface IRequestService
+{
+    /// <summary>
+    ///     Gets a snapshot of all requests.
+    /// </summary>
+    Task<IReadOnlyList<MediaRequest>> GetRequestsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    ///     Replaces the current list of requests and persists it to disk.
+    /// </summary>
+    Task SetRequestsAsync(IEnumerable<MediaRequest> requests, CancellationToken cancellationToken);
+
+    /// <summary>
+    ///     Tries to add a request while enforcing per-user limits and duplicate checks.
+    /// </summary>
+    Task<RequestAddResult> TryAddRequestAsync(
+        MediaRequest request,
+        int maxRequestsPerUser,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    ///     Removes a request by IMDb ID.
+    /// </summary>
+    Task RemoveRequestAsync(string imdbId, CancellationToken cancellationToken);
+}
+
 /// <summary>
 ///     Service for handling media requests, including persisting, retrieving,
 ///     and managing validations such as user limits and duplicate checks.
 /// </summary>
-public class RequestService
+internal sealed class RequestService : IRequestService
 {
     private readonly IApplicationPaths _applicationPaths;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };

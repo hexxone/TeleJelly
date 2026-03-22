@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
 using Microsoft.AspNetCore.Mvc;
@@ -11,9 +12,9 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Route("TeleJelly/DownloadManager")]
 public class DownloadManagerController : ControllerBase
 {
-    private readonly DownloadOrchestrator _orchestrator;
+    private readonly IDownloadOrchestrator _orchestrator;
 
-    public DownloadManagerController(DownloadOrchestrator orchestrator)
+    public DownloadManagerController(IDownloadOrchestrator orchestrator)
     {
         _orchestrator = orchestrator;
     }
@@ -25,7 +26,7 @@ public class DownloadManagerController : ControllerBase
     }
 
     [HttpPost("downloads/{id}/cancel")]
-    public IActionResult CancelDownload(Guid id)
+    public async Task<IActionResult> CancelDownload(Guid id)
     {
         var download = _orchestrator.GetDownload(id);
         if (download == null)
@@ -33,7 +34,7 @@ public class DownloadManagerController : ControllerBase
             return NotFound();
         }
 
-        _orchestrator.UpdateDownloadStatus(id, DownloadStatus.Canceled);
+        await _orchestrator.UpdateDownloadStatus(id, DownloadStatus.Canceled);
         return Ok();
     }
 

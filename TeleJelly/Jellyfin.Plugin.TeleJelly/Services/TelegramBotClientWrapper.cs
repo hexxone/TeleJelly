@@ -6,7 +6,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services;
 ///     Dependency injected singleton class for holding the reference to the initialized Telegram Bot Api Client.
 /// </summary>
 // ReSharper disable once ClassNeverInstantiated.Global
-public class TelegramBotClientWrapper
+public sealed class TelegramBotClientWrapper
 {
     /// <summary>
     ///     DI-Singleton global initialized Client.

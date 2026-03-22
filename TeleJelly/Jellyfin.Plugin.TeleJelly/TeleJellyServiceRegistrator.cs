@@ -21,21 +21,26 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
         // register internal helpers
-        serviceCollection.AddSingleton<ICommandProvider, DefaultCommandProvider>();
         serviceCollection.AddSingleton<TelegramBotClientWrapper>();
-        serviceCollection.AddSingleton<RequestService>();
-        serviceCollection.AddSingleton<NotificationService>();
+        serviceCollection.AddSingleton<ICommandProvider, DefaultCommandProvider>();
+        serviceCollection.AddSingleton<IRequestService, RequestService>();
+        serviceCollection.AddSingleton<INotificationService, NotificationService>();
 
         // Download manager services
-        serviceCollection.AddSingleton<DownloadOrchestrator>();
+        serviceCollection.AddSingleton<IDownloadOrchestrator, DownloadOrchestrator>();
         serviceCollection.AddSingleton<ArchiveExtractionService>();
         serviceCollection.AddSingleton<MediaAnalyzerService>();
         serviceCollection.AddSingleton<PathTemplateService>();
         serviceCollection.AddSingleton<MediaFileOrganizerService>();
+        serviceCollection.AddSingleton<IServiceHealthMonitor, ServiceHealthMonitor>();
 
-        // Register download clients
+        // Register download clients (torrent services)
         serviceCollection.AddScoped<ITorrentDownloadService, TransmissionService>();
+        serviceCollection.AddScoped<ITorrentDownloadService, QBittorrentService>();
+
+        // Register download clients (hosted services)
         serviceCollection.AddScoped<IHostedDownloadService, JDownloader2Service>();
+        serviceCollection.AddScoped<IHostedDownloadService, PyLoadService>();
 
         // listen for commands in the background.
         serviceCollection.AddHostedService<TelegramBackgroundService>();

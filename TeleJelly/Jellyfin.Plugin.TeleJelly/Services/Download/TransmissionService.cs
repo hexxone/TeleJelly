@@ -11,7 +11,7 @@ using Transmission.API.RPC.Entity;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
-public class TransmissionService : ITorrentDownloadService
+internal sealed class TransmissionService : ITorrentDownloadService
 {
     private static TransmissionSettings? Config => TeleJellyPlugin.Instance?.Configuration.DownloadManager.TorrentServices.Transmission;
 
@@ -140,7 +140,13 @@ public class TransmissionService : ITorrentDownloadService
 
     private Client GetClient()
     {
-        var url = $"http://{Config.Host}:{Config.Port}/transmission/rpc";
-        return new Client(url, null, Config.Username, Config.Password);
+        var config = Config;
+        if (config == null)
+        {
+            throw new InvalidOperationException("Transmission service is not configured");
+        }
+
+        var url = $"http://{config.Host}:{config.Port}/transmission/rpc";
+        return new Client(url, null, config.Username, config.Password);
     }
 }

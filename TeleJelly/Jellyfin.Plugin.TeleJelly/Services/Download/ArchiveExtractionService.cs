@@ -21,7 +21,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 ///     TODO what about ".tar.gz" and ".tar.bz2" files which are essentially double archives? Or wrapped archives like one zip in another?
 ///     .. maybe we should make this into a setting like "ExtractRecursiveDepth=0" for none (only top level), =1 for one etc. to avoid Zip-bombs..
 /// </summary>
-public class ArchiveExtractionService
+internal sealed class ArchiveExtractionService
 {
     // TODO better way to determine if a file is an archive?
     private static readonly string[] ArchiveExtensions = [".rar", ".zip", ".7z", ".tar", ".gz", ".bz2"];
@@ -97,7 +97,7 @@ public class ArchiveExtractionService
         _logger.LogInformation("Successfully extracted archive: {ArchivePath}", archivePath);
     }
 
-    public Task<string> TryAllPasswordsAsync(string archivePath, string[] passwords, CancellationToken ct)
+    public Task<string?> TryAllPasswordsAsync(string archivePath, string[] passwords, CancellationToken ct)
     {
         return Task.Run(() =>
         {
@@ -135,12 +135,19 @@ public class ArchiveExtractionService
         }, ct);
     }
 
-    public Task<string[]> GetArchiveContentsAsync(string archivePath, string password = null)
+    // TODO unused ??
+    public Task<string[]> GetArchiveContentsAsync(string archivePath, string? password = null)
     {
         return Task.Run(() =>
         {
             using var archive = ArchiveFactory.Open(archivePath, new ReaderOptions { Password = password });
-            return archive.Entries.Where(e => !e.IsDirectory).Select(e => e.Key).ToArray();
+
+            return archive.Entries
+                .Where(e => !e.IsDirectory)
+                .Select(e => e.Key)
+                .Where(k => k != null)
+                .Cast<string>()
+                .ToArray();
         });
     }
 }

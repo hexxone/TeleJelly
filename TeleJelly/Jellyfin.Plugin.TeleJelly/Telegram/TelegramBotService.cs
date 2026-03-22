@@ -2,15 +2,18 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 using MediaBrowser.Controller.Library;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
@@ -52,6 +55,7 @@ internal sealed class TelegramBotService : ITelegramBotService
     private readonly string _botToken;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly ILibraryManager _libraryManager;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, PendingTorrent> _pendingTorrentUploads = new();
 
 
     /// <summary>
@@ -162,6 +166,10 @@ internal sealed class TelegramBotService : ITelegramBotService
                 // Handle commands
                 case { Type: UpdateType.Message, Message.Text: not null }:
                     await HandleBotMessage(update, cancellationToken);
+                    break;
+                // Handle document uploads (.torrent files)
+                case { Type: UpdateType.Message, Message.Document: not null }:
+                    await HandleDocumentUpload(update.Message, cancellationToken);
                     break;
                 // Handle callback queries from inline keyboards
                 case { Type: UpdateType.CallbackQuery, CallbackQuery: not null }:
@@ -310,6 +318,15 @@ internal sealed class TelegramBotService : ITelegramBotService
         }
 
         var message = update.Message!;
+
+        // Check if this is a reply to a pending torrent upload
+        if (message.ReplyToMessage != null &&
+            _pendingTorrentUploads.TryRemove(message.ReplyToMessage.MessageId, out var pendingTorrent))
+        {
+            await HandleTorrentImdbReply(message, pendingTorrent, cancellationToken);
+            return;
+        }
+
         if (message.Text == null || !message.Text.StartsWith('/'))
         {
             return; // Not a command, ignore
@@ -327,8 +344,81 @@ internal sealed class TelegramBotService : ITelegramBotService
         await FindAndExecuteCommand(message, commandText, cancellationToken);
     }
 
+    private async Task HandleTorrentImdbReply(Message message, PendingTorrent pendingTorrent, CancellationToken cancellationToken)
+    {
+        var imdbId = message.Text?.Trim();
+        if (string.IsNullOrEmpty(imdbId) || !imdbId.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
+        {
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.SendMessage(
+                    message.Chat.Id,
+                    "❌ Invalid IMDB ID format. Please provide a valid ID starting with 'tt' (e.g., tt1234567)",
+                    cancellationToken: cancellationToken);
+            }
+
+            return;
+        }
+
+        try
+        {
+            // Save torrent to temp location
+            var tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), pendingTorrent.FileName);
+            await System.IO.File.WriteAllBytesAsync(tempPath, pendingTorrent.FileBytes, cancellationToken);
+
+            Logger.LogInformation("Starting download workflow for torrent {FileName} with IMDB ID {ImdbId}", pendingTorrent.FileName, imdbId);
+
+            // Start download workflow
+            var orchestrator = ServiceProvider.GetService<IDownloadOrchestrator>();
+            if (orchestrator == null)
+            {
+                Logger.LogError("DownloadOrchestrator not found in service provider");
+                if (BotClientWrapper.Client != null)
+                {
+                    await BotClientWrapper.Client.SendMessage(
+                        message.Chat.Id,
+                        "❌ Internal error: Download orchestrator not available",
+                        cancellationToken: cancellationToken);
+                }
+
+                return;
+            }
+
+            var download = await orchestrator.BeginDownloadWorkflow(imdbId, message.Chat.Id, message.From!.Id, $"file://{tempPath}");
+
+            // Get available libraries
+            var libraries = _libraryManager.GetVirtualFolders();
+            var libraryButtons = libraries
+                .Select(lib => new[] { InlineKeyboardButton.WithCallbackData(lib.Name, $"dl_{download.Id}_library_{lib.ItemId}") })
+                .ToArray();
+
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.SendMessage(
+                    message.Chat.Id,
+                    $"✅ Download workflow started for <b>{download.Title}</b> ({download.Year})\n\nPlease select the target library:",
+                    ParseMode.Html,
+                    replyMarkup: new InlineKeyboardMarkup(libraryButtons),
+                    cancellationToken: cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to start download workflow for torrent");
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.SendMessage(
+                    message.Chat.Id,
+                    $"❌ Failed to start download: {ex.Message}",
+                    cancellationToken: cancellationToken);
+            }
+        }
+    }
+
     private async Task HandleCallbackQuery(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
+        Debug.Assert(BotClientWrapper.Client != null, "BotClientWrapper.Client != null");
+
         if (callbackQuery.Data == null)
         {
             return;
@@ -343,10 +433,11 @@ internal sealed class TelegramBotService : ITelegramBotService
             return;
         }
 
-        var orchestrator = ServiceProvider.GetService(typeof(DownloadOrchestrator)) as DownloadOrchestrator;
+        var orchestrator = ServiceProvider.GetService<IDownloadOrchestrator>();
         if (orchestrator == null)
         {
             Logger.LogError("DownloadOrchestrator not found in service provider.");
+
             await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Internal server error.", cancellationToken: cancellationToken);
             return;
         }
@@ -355,6 +446,13 @@ internal sealed class TelegramBotService : ITelegramBotService
         if (download == null)
         {
             await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Download not found.", cancellationToken: cancellationToken);
+            return;
+        }
+
+        // User validation: only the download initiator can interact with callbacks
+        if (callbackQuery.From?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) != download.UserId)
+        {
+            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Only the download initiator can interact with this.", true, cancellationToken: cancellationToken);
             return;
         }
 
@@ -379,38 +477,94 @@ internal sealed class TelegramBotService : ITelegramBotService
                         cancellationToken: cancellationToken);
                     break;
 
-                // TODO should we maybe select the "MediaType" first and only afterwards the "library"?
-                //   .. this way we could narrow down the available libraries based on the selected media type.
-                //   .. any maybe even have a single one remaining we can automatically "force" select.
                 case "mediatype":
                     download.MediaType = Enum.Parse<MediaType>(value!);
-                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingPathConfirm);
 
-                    // For simplicity, we auto-confirm the path for now.
-                    // TODO fix the "auto confirm" and actually let the user confirm the path with a separate step.
-                    //   .. also trigger to Start the download if everything is ready. Doesnt seem like thats happening.
-
-                    var library = _libraryManager.GetItemById(download.TargetLibraryId!);
-                    if (library?.Path != null)
+                    // If Series, prompt for season selection
+                    if (download.MediaType == MediaType.Series)
                     {
-                        download.UserConfirmedPath = library.Path;
-                        await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
+                        await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingSeason);
+
+                        var seasonButtons = new List<InlineKeyboardButton[]>();
+                        for (int i = 1; i <= 10; i++)
+                        {
+                            if (i % 2 == 1)
+                            {
+                                var buttons = new List<InlineKeyboardButton> { InlineKeyboardButton.WithCallbackData($"Season {i}", $"dl_{download.Id}_season_{i}") };
+                                if (i + 1 <= 10)
+                                {
+                                    buttons.Add(InlineKeyboardButton.WithCallbackData($"Season {i + 1}", $"dl_{download.Id}_season_{i + 1}"));
+                                }
+
+                                seasonButtons.Add(buttons.ToArray());
+                            }
+                        }
+
+                        seasonButtons.Add([InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel")]);
 
                         await BotClientWrapper.Client.EditMessageText(
                             callbackQuery.Message!.Chat.Id,
                             callbackQuery.Message.MessageId,
-                            "Media type set. Download starting...",
+                            $"Media type set to <b>Series</b>. Please select the season:",
+                            ParseMode.Html,
+                            replyMarkup: new InlineKeyboardMarkup(seasonButtons),
                             cancellationToken: cancellationToken);
                     }
                     else
                     {
-                        await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Failed,
-                            "Target library not found or path is missing.");
+                        // Movie: proceed to path confirmation
+                        await ShowPathConfirmation(orchestrator, download, callbackQuery, cancellationToken);
+                    }
 
-                        await BotClientWrapper.Client.EditMessageText(
+                    break;
+
+                case "season":
+                    if (int.TryParse(value, out var seasonNum))
+                    {
+                        download.Season = seasonNum;
+                        await ShowPathConfirmation(orchestrator, download, callbackQuery, cancellationToken);
+                    }
+
+                    break;
+
+                case "accept":
+                    // Accept the path and initiate download
+                    download.UserConfirmedPath = download.SuggestedDestinationPath;
+                    var success = await orchestrator.InitiateDownloadAsync(downloadId, cancellationToken);
+
+                    if (BotClientWrapper.Client != null)
+                    {
+                        if (success)
+                        {
+                            await BotClientWrapper.Client.EditMessageText(
+                                callbackQuery.Message!.Chat.Id,
+                                callbackQuery.Message.MessageId,
+                                $"✅ Download started for <b>{download.Title}</b>!\nPath: <code>{download.SuggestedDestinationPath}</code>",
+                                ParseMode.Html,
+                                cancellationToken: cancellationToken);
+                        }
+                        else
+                        {
+                            await BotClientWrapper.Client.EditMessageText(
+                                callbackQuery.Message!.Chat.Id,
+                                callbackQuery.Message.MessageId,
+                                $"❌ Failed to start download. {download.ErrorMessage ?? "No available download service."}",
+                                ParseMode.Html,
+                                cancellationToken: cancellationToken);
+                        }
+                    }
+
+                    break;
+
+                case "edit":
+                    // Prompt user to reply with custom path
+                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.AwaitingPathConfirm);
+                    if (BotClientWrapper.Client != null)
+                    {
+                        await BotClientWrapper.Client.SendMessage(
                             callbackQuery.Message!.Chat.Id,
-                            callbackQuery.Message.MessageId,
-                            "Error: Target library not found or path is missing.",
+                            "Please reply to this message with your custom path:",
+                            replyMarkup: new ForceReplyMarkup(),
                             cancellationToken: cancellationToken);
                     }
 
@@ -418,30 +572,114 @@ internal sealed class TelegramBotService : ITelegramBotService
 
                 case "cancel":
                     await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Canceled);
-                    await BotClientWrapper.Client.EditMessageText(
-                        callbackQuery.Message!.Chat.Id,
-                        callbackQuery.Message.MessageId,
-                        $"Download for <b>{download.Title}</b> has been canceled.",
-                        ParseMode.Html,
-                        cancellationToken: cancellationToken);
+                    if (BotClientWrapper.Client != null)
+                    {
+                        await BotClientWrapper.Client.EditMessageText(
+                            callbackQuery.Message!.Chat.Id,
+                            callbackQuery.Message.MessageId,
+                            $"Download for <b>{download.Title}</b> has been canceled.",
+                            ParseMode.Html,
+                            cancellationToken: cancellationToken);
+                    }
+
                     break;
 
                 default:
-                    await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Unknown action.", cancellationToken: cancellationToken);
+                    if (BotClientWrapper.Client != null)
+                    {
+                        await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Unknown action.", cancellationToken: cancellationToken);
+                    }
+
                     break;
             }
 
-            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error processing callback query for download {DownloadId}", downloadId);
-            await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "An error occurred.", cancellationToken: cancellationToken);
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "An error occurred.", cancellationToken: cancellationToken);
+            }
         }
+    }
+
+    private async Task ShowPathConfirmation(IDownloadOrchestrator orchestrator, ManagedDownload download, CallbackQuery callbackQuery, CancellationToken cancellationToken)
+    {
+        Debug.Assert(BotClientWrapper.Client != null, "BotClientWrapper.Client != null");
+
+        await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.AwaitingPathConfirm);
+
+        var library = _libraryManager.GetItemById(download.TargetLibraryId!);
+        if (library?.Path == null)
+        {
+            await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.Failed,
+                "Target library not found or path is missing.");
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.EditMessageText(
+                    callbackQuery.Message!.Chat.Id,
+                    callbackQuery.Message.MessageId,
+                    "❌ Error: Target library not found or path is missing.",
+                    ParseMode.Html,
+                    cancellationToken: cancellationToken);
+            }
+
+            return;
+        }
+
+        // Build proposed path
+        var pathTemplater = ServiceProvider.GetService(typeof(PathTemplateService)) as PathTemplateService;
+        var config = TeleJellyPlugin.Instance!.Configuration.DownloadManager;
+        var librarySettings = config.LibrarySettings.FirstOrDefault(l => l.LibraryId == download.TargetLibraryId) ?? new LibrarySettings();
+
+        var proposedPath = library.Path;
+        if (pathTemplater != null)
+        {
+            try
+            {
+                proposedPath = await pathTemplater.ApplyTemplateAsync(
+                    librarySettings.PathTemplate,
+                    download,
+                    new Dictionary<string, string>(),
+                    download.Title);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to apply path template, using library path");
+            }
+        }
+
+        download.SuggestedDestinationPath = proposedPath;
+
+        var confirmKeyboard = new InlineKeyboardMarkup([
+            [InlineKeyboardButton.WithCallbackData("✅ Accept", $"dl_{download.Id}_accept")],
+            [InlineKeyboardButton.WithCallbackData("✏️ Edit Path", $"dl_{download.Id}_edit")],
+            [InlineKeyboardButton.WithCallbackData("❌ Cancel", $"dl_{download.Id}_cancel")]
+        ]);
+
+        var seasonInfo = download.Season.HasValue ? $"\n<b>Season:</b> {download.Season}" : "";
+        await BotClientWrapper.Client.EditMessageText(
+            callbackQuery.Message!.Chat.Id,
+            callbackQuery.Message.MessageId,
+            $"<b>Download Ready</b>\n\n" +
+            $"<b>Title:</b> {download.Title} ({download.Year})\n" +
+            $"<b>Type:</b> {download.MediaType}{seasonInfo}\n" +
+            $"<b>Path:</b> <code>{proposedPath}</code>\n\n" +
+            $"Please confirm or edit the download path:",
+            ParseMode.Html,
+            replyMarkup: confirmKeyboard,
+            cancellationToken: cancellationToken);
     }
 
     private async Task HandleInlineQuery(InlineQuery inlineQuery, CancellationToken cancellationToken)
     {
+        Debug.Assert(BotClientWrapper.Client != null, "BotClientWrapper.Client != null");
+
         // Check if inline queries are enabled
         if (!Config.EnableInlineQueries)
         {
@@ -629,6 +867,54 @@ internal sealed class TelegramBotService : ITelegramBotService
         return commandText;
     }
 
+    private async Task HandleDocumentUpload(Message message, CancellationToken cancellationToken)
+    {
+        if (message.Document?.FileName?.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase) != true)
+        {
+            return; // Not a torrent file, ignore
+        }
+
+        Logger.LogInformation("Received .torrent file upload: {FileName}", message.Document.FileName);
+        Debug.Assert(BotClientWrapper.Client != null, "BotClientWrapper.Client != null");
+
+        try
+        {
+            // Download the file
+            var file = await BotClientWrapper.Client.GetFile(message.Document.FileId, cancellationToken);
+            using var stream = new System.IO.MemoryStream();
+            await BotClientWrapper.Client.DownloadFile(file.FilePath!, stream, cancellationToken);
+            var bytes = stream.ToArray();
+
+            // Store temporarily
+            _pendingTorrentUploads[message.MessageId] = new PendingTorrent
+            {
+                FileName = message.Document.FileName,
+                FileBytes = bytes,
+                UserId = message.From!.Id,
+                ChatId = message.Chat.Id,
+                UploadedAt = DateTime.UtcNow
+            };
+
+            // Prompt for IMDB ID
+            await BotClientWrapper.Client.SendMessage(
+                message.Chat.Id,
+                "✅ Torrent file received! Please reply to this message with the IMDB ID (e.g., tt1234567)",
+                replyMarkup: new ForceReplyMarkup { Selective = true },
+                replyParameters: new ReplyParameters { MessageId = message.MessageId },
+                cancellationToken: cancellationToken);
+
+            Logger.LogInformation("Waiting for IMDB ID reply for torrent: {FileName}", message.Document.FileName);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to process torrent file upload");
+            await BotClientWrapper.Client.SendMessage(
+                message.Chat.Id,
+                "❌ Failed to process torrent file. Please try again.",
+                cancellationToken: cancellationToken);
+        }
+    }
+
     private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
         var errorMessage = exception switch
@@ -640,5 +926,14 @@ internal sealed class TelegramBotService : ITelegramBotService
         Logger.LogError("Bot update handling Error: {Err}", errorMessage);
 
         return Task.CompletedTask;
+    }
+
+    private sealed class PendingTorrent
+    {
+        public string FileName { get; init; } = string.Empty;
+        public byte[] FileBytes { get; init; } = [];
+        public long UserId { get; init; }
+        public long ChatId { get; init; }
+        public DateTime UploadedAt { get; init; }
     }
 }
