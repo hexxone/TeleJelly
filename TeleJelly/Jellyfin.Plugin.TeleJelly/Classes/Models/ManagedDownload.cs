@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 
 namespace Jellyfin.Plugin.TeleJelly.Classes.Models;
 
@@ -9,6 +10,7 @@ public class ManagedDownload
     public long ChatId { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string? LinkOrMagnet { get; set; }
+    public string? SourcePassword { get; set; }
     public DownloadStatus Status { get; set; }
     public string? ErrorMessage { get; set; }
     public string ImdbId { get; set; } = string.Empty;
@@ -33,7 +35,7 @@ public class ManagedDownload
     public string[]? TriedPasswords { get; set; }
     public Dictionary<string, string>? PendingPathVariables { get; set; }
     public Dictionary<string, string>? FilledPathVariables { get; set; }
-    public object[]? SearchResults { get; set; } // Placeholder
+    public SearchResult[]? SearchResults { get; set; }
     public MediaFileGroup[]? AnalyzedFiles { get; set; }
     public long MessageId { get; set; }
 }

@@ -60,6 +60,13 @@ internal sealed class ServiceHealthMonitor : IServiceHealthMonitor
         return _healthStatus.TryGetValue(serviceName, out var status) ? status : null;
     }
 
+    public IEnumerable<ServiceHealthStatus> GetAllServiceHealth()
+    {
+        return _healthStatus.Values
+            .OrderBy(s => GetServicePriority(s.ServiceName))
+            .ThenBy(s => s.ServiceName);
+    }
+
     public IEnumerable<ITorrentDownloadService> GetAvailableTorrentServices()
     {
         return _torrentServices

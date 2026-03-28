@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,9 +32,14 @@ internal sealed class JDownloader2Service : IHostedDownloadService
 
     public bool CanHandle(string linkOrFile)
     {
-        return !string.IsNullOrEmpty(linkOrFile) &&
-               Uri.TryCreate(linkOrFile, UriKind.Absolute, out var uri) &&
-               (uri.Scheme == "http" || uri.Scheme == "https");
+        if (string.IsNullOrWhiteSpace(linkOrFile))
+        {
+            return false;
+        }
+
+        return SplitLinks(linkOrFile)
+            .All(link => Uri.TryCreate(link, UriKind.Absolute, out var uri) &&
+                         (uri.Scheme == "http" || uri.Scheme == "https"));
     }
 
     public async Task<string> AddDownloadAsync(string linkOrFile, CancellationToken ct)
@@ -134,6 +140,12 @@ internal sealed class JDownloader2Service : IHostedDownloadService
     {
         _logger.LogWarning("Client-side DLC password extraction is not supported. Please send the DLC file to JDownloader directly.");
         return Task.FromResult<string?>(null);
+    }
+
+    private static IEnumerable<string> SplitLinks(string linkOrFile)
+    {
+        return linkOrFile
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     private async Task<DeviceData> GetDeviceClient(CancellationToken ct)

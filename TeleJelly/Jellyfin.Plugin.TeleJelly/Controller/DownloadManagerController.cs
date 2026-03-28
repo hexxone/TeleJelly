@@ -12,17 +12,31 @@ namespace Jellyfin.Plugin.TeleJelly.Controller;
 [Route("TeleJelly/DownloadManager")]
 public class DownloadManagerController : ControllerBase
 {
+    private readonly IServiceHealthMonitor _healthMonitor;
     private readonly IDownloadOrchestrator _orchestrator;
 
-    public DownloadManagerController(IDownloadOrchestrator orchestrator)
+    public DownloadManagerController(IDownloadOrchestrator orchestrator, IServiceHealthMonitor healthMonitor)
     {
         _orchestrator = orchestrator;
+        _healthMonitor = healthMonitor;
     }
 
     [HttpGet("downloads")]
-    public ActionResult<IEnumerable<ManagedDownload>> GetDownloads()
+    public ActionResult<IEnumerable<ManagedDownload>> GetDownloads([FromQuery] string? status = null)
     {
-        return Ok(_orchestrator.GetAllDownloads().OrderByDescending(d => d.StartedAt));
+        var downloads = _orchestrator.GetAllDownloads();
+        if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
+        {
+            downloads = downloads.Where(d => d.Status.ToString().Equals(status, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return Ok(downloads.OrderByDescending(d => d.StartedAt));
+    }
+
+    [HttpGet("health")]
+    public ActionResult<IEnumerable<ServiceHealthStatus>> GetHealth()
+    {
+        return Ok(_healthMonitor.GetAllServiceHealth());
     }
 
     [HttpPost("downloads/{id}/cancel")]

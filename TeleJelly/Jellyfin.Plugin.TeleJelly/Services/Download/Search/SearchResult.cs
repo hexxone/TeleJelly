@@ -8,6 +8,7 @@ public class SearchResult
     public string Title { get; set; } = string.Empty;
     // TODO unused ??
     public string DownloadLink { get; set; } = string.Empty;
+    public string? Password { get; set; }
     public string? Resolution { get; set; }
     public string? Codec { get; set; }
     public string? HDR { get; set; }

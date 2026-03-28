@@ -34,14 +34,19 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 ## Contents
 
 - [Usage](#usage)
+    - [Features](#features)
+    - [Requirements](#installation---usage-requirements)
+- [Telegram Bot Interaction](#bot-interaction)
+    - [Events](#bot-events)
+    - [Notifications](#bot-notifications)
+    - [Commands](#bot-commands)
+    - [Inline Search](#inline-search)
+- [Demo Video](#demo-video)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Bot Interaction](#bot-interaction)
-  - [Inline Search](#inline-search)
 - [Known issues](#known-issues)
-- [Demo Video](#demo-video)
-- [Screenshots](#screenshots)
-- [Making Changes](#making-changes)
+- [Documentation](./TeleJelly/docs/README.md)
+- [How to Contribute](./TeleJelly/docs/Contributing.md)
 
 ## Usage
 
@@ -49,8 +54,8 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 2. User lands on the page `/sso/Telegram`
 3. Plugin shows a Page with an embedded Telegram Login Widget.
 4. When the button is clicked, Plugin validates User credentials using bot token.
-    - On Success -> Authenticate & redirect User to Jellyfin Dashboard
-    - On Failure -> Show Error Message (e.g. Invalid Data, not Whitelisted)
+    - On Success → Authenticate & redirect User to Jellyfin Dashboard
+    - On Failure → Show Error Message (e.g. Invalid Data, not Whitelisted)
 
 ### Features
 
@@ -60,8 +65,8 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
     - shows a "Back to Normal Login" button
     - shows the Telegram Login Widget
     - checks the Telegram Auth data against the backend
-    - if data is invalid -> show an error message
-    - if data is valid -> takes the Jellyfin Auth Response and authenticates the user
+    - if data is invalid → show an error message
+    - if data is valid → takes the Jellyfin Auth Response and authenticates the user
     - loading animation
     - supports custom CSS
 
@@ -75,63 +80,28 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
         - _Important: If "Sync Usernames" is disabled, you must manually add every Telegram Username to the list for
           them to be able to log in._
 
-### Requirements
+- Extensive Bot-Commands and configuration options
+    - Search for media on the server, get detailed results displayed in Telegram, with direct links
+    - Request new media for the server from the Owner via IMDB-Id
+    - Get Server Status and media info
+    - Several administrative commands
+    - **(⚠️ WIP)** Fully integrated and automated Download-Pipeline 
+        - have you ever thought "why is piracy so annoying and time-consuming" ? This might be for you. 
+        - Primary Goal: Automate **everything** from "IMDB request" to "media on the server"
+        - Secondary Goal: dont go to Jail, because everything is tunneled through a VPN
+        - Automate searching for the requested IMDB-ID / Title + Year
+        - Gather, de-duplicate and score Search results from multiple sites
+        - Automatically select the best download(s) with custom download-scoring engine
+        - Support all kinds of downloads via JDownloader & Torrent
+        - Automatically unpack, decrypt & move download files to their correct destination Library
+        - Automatically get the Metadata in JellyFin & Enrich with IMDB-Id
+        - Send a notification to the Users in Telegram & remove the request
+
+### Installation- & Usage Requirements
 
 1. A Telegram Username is mandatory for all users who wish to use this Login method.
 2. A valid, public SSL certificate is needed for the Login Widget to work (e.g. LetsEncrypt).
 3. A Telegram Bot (token) is required to cryptographically validate the User Login credentials.
-
-## Installation
-
-You can choose between three options below.
-
-### Option 1: Plugin Repository (easiest)
-
-1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json>
-2. install `TeleJelly` from the Plugin catalogue
-3. restart Jellyfin server
-
-### Option 2: Download manually
-
-If your sever doesn't have internet access, or you need older versions.
-
-1. Download the [Release](https://github.com/hexxone/TeleJelly/releases/) (`TeleJelly_vX.X.X.zip`) for your correct
-   Jellyfin Server TargetAbi
-2. Extract the `.zip`-content into your jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
-3. Restart Jellyfin server
-
-### Option 3: Compile from source
-
-Don't trust the downloads? You can also do it by yourself.
-
-1. run command `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
-2. install [.NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet) (see the [Tools section](#tools) below for the
-   correct Version)
-3. navigate solution folder `cd ./TeleJelly`
-4. run command `dotnet publish Jellyfin.Plugin.TeleJelly -c Release -v d`
-5. you will get a file like `TeleJelly_vX.X.X-alpha.X.X.zip`
-6. extract the `.zip`-content into your jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
-7. restart Jellyfin server
-
-## Configuration
-
-1. Make a new Bot & get the Token via [@Botfather](https://t.me/BotFather)
-2. Make sure to use the `/setdomain` command to link your Jellyfin domain (needs valid SSL cert).
-3. Go to the TeleJelly plugin configuration page and fill in the Bot-Token.
-4. (Optional) Fill in the "Server Domain and Base URL" if you want the bot to use a specific URL in messages.
-5. Add yourself into the "Administrators" list for full access or create an Administrator Group.
-6. Now you should be able to log in via Telegram by visiting `/sso/Telegram`.
-7. You may also include this link in the Login "Branding" via Markdown or HTML. The configuration page provides a *
-   *ready-to-copy code snippet** for this. See screenshots below.
-
-### Group Setup & Linking
-
-To give other users access without making them Admins:
-
-1. Create a new Group on the TeleJelly Config page (e.g., "Friends").
-2. Add the Bot to your corresponding Telegram Group.
-3. Run `/link` inside that Telegram Group to connect it to the TeleJelly Group.
-4. If "Sync Usernames" is enabled, users joining the chat are automatically added to the plugin access list.
 
 ## Bot Interaction
 
@@ -214,28 +184,10 @@ To enable inline search, you need to configure it in **two places**:
 >
 > **Only enable this feature if you trust all users in your TeleJelly groups** and understand that they can share search results anywhere on Telegram.
 
-## Known issues
-
-- This Login-method is intended for Desktop/Browser usage. It has not been tested to be working with official Jellyfin
-  Apps. If you encounter problems, try signing in on a "real" browser instead and use the `Quick Connect` feature when
-  possible. Besides that, there is very little you, or I can do.
-
-- The `Sign in with Telegram` button will sometimes get hidden by Browser Plugins like "I don't like Cookies" or "UBlock
-  Origin". Try disabling these on your Jellyfin domain and inform your users.
-
-- If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to
-  private. In this case, the plugin will fall back to its default icon.
-
-- If a User were to change/sell his Username, a random person would possibly be able to use this Service.
-  However, having Names over ID's is much more convenient for Management.
-
-- If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy;
-  otherwise adversaries might be able to lag the system.
-
 ## Demo Video
 
 _Note: Video & Screenshots are taken
-with [my custom css theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied.
+with [my custom CSS theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4bc43d54e587) applied.
 The Logo is AI-generated._
 
 https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
@@ -266,59 +218,79 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 
 </details>
 
-## Making Changes
+## Installation
 
-### Tools
+You can choose between three options below.
 
-- [git](https://git-scm.com/downloads) if you plan to contribute
-- [Visual Studio](https://visualstudio.microsoft.com/de/downloads/) or Rider IDE
-- [.NET9](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) for Jellyfin >= 10.11
-- [.NET8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) for Jellyfin 10.9 - 10.10
-- [.NET6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) for Jellyfin <= 10.8
-- [Docker](https://www.docker.com/products/docker-desktop/) for local testing
+### Option 1: Plugin Repository (easiest)
 
-### Dependencies
+1. Add the repository: <https://raw.githubusercontent.com/hexxone/TeleJelly/dist/manifest.json>
+2. install `TeleJelly` from the Plugin catalogue
+3. restart Jellyfin server
 
-- [Telegram.Bot](https://github.com/TelegramBots/telegram.bot) telegram bot api interaction
-- [ILRepack](https://github.com/gluck/il-repack) for packing all dependency dlls into one single plugin dll
-- [MinVer](https://github.com/adamralph/minver) for automated Release-versioning via git tags
+### Option 2: Download manually
 
-### Getting Started
+If your sever doesn't have internet access, or you need older versions.
 
-1. Run `git clone https://github.com/hexxone/TeleJelly.git`
-2. Open `TeleJelly.sln` file with Visual Studio or Rider IDE, restore Nuget packages
-3. Copy `example.env`-file to `.env` and fill out the variables
-4. Choose to run Profile `Docker Test`
-5. Afterward Jellyfin with TeleJelly should be reachable under: <https://jellyfin.localhost:8443/>
+1. Download the [Release](https://github.com/hexxone/TeleJelly/releases/) (`TeleJelly_vX.X.X.zip`) for your correct
+   Jellyfin Server TargetAbi
+2. Extract the `.zip`-content into your Jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
+3. Restart Jellyfin server
 
-> Note: the "invalid" SSL certificate warning is normal. You can, however, get a "real" one working with traefik with
-> ease.
+### Option 3: Compile from source
 
-### Contributing
+Don't trust the downloads? You can also do it by yourself.
 
-When implementing a new feature, please name your commit messages in a meaningful way and refer to git best practices.
+1. run command `git clone https://github.com/hexxone/TeleJelly.git` or download as zip.
+2. install [.NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet) (see [Docs](#documentation) for the
+   correct Version)
+3. navigate solution folder `cd ./TeleJelly`
+4. run command `dotnet publish Jellyfin.Plugin.TeleJelly -c Release -v d`
+5. you will get a file like `TeleJelly_vX.X.X-alpha.X.X.zip`
+6. extract the `.zip`-content into your Jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
+7. restart Jellyfin server
 
-The plugin uses "MinVer" and git-tags for semantic versioning.
+## Configuration
 
-Most of the Versions (meta.json and manifest.json) get incremented automatically on release build,
-**but** there are some places that have to be done manually - for example, in the `config.html`.
+1. Make a new Bot & get the Token via [@Botfather](https://t.me/BotFather)
+2. Make sure to use the `/setdomain` command to link your Jellyfin domain (needs valid SSL cert).
+3. Go to the TeleJelly plugin configuration page and fill in the Bot-Token.
+4. (Optional) Fill in the "Server Domain and Base URL" if you want the bot to use a specific URL in messages.
+5. Add yourself into the "Administrators" list for full access or create an Administrator Group.
+6. Now you should be able to log in via Telegram by visiting `/sso/Telegram`.
+7. You may also include this link in the Login "Branding" via Markdown or HTML. The configuration page provides a *
+   *ready-to-copy code snippet** for this. See screenshots below.
 
-When incrementing the version of Jellyfin, remember to set the correct `TargetAbi` version in `JellyfinPluginHelper`!
+### Group Setup & Linking
 
-> Feel free to open a new Pull-Requests for useful additions and fixes.
+To give other users access without making them Admins:
 
-### Release Process
+1. Create a new Group on the TeleJelly Config page (e.g., "Friends").
+2. Add the Bot to your corresponding Telegram Group.
+3. Run `/link` inside that Telegram Group to connect it to the TeleJelly Group.
+4. If "Sync Usernames" is enabled, users joining the chat are automatically added to the plugin access list.
 
-This project uses a GitHub Actions workflow for automated releases (`dotnetcore.yml`). Here is how it ties into the
-release cycle:
+## Known issues
 
-1. **Trigger**: The workflow is triggered manually via the **Actions** tab on GitHub.
-2. **Versioning**: It uses `MinVer` to calculate the version number based on the latest Git tag in the history.
-3. **Build**: The plugin is compiled using the .NET 8 SDK.
-4. **Repository Update**: It automatically updates the `manifest.json` in the orphaned `dist` branch. This allows
-   Jellyfin instances to see the new version immediately via the repository URL.
-5. **GitHub Release**: Finally, it creates a new Release entry on GitHub, drafts the changelog, and attaches the
-   compiled `.zip` file for manual download.
+- This Login-method is intended for Desktop/Browser usage. It has not been tested to be working with official Jellyfin
+  Apps. If you encounter problems, try signing in on a "real" browser instead and use the `Quick Connect` feature when
+  possible. Besides that, there is very little you, or I can do.
+
+- The `Sign in with Telegram` button will sometimes get hidden by Browser Plugins like "I don't like Cookies" or "UBlock
+  Origin". Try disabling these on your Jellyfin domain and inform your users.
+
+- If a User's profile picture fails to download even though the url is given (err 404), he has probably set it to
+  private. In this case, the plugin will fall back to its default icon.
+
+- If a User were to change/sell his Username, a random person would possibly be able to use this Service.
+  However, having Names over ID's is much more convenient for Management.
+
+- If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy;
+  otherwise adversaries might be able to lag the system.
+
+## [Documentation](./TeleJelly/docs/README.md)
+
+## [How to Contribute](./TeleJelly/docs/Contributing.md)
 
 ## Licensing
 

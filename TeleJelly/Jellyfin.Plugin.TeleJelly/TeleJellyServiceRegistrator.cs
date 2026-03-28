@@ -1,5 +1,7 @@
-﻿using Jellyfin.Plugin.TeleJelly.Services;
+using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Search;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Search.Providers;
 using Jellyfin.Plugin.TeleJelly.Telegram;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
@@ -33,6 +35,23 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<PathTemplateService>();
         serviceCollection.AddSingleton<MediaFileOrganizerService>();
         serviceCollection.AddSingleton<IServiceHealthMonitor, ServiceHealthMonitor>();
+        serviceCollection.AddSingleton<QualityRuleEngine>();
+        serviceCollection.AddSingleton<SearchOrchestrator>();
+
+        // Search providers
+        serviceCollection.AddSingleton<ISearchProvider, FunxdSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, JjsSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, HdSourceSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, FilmfansSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, SerienfansSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, CrawliSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, DataLoadSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, DdlWarezSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, Nima4kSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, MovieblogSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, DiscoLoadSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, HdencodeSearchProvider>();
+        serviceCollection.AddSingleton<ISearchProvider, ByteToSearchProvider>();
 
         // Register download clients (torrent services)
         serviceCollection.AddScoped<ITorrentDownloadService, TransmissionService>();

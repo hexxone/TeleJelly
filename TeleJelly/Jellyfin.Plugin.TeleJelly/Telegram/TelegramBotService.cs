@@ -11,6 +11,7 @@ using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 using Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,7 @@ internal sealed class TelegramBotService : ITelegramBotService
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly ILibraryManager _libraryManager;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<int, PendingTorrent> _pendingTorrentUploads = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, PendingExtractionRetry> _pendingExtractionRetries = new();
 
 
     /// <summary>
@@ -327,6 +329,47 @@ internal sealed class TelegramBotService : ITelegramBotService
             return;
         }
 
+        if (message.ReplyToMessage != null &&
+            _pendingExtractionRetries.TryRemove(message.ReplyToMessage.MessageId, out var pendingExtractionRetry))
+        {
+            await HandleExtractionRetryReply(message, pendingExtractionRetry, cancellationToken);
+            return;
+        }
+
+        if (message.ReplyToMessage != null && !string.IsNullOrWhiteSpace(message.Text))
+        {
+            var orchestratorForPathEdit = ServiceProvider.GetService<IDownloadOrchestrator>();
+            if (orchestratorForPathEdit != null && message.From != null)
+            {
+                var pendingPathEdit = orchestratorForPathEdit.GetAllDownloads()
+                    .Where(d =>
+                        d.ChatId == message.Chat.Id &&
+                        d.UserId == message.From.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) &&
+                        d.Status == DownloadStatus.AwaitingPathConfirm)
+                    .OrderByDescending(d => d.StartedAt)
+                    .FirstOrDefault();
+
+                if (pendingPathEdit != null)
+                {
+                    pendingPathEdit.UserConfirmedPath = message.Text.Trim();
+                    pendingPathEdit.SuggestedDestinationPath = message.Text.Trim();
+                    var started = await orchestratorForPathEdit.InitiateDownloadAsync(pendingPathEdit.Id, cancellationToken);
+                    if (BotClientWrapper.Client != null)
+                    {
+                        await BotClientWrapper.Client.SendMessage(
+                            message.Chat.Id,
+                            started
+                                ? $"✅ Download started for <b>{pendingPathEdit.Title}</b>.\nPath: <code>{pendingPathEdit.UserConfirmedPath}</code>"
+                                : $"❌ Failed to start download: {pendingPathEdit.ErrorMessage ?? "No available service."}",
+                            ParseMode.Html,
+                            cancellationToken: cancellationToken);
+                    }
+
+                    return;
+                }
+            }
+        }
+
         if (message.Text == null || !message.Text.StartsWith('/'))
         {
             return; // Not a command, ignore
@@ -412,6 +455,55 @@ internal sealed class TelegramBotService : ITelegramBotService
                     $"❌ Failed to start download: {ex.Message}",
                     cancellationToken: cancellationToken);
             }
+        }
+    }
+
+    private async Task HandleExtractionRetryReply(Message message, PendingExtractionRetry pendingRetry, CancellationToken cancellationToken)
+    {
+        var password = message.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.SendMessage(
+                    message.Chat.Id,
+                    "❌ Extraction password cannot be empty.",
+                    cancellationToken: cancellationToken);
+            }
+
+            return;
+        }
+
+        var orchestrator = ServiceProvider.GetService<IDownloadOrchestrator>();
+        var download = orchestrator?.GetDownload(pendingRetry.DownloadId);
+        if (download == null)
+        {
+            if (BotClientWrapper.Client != null)
+            {
+                await BotClientWrapper.Client.SendMessage(message.Chat.Id, "Download no longer available.", cancellationToken: cancellationToken);
+            }
+
+            return;
+        }
+
+        var extractionSettings = TeleJellyPlugin.Instance?.Configuration.DownloadManager.Extraction;
+        if (extractionSettings != null && !extractionSettings.Passwords.Contains(password))
+        {
+            extractionSettings.Passwords.Add(password);
+            if (TeleJellyPlugin.Instance != null)
+            {
+                TeleJellyPlugin.Instance.SaveConfiguration(TeleJellyPlugin.Instance.Configuration);
+            }
+        }
+
+        await orchestrator!.UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
+        if (BotClientWrapper.Client != null)
+        {
+            await BotClientWrapper.Client.SendMessage(
+                message.Chat.Id,
+                $"🔁 Retry started for <b>{download.Title}</b> with provided password.",
+                ParseMode.Html,
+                cancellationToken: cancellationToken);
         }
     }
 
@@ -512,8 +604,7 @@ internal sealed class TelegramBotService : ITelegramBotService
                     }
                     else
                     {
-                        // Movie: proceed to path confirmation
-                        await ShowPathConfirmation(orchestrator, download, callbackQuery, cancellationToken);
+                        await ContinueWithAutoSearchOrPath(orchestrator, download, callbackQuery, cancellationToken);
                     }
 
                     break;
@@ -522,10 +613,48 @@ internal sealed class TelegramBotService : ITelegramBotService
                     if (int.TryParse(value, out var seasonNum))
                     {
                         download.Season = seasonNum;
-                        await ShowPathConfirmation(orchestrator, download, callbackQuery, cancellationToken);
+                        await ContinueWithAutoSearchOrPath(orchestrator, download, callbackQuery, cancellationToken);
                     }
 
                     break;
+
+                case "result":
+                    if (!int.TryParse(value, out var resultIndex) || download.SearchResults == null || resultIndex < 0 || resultIndex >= download.SearchResults.Length)
+                    {
+                        await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Invalid search result.", cancellationToken: cancellationToken);
+                        break;
+                    }
+
+                    var selectedResult = download.SearchResults[resultIndex];
+                    download.LinkOrMagnet = selectedResult.DownloadLink;
+                    download.SourcePassword = selectedResult.Password;
+                    await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Result selected.", cancellationToken: cancellationToken);
+
+                    await ShowDynamicPathVariableSelection(orchestrator, download, callbackQuery, cancellationToken);
+                    break;
+
+                case "pathvar":
+                {
+                    var pathVarPrefix = $"dl_{download.Id}_pathvar_";
+                    var encodedPayload = callbackQuery.Data.StartsWith(pathVarPrefix, StringComparison.Ordinal)
+                        ? callbackQuery.Data[pathVarPrefix.Length..]
+                        : string.Empty;
+                    var separatorIndex = encodedPayload.IndexOf('_');
+                    if (separatorIndex < 1 || separatorIndex + 1 >= encodedPayload.Length)
+                    {
+                        await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Invalid path variable value.", cancellationToken: cancellationToken);
+                        break;
+                    }
+
+                    var name = Uri.UnescapeDataString(encodedPayload[..separatorIndex]);
+                    var selectedValue = Uri.UnescapeDataString(encodedPayload[(separatorIndex + 1)..]);
+
+                    download.FilledPathVariables ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    download.FilledPathVariables[name] = selectedValue;
+
+                    await ShowDynamicPathVariableSelection(orchestrator, download, callbackQuery, cancellationToken);
+                    break;
+                }
 
                 case "accept":
                     // Accept the path and initiate download
@@ -554,6 +683,22 @@ internal sealed class TelegramBotService : ITelegramBotService
                         }
                     }
 
+                    break;
+
+                case "retry":
+                    if (parts.Length >= 4 && parts[3].Equals("extraction", StringComparison.OrdinalIgnoreCase) &&
+                        download.Status == DownloadStatus.ExtractionFailed)
+                    {
+                        if (BotClientWrapper.Client != null)
+                        {
+                            var retryMessage = await BotClientWrapper.Client.SendMessage(
+                                callbackQuery.Message!.Chat.Id,
+                                "Reply with the extraction password to retry:",
+                                replyMarkup: new ForceReplyMarkup { Selective = true },
+                                cancellationToken: cancellationToken);
+                            _pendingExtractionRetries[retryMessage.MessageId] = new PendingExtractionRetry { DownloadId = download.Id };
+                        }
+                    }
                     break;
 
                 case "edit":
@@ -645,7 +790,7 @@ internal sealed class TelegramBotService : ITelegramBotService
                 proposedPath = await pathTemplater.ApplyTemplateAsync(
                     librarySettings.PathTemplate,
                     download,
-                    new Dictionary<string, string>(),
+                    download.FilledPathVariables ?? new Dictionary<string, string>(),
                     download.Title);
             }
             catch (Exception ex)
@@ -673,6 +818,148 @@ internal sealed class TelegramBotService : ITelegramBotService
             $"Please confirm or edit the download path:",
             ParseMode.Html,
             replyMarkup: confirmKeyboard,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task ContinueWithAutoSearchOrPath(
+        IDownloadOrchestrator orchestrator,
+        ManagedDownload download,
+        CallbackQuery callbackQuery,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(download.LinkOrMagnet))
+        {
+            await ShowPathConfirmation(orchestrator, download, callbackQuery, cancellationToken);
+            return;
+        }
+
+        var searchOrchestrator = ServiceProvider.GetService<SearchOrchestrator>();
+        if (searchOrchestrator == null)
+        {
+            await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "Search orchestrator unavailable.");
+            await BotClientWrapper.Client!.EditMessageText(
+                callbackQuery.Message!.Chat.Id,
+                callbackQuery.Message.MessageId,
+                "❌ Automated search is currently unavailable.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var config = TeleJellyPlugin.Instance!.Configuration.DownloadManager;
+        var librarySettings = config.LibrarySettings.FirstOrDefault(l => l.LibraryId == download.TargetLibraryId) ?? new LibrarySettings();
+        var query = download.MediaType == MediaType.Series && download.Season.HasValue
+            ? $"{download.Title} {download.Year} S{download.Season:00}"
+            : $"{download.Title} {download.Year}";
+
+        var rankedResults = await searchOrchestrator.SearchAndRankAsync(
+            query,
+            download.ImdbId,
+            librarySettings.QualityProfile,
+            maxResults: 5,
+            cancellationToken,
+            config.Search.EnabledServices);
+
+        if (rankedResults.Count == 0)
+        {
+            await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "No search results found.");
+            await BotClientWrapper.Client!.EditMessageText(
+                callbackQuery.Message!.Chat.Id,
+                callbackQuery.Message.MessageId,
+                "❌ No matching download results found for the selected media.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        download.SearchResults = rankedResults.ToArray();
+        await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.AwaitingSearchResult);
+
+        var buttons = rankedResults
+            .Select((result, index) =>
+            {
+                var label = $"{index + 1}. {result.Title}";
+                if (label.Length > 55)
+                {
+                    label = label[..55];
+                }
+
+                return new[] { InlineKeyboardButton.WithCallbackData(label, $"dl_{download.Id}_result_{index}") };
+            })
+            .ToList();
+        buttons.Add([InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel")]);
+
+        await BotClientWrapper.Client!.EditMessageText(
+            callbackQuery.Message!.Chat.Id,
+            callbackQuery.Message.MessageId,
+            $"<b>Top Search Results</b>\nSelect one result for <b>{download.Title}</b>:",
+            ParseMode.Html,
+            replyMarkup: new InlineKeyboardMarkup(buttons),
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task ShowDynamicPathVariableSelection(
+        IDownloadOrchestrator orchestrator,
+        ManagedDownload download,
+        CallbackQuery callbackQuery,
+        CancellationToken cancellationToken)
+    {
+        var config = TeleJellyPlugin.Instance!.Configuration.DownloadManager;
+        var librarySettings = config.LibrarySettings.FirstOrDefault(l => l.LibraryId == download.TargetLibraryId) ?? new LibrarySettings();
+        var pathTemplater = ServiceProvider.GetService<PathTemplateService>();
+        if (pathTemplater == null)
+        {
+            await ShowPathConfirmation(orchestrator, download, callbackQuery, cancellationToken);
+            return;
+        }
+
+        var dynamicVars = await pathTemplater.ExtractDynamicVariablesAsync(librarySettings.PathTemplate, librarySettings);
+        download.PendingPathVariables ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        download.FilledPathVariables ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dynamicVar in dynamicVars)
+        {
+            if (download.PendingPathVariables.ContainsKey(dynamicVar.Name) || download.FilledPathVariables.ContainsKey(dynamicVar.Name))
+            {
+                continue;
+            }
+
+            var defaultOption = dynamicVar.DefaultValue ?? dynamicVar.Options.FirstOrDefault() ?? string.Empty;
+            download.PendingPathVariables[dynamicVar.Name] = defaultOption;
+        }
+
+        var nextVariable = dynamicVars.FirstOrDefault(v => !download.FilledPathVariables.ContainsKey(v.Name));
+        if (nextVariable == null)
+        {
+            await ShowPathConfirmation(orchestrator, download, callbackQuery, cancellationToken);
+            return;
+        }
+
+        await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.AwaitingPathVars);
+        var optionButtons = nextVariable.Options
+            .Select(option =>
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        option,
+                        $"dl_{download.Id}_pathvar_{Uri.EscapeDataString(nextVariable.Name)}_{Uri.EscapeDataString(option)}")
+                })
+            .ToList();
+        if (!string.IsNullOrEmpty(nextVariable.DefaultValue))
+        {
+            optionButtons.Add(
+            [
+                InlineKeyboardButton.WithCallbackData(
+                    $"Default ({nextVariable.DefaultValue})",
+                    $"dl_{download.Id}_pathvar_{Uri.EscapeDataString(nextVariable.Name)}_{Uri.EscapeDataString(nextVariable.DefaultValue)}")
+            ]);
+        }
+
+        optionButtons.Add([InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel")]);
+        await BotClientWrapper.Client!.EditMessageText(
+            callbackQuery.Message!.Chat.Id,
+            callbackQuery.Message.MessageId,
+            $"Select value for path variable <b>{nextVariable.Name}</b>:",
+            ParseMode.Html,
+            replyMarkup: new InlineKeyboardMarkup(optionButtons),
             cancellationToken: cancellationToken);
     }
 
@@ -935,5 +1222,10 @@ internal sealed class TelegramBotService : ITelegramBotService
         public long UserId { get; init; }
         public long ChatId { get; init; }
         public DateTime UploadedAt { get; init; }
+    }
+
+    private sealed class PendingExtractionRetry
+    {
+        public Guid DownloadId { get; init; }
     }
 }

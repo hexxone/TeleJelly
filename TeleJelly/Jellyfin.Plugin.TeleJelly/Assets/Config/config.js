@@ -101,12 +101,25 @@ Sign in with Telegram
 
     /** ======== ======== DOWNLOAD MANAGER ======== ======== */
     loadDownloads: (page) => {
+        const selectedStatus = page.querySelector("#DownloadStatusFilter")?.value || "All";
+        const query = selectedStatus && selectedStatus !== "All"
+            ? `?status=${encodeURIComponent(selectedStatus)}`
+            : "";
+
         window.ApiClient.ajax({
-            url: window.ApiClient.getUrl("/TeleJelly/DownloadManager/downloads"),
+            url: window.ApiClient.getUrl(`/TeleJelly/DownloadManager/downloads${query}`),
             type: "GET",
             dataType: "json"
         }).then((downloads) => {
             tgConfigPage.populateDownloads(page, downloads);
+        });
+
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl("/TeleJelly/DownloadManager/health"),
+            type: "GET",
+            dataType: "json"
+        }).then((health) => {
+            tgConfigPage.populateServiceHealth(page, health);
         });
     },
 
@@ -119,41 +132,67 @@ Sign in with Telegram
             return;
         }
 
+        const header = document.createElement("div");
+        header.className = "listItem listItem-border";
+        header.style.display = "grid";
+        header.style.gridTemplateColumns = "2fr 1fr 0.7fr 1fr 1fr 0.8fr";
+        header.style.fontWeight = "bold";
+        header.style.padding = "0.5em";
+        header.innerHTML = "<div>Title</div><div>Status</div><div>Progress</div><div>Service</div><div>Started</div><div>Action</div>";
+        listContainer.appendChild(header);
+
         downloads.forEach(dl => {
             const item = document.createElement("div");
             item.className = "listItem listItem-border";
-            item.style.display = "flex";
+            item.style.display = "grid";
+            item.style.gridTemplateColumns = "2fr 1fr 0.7fr 1fr 1fr 0.8fr";
             item.style.alignItems = "center";
-            item.style.justifyContent = "space-between";
             item.style.padding = "0.5em";
-
-            const info = document.createElement("div");
-            info.style.display = "flex";
-            info.style.flexDirection = "column";
-
-            const title = document.createElement("div");
-            title.style.fontWeight = "bold";
-            title.textContent = `${dl.Title} (${dl.Year})`;
-
-            const details = document.createElement("div");
-            details.style.opacity = "0.7";
-            details.style.fontSize = "0.9em";
-            details.textContent = `Status: ${dl.Status} | Progress: ${dl.ProgressPercentage.toFixed(1)}% | Started: ${new Date(dl.StartedAt).toLocaleString()}`;
-
-            info.appendChild(title);
-            info.appendChild(details);
-            item.appendChild(info);
 
             const cancelBtn = document.createElement("button");
             cancelBtn.is = "emby-button";
             cancelBtn.type = "button";
             cancelBtn.className = "raised button-cancel emby-button";
             cancelBtn.textContent = "Cancel";
-            cancelBtn.style.marginLeft = "1em";
             cancelBtn.onclick = () => tgConfigPage.cancelDownload(page, dl.Id);
 
+            const title = document.createElement("div");
+            title.textContent = `${dl.Title} (${dl.Year || "?"})`;
+            const status = document.createElement("div");
+            status.textContent = dl.Status;
+            const progress = document.createElement("div");
+            progress.textContent = `${dl.ProgressPercentage.toFixed(1)}%`;
+            const service = document.createElement("div");
+            service.textContent = dl.ServiceName || "n/a";
+            const started = document.createElement("div");
+            started.textContent = new Date(dl.StartedAt).toLocaleString();
+
+            item.appendChild(title);
+            item.appendChild(status);
+            item.appendChild(progress);
+            item.appendChild(service);
+            item.appendChild(started);
             item.appendChild(cancelBtn);
             listContainer.appendChild(item);
+        });
+    },
+
+    populateServiceHealth: (page, healthEntries) => {
+        const healthContainer = page.querySelector("#ServiceHealthList");
+        if (!healthContainer) return;
+
+        healthContainer.innerHTML = "";
+        if (!healthEntries || healthEntries.length === 0) {
+            healthContainer.innerHTML = '<div class="listItem">No service health data yet.</div>';
+            return;
+        }
+
+        healthEntries.forEach(entry => {
+            const row = document.createElement("div");
+            row.className = "listItem listItem-border";
+            row.style.padding = "0.5em";
+            row.textContent = `${entry.ServiceName}: ${entry.State} | Failures: ${entry.ConsecutiveFailures} | Last success: ${entry.LastSuccess ? new Date(entry.LastSuccess).toLocaleString() : "never"}`;
+            healthContainer.appendChild(row);
         });
     },
 
@@ -895,6 +934,9 @@ export default function (view) {
         e.preventDefault();
         tgConfigPage.loadDownloads(view);
         window.Dashboard.alert('Download list refreshed');
+    });
+    view.querySelector("#DownloadStatusFilter").addEventListener("change", () => {
+        tgConfigPage.loadDownloads(view);
     });
 
     // Bot token validation

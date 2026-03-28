@@ -35,9 +35,14 @@ internal sealed class PyLoadService : IHostedDownloadService, IDisposable
 
     public bool CanHandle(string linkOrFile)
     {
-        return !string.IsNullOrEmpty(linkOrFile) &&
-               Uri.TryCreate(linkOrFile, UriKind.Absolute, out var uri) &&
-               (uri.Scheme == "http" || uri.Scheme == "https");
+        if (string.IsNullOrWhiteSpace(linkOrFile))
+        {
+            return false;
+        }
+
+        return SplitLinks(linkOrFile)
+            .All(link => Uri.TryCreate(link, UriKind.Absolute, out var uri) &&
+                         (uri.Scheme == "http" || uri.Scheme == "https"));
     }
 
     public async Task<string> AddDownloadAsync(string linkOrFile, CancellationToken ct)
@@ -49,7 +54,7 @@ internal sealed class PyLoadService : IHostedDownloadService, IDisposable
         var payload = new
         {
             name = $"TeleJelly_{DateTime.UtcNow:yyyyMMdd_HHmmss}",
-            links = new[] { linkOrFile },
+            links = SplitLinks(linkOrFile),
             dest = Config.StagingPath
         };
 
@@ -269,6 +274,12 @@ internal sealed class PyLoadService : IHostedDownloadService, IDisposable
     public void Dispose()
     {
         _httpClient?.Dispose();
+    }
+
+    private static string[] SplitLinks(string linkOrFile)
+    {
+        return linkOrFile
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     private class PyLoadPackageInfo

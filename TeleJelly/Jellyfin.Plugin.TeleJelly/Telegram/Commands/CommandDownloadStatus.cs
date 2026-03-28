@@ -15,11 +15,13 @@ namespace Jellyfin.Plugin.TeleJelly.Telegram.Commands;
 
 public class CommandDownloadStatus : ICommandBase
 {
+    private readonly IServiceHealthMonitor _healthMonitor;
     private readonly IDownloadOrchestrator _orchestrator;
 
-    public CommandDownloadStatus(IDownloadOrchestrator orchestrator)
+    public CommandDownloadStatus(IDownloadOrchestrator orchestrator, IServiceHealthMonitor healthMonitor)
     {
         _orchestrator = orchestrator;
+        _healthMonitor = healthMonitor;
     }
 
     public string Command => "download_status";
@@ -72,6 +74,20 @@ public class CommandDownloadStatus : ICommandBase
             sb.AppendLine(CultureInfo.InvariantCulture, $"Started: {download.StartedAt:g}");
             sb.AppendLine(CultureInfo.InvariantCulture, $"ID: <code>{download.Id}</code>");
             sb.AppendLine("---");
+        }
+
+        var health = _healthMonitor.GetAllServiceHealth().ToArray();
+        if (health.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("<b>Service Health:</b>");
+            foreach (var status in health)
+            {
+                var lastSuccess = status.LastSuccess?.ToString("g", CultureInfo.InvariantCulture) ?? "never";
+                sb.AppendLine(
+                    CultureInfo.InvariantCulture,
+                    $"• <b>{status.ServiceName}</b>: <i>{status.State}</i> | Failures: {status.ConsecutiveFailures} | Last success: {lastSuccess}");
+            }
         }
 
         await client.SendMessage(

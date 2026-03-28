@@ -7,12 +7,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using JDownloader.Model;
 using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using MediaBrowser.Controller.Configuration;
 using Microsoft.Extensions.Logging;
-using Transmission.API.RPC.Entity;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
@@ -37,6 +35,8 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
     private readonly IServerConfigurationManager _configurationManager;
 
     private readonly ConcurrentDictionary<Guid, ManagedDownload> _downloads = new();
+    private readonly ConcurrentDictionary<Guid, byte> _processingDownloads = new();
+    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _downloadLocks = new();
     private readonly MediaFileOrganizerService _fileOrganizer;
     private readonly IEnumerable<IHostedDownloadService> _hostedServices;
     private readonly ILogger<DownloadOrchestrator> _logger;
@@ -45,6 +45,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
     private readonly string _persistencePath;
     private readonly IEnumerable<ITorrentDownloadService> _torrentServices;
     private readonly IServiceHealthMonitor _healthMonitor;
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
 
     public DownloadOrchestrator(
         ILogger<DownloadOrchestrator> logger,
@@ -100,12 +101,23 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
     public async Task UpdateDownloadStatus(Guid id, DownloadStatus newStatus, string? errorMessage = null)
     {
-        if (_downloads.TryGetValue(id, out var download))
+        await WithDownloadLockAsync(id, async () =>
         {
+            if (!_downloads.TryGetValue(id, out var download))
+            {
+                return;
+            }
+
+            if (!IsValidTransition(download.Status, newStatus))
+            {
+                _logger.LogDebug("Ignoring invalid state transition for {DownloadId}: {From} -> {To}", id, download.Status, newStatus);
+                return;
+            }
+
             download.Status = newStatus;
             download.ErrorMessage = errorMessage;
             await SaveDownloadsAsync();
-        }
+        });
     }
 
     public ManagedDownload? GetDownload(Guid id)
@@ -120,8 +132,17 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
     public async Task ProcessAllDownloadsAsync(CancellationToken stoppingToken)
     {
-        foreach (var download in _downloads.Values.Where(d => d.Status != DownloadStatus.Completed && d.Status != DownloadStatus.Failed))
+        var activeDownloads = _downloads.Values
+            .Where(d => d.Status != DownloadStatus.Completed && d.Status != DownloadStatus.Failed && d.Status != DownloadStatus.Canceled)
+            .ToArray();
+
+        foreach (var download in activeDownloads)
         {
+            if (!_processingDownloads.TryAdd(download.Id, 0))
+            {
+                continue;
+            }
+
             try
             {
                 await ProcessDownloadAsync(download, stoppingToken);
@@ -130,6 +151,10 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             {
                 _logger.LogError(ex, "Failed to process download {DownloadId}", download.Id);
                 await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, ex.Message);
+            }
+            finally
+            {
+                _processingDownloads.TryRemove(download.Id, out _);
             }
         }
     }
@@ -281,7 +306,10 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             download.CurrentStagingPath = extractionPath;
 
             var config = TeleJellyPlugin.Instance!.Configuration.DownloadManager.Extraction;
-            var passwords = config.Passwords.ToArray();
+            var passwords = config.Passwords
+                .Concat(string.IsNullOrWhiteSpace(download.SourcePassword) ? [] : [download.SourcePassword!])
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
 
             foreach (var archive in archives)
             {
@@ -369,49 +397,72 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             ? DownloadServiceType.Hosted
             : DownloadServiceType.Torrent;
 
-        var selectedService = SelectServiceForDownload(download.LinkOrMagnet, serviceType);
-        if (selectedService == null)
+        var candidates = SelectServicesForDownload(download.LinkOrMagnet, serviceType).ToArray();
+        if (!candidates.Any())
         {
-            _logger.LogError("No available service found for download {DownloadId}", downloadId);
+            _logger.LogError("No available services found for download {DownloadId}", downloadId);
             await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "No download service available");
             return false;
         }
 
-        try
+        foreach (var candidate in candidates)
         {
-            string serviceDownloadId;
-            if (serviceType == DownloadServiceType.Torrent)
+            var serviceName = candidate switch
             {
-                var torrentService = selectedService as ITorrentDownloadService;
-                serviceDownloadId = await torrentService!.AddDownloadAsync(download.LinkOrMagnet, ct);
-                _logger.LogInformation("Started torrent download with {ServiceName}: {DownloadId}", torrentService.ServiceName, serviceDownloadId);
-            }
-            else
+                ITorrentDownloadService torrent => torrent.ServiceName,
+                IHostedDownloadService hosted => hosted.ServiceName,
+                _ => "unknown"
+            };
+
+            for (var attempt = 1; attempt <= 3; attempt++)
             {
-                var hostedService = selectedService as IHostedDownloadService;
-                serviceDownloadId = await hostedService!.AddDownloadAsync(download.LinkOrMagnet, ct);
-                _logger.LogInformation("Started hosted download with {ServiceName}: {DownloadId}", hostedService.ServiceName, serviceDownloadId);
+                try
+                {
+                    string serviceDownloadId;
+                    if (candidate is ITorrentDownloadService torrentService)
+                    {
+                        serviceDownloadId = await torrentService.AddDownloadAsync(download.LinkOrMagnet, ct);
+                        _logger.LogInformation("Started torrent download with {ServiceName}: {DownloadId}", torrentService.ServiceName, serviceDownloadId);
+                    }
+                    else if (candidate is IHostedDownloadService hostedService)
+                    {
+                        serviceDownloadId = await hostedService.AddDownloadAsync(download.LinkOrMagnet, ct);
+                        _logger.LogInformation("Started hosted download with {ServiceName}: {DownloadId}", hostedService.ServiceName, serviceDownloadId);
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                    download.ServiceDownloadId = serviceDownloadId;
+                    download.ServiceName = serviceName;
+                    download.ServiceType = serviceType;
+
+                    await UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Attempt {Attempt} failed for download {DownloadId} using service {ServiceName}",
+                        attempt, downloadId, serviceName);
+
+                    if (attempt >= 3)
+                    {
+                        break;
+                    }
+
+                    var backoffSeconds = Math.Pow(2, attempt - 1);
+                    await Task.Delay(TimeSpan.FromSeconds(backoffSeconds), ct);
+                }
             }
-
-            download.ServiceDownloadId = serviceDownloadId;
-            download.ServiceName = serviceType == DownloadServiceType.Torrent
-                ? (selectedService as ITorrentDownloadService)!.ServiceName
-                : (selectedService as IHostedDownloadService)!.ServiceName;
-            download.ServiceType = serviceType;
-
-            await UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
-            return true;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initiate download {DownloadId} with service {ServiceName}",
-                downloadId, selectedService);
-            await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, $"Failed to start download: {ex.Message}");
-            return false;
-        }
+
+        await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "Failed to start download on all available services.");
+        return false;
     }
 
-    private object? SelectServiceForDownload(string linkOrMagnet, DownloadServiceType serviceType)
+    private IEnumerable<object> SelectServicesForDownload(string linkOrMagnet, DownloadServiceType serviceType)
     {
         if (serviceType == DownloadServiceType.Torrent)
         {
@@ -421,9 +472,13 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
             if (availableServices.Any())
             {
-                var selected = availableServices.First();
-                _logger.LogInformation("Selected torrent service: {ServiceName}", selected.ServiceName);
-                return selected;
+                foreach (var service in availableServices)
+                {
+                    _logger.LogInformation("Torrent service candidate: {ServiceName}", service.ServiceName);
+                    yield return service;
+                }
+
+                yield break;
             }
         }
         else
@@ -434,14 +489,17 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
             if (availableServices.Any())
             {
-                var selected = availableServices.First();
-                _logger.LogInformation("Selected hosted service: {ServiceName}", selected.ServiceName);
-                return selected;
+                foreach (var service in availableServices)
+                {
+                    _logger.LogInformation("Hosted service candidate: {ServiceName}", service.ServiceName);
+                    yield return service;
+                }
+
+                yield break;
             }
         }
 
         _logger.LogWarning("No available {ServiceType} service found for link: {Link}", serviceType, linkOrMagnet);
-        return null;
     }
 
     private bool IsHostedDownload(string linkOrMagnet)
@@ -491,6 +549,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
     private async Task SaveDownloadsAsync()
     {
+        await _saveLock.WaitAsync();
         try
         {
             var json = JsonSerializer.Serialize(_downloads.Values, new JsonSerializerOptions { WriteIndented = true });
@@ -500,5 +559,54 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
         {
             _logger.LogError(ex, "Failed to save downloads to persistence.");
         }
+        finally
+        {
+            _saveLock.Release();
+        }
+    }
+
+    private async Task WithDownloadLockAsync(Guid id, Func<Task> action)
+    {
+        var lockForDownload = _downloadLocks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+        await lockForDownload.WaitAsync();
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            lockForDownload.Release();
+        }
+    }
+
+    private static bool IsValidTransition(DownloadStatus from, DownloadStatus to)
+    {
+        if (from == to)
+        {
+            return true;
+        }
+
+        if (to is DownloadStatus.Failed or DownloadStatus.Canceled)
+        {
+            return true;
+        }
+
+        return from switch
+        {
+            DownloadStatus.Pending => to is DownloadStatus.AwaitingLibrary or DownloadStatus.AwaitingMediaType,
+            DownloadStatus.AwaitingLibrary => to == DownloadStatus.AwaitingMediaType,
+            DownloadStatus.AwaitingMediaType => to is DownloadStatus.AwaitingSeason or DownloadStatus.AwaitingSearchResult or DownloadStatus.AwaitingPathConfirm,
+            DownloadStatus.AwaitingSeason => to is DownloadStatus.AwaitingSearchResult or DownloadStatus.AwaitingPathConfirm,
+            DownloadStatus.AwaitingSearchResult => to is DownloadStatus.AwaitingPathVars or DownloadStatus.AwaitingPathConfirm,
+            DownloadStatus.AwaitingPathVars => to is DownloadStatus.AwaitingPathVars or DownloadStatus.AwaitingPathConfirm,
+            DownloadStatus.AwaitingPathConfirm => to == DownloadStatus.Downloading,
+            DownloadStatus.Downloading => to is DownloadStatus.Extracting or DownloadStatus.Stalled,
+            DownloadStatus.Extracting => to is DownloadStatus.Analyzing or DownloadStatus.ExtractionFailed,
+            DownloadStatus.ExtractionFailed => to == DownloadStatus.Extracting,
+            DownloadStatus.Analyzing => to == DownloadStatus.Organizing,
+            DownloadStatus.Organizing => to == DownloadStatus.Completed,
+            DownloadStatus.Stalled => to is DownloadStatus.Downloading or DownloadStatus.Extracting,
+            _ => false
+        };
     }
 }

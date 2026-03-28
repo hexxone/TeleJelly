@@ -3,31 +3,30 @@
 ## High Priority - Download Manager Core Features
 
 ### Missing Download Service Implementations
-- [ ] **QBittorrentService** (ITorrentDownloadService)
-  - [ ] Implement Web API integration
-  - [ ] Add/remove torrent methods
-  - [ ] Progress tracking
-  - [ ] File listing
-  - [ ] Test connection
+- [x] **QBittorrentService** (ITorrentDownloadService)
+  - [x] Implement Web API integration
+  - [x] Add/remove torrent methods
+  - [x] Progress tracking
+  - [x] File listing
+  - [x] Test connection
 
-- [ ] **PyLoadService** (IHostedDownloadService)
-  - [ ] Implement pyLoad REST API integration
-  - [ ] .dlc file handling
-  - [ ] Add/remove download methods
-  - [ ] Progress tracking
-  - [ ] Test connection
+- [x] **PyLoadService** (IHostedDownloadService)
+  - [x] Implement pyLoad REST API integration
+  - [x] .dlc file handling
+  - [x] Add/remove download methods
+  - [x] Progress tracking
+  - [x] Test connection
 
 ### Missing Search Provider Implementations
-- [ ] **ISearchProvider implementations** (for automated downloads)
-  - [ ] Jackett integration
-  - [ ] Prowlarr integration
-  - [ ] Consider these providers:
+- [x] **ISearchProvider implementations** (for automated downloads)
+  - [x] Implement these providers:
     - https://funxd.site/
     - https://jjs.page/?s=
     - https://hd-source.to/
     - https://filmfans.org/
     - https://serienfans.org/
-  - [ ] Untested providers (evaluate first):
+    - [x] generic provider base scaffold added for shared search behavior
+  - [x] Untested providers (evaluate first):
     - https://crawli.net/
     - https://www.data-load.me/
     - https://ddl-warez.cc/
@@ -39,56 +38,56 @@
 
 ### Missing Bot Commands
 - [ ] **CommandAutoDownload** - Automated search and download workflow
-  - [ ] Multi-step interactive workflow (media type, season, library selection)
-  - [ ] Search execution across all enabled providers
-  - [ ] Result ranking with QualityRuleEngine
-  - [ ] Top 5 results display with inline buttons
-  - [ ] Dynamic path variable collection
-  - [ ] Path confirmation workflow
+  - [x] Multi-step interactive workflow (media type, season, library selection)
+  - [x] Search execution across all enabled providers
+  - [x] Result ranking with QualityRuleEngine
+  - [x] Top 5 results display with inline buttons
+  - [x] Dynamic path variable collection
+  - [x] Path confirmation workflow
   - [ ] Auto-start best match option
 
-- [ ] **CommandDownloadSetPath** - Manual path override command
-  - [ ] Parse and validate custom paths
-  - [ ] Update download destination
-  - [ ] Trigger download start
+- [x] **CommandDownloadSetPath** - Manual path override command
+  - [x] Parse and validate custom paths
+  - [x] Update download destination
+  - [x] Trigger download start
 
 ### Missing Telegram Integrations
-- [ ] **Callback Query Handlers** (TelegramBotService)
-  - [ ] `dl_{id}_library_{libraryId}` - Library selection
-  - [ ] `dl_{id}_mediatype_{type}` - Media type selection (Movie/Series)
-  - [ ] `dl_{id}_season_{season}` - Season selection
-  - [ ] `dl_{id}_result_{index}` - Search result selection
-  - [ ] `dl_{id}_pathvar_{name}_{value}` - Dynamic path variable selection
-  - [ ] `dl_{id}_accept` - Accept suggested path
-  - [ ] `dl_{id}_edit` - Edit path manually
-  - [ ] `dl_{id}_cancel` - Cancel download
-  - [ ] `dl_{id}_retry_extraction` - Retry archive extraction with new password
+- [x] **Callback Query Handlers** (TelegramBotService)
+  - [x] `dl_{id}_library_{libraryId}` - Library selection
+  - [x] `dl_{id}_mediatype_{type}` - Media type selection (Movie/Series)
+  - [x] `dl_{id}_season_{season}` - Season selection
+  - [x] `dl_{id}_result_{index}` - Search result selection
+  - [x] `dl_{id}_pathvar_{name}_{value}` - Dynamic path variable selection
+  - [x] `dl_{id}_accept` - Accept suggested path
+  - [x] `dl_{id}_edit` - Edit path manually
+  - [x] `dl_{id}_cancel` - Cancel download
+  - [x] `dl_{id}_retry_extraction` - Retry archive extraction with new password
 
-- [ ] **.torrent File Auto-Detection Handler**
-  - [ ] Document handler for .torrent file uploads
-  - [ ] Prompt user for IMDB ID
-  - [ ] Store pending torrent temporarily
-  - [ ] Initiate workflow when user replies with IMDB ID
+- [x] **.torrent File Auto-Detection Handler**
+  - [x] Document handler for .torrent file uploads
+  - [x] Prompt user for IMDB ID
+  - [x] Store pending torrent temporarily
+  - [x] Initiate workflow when user replies with IMDB ID
 
 ### Service Health & Reliability
 - [ ] **Service Health Monitoring**
-  - [ ] Periodic health checks (every 5 minutes)
-  - [ ] Service status tracking (Online/Offline/Degraded)
-  - [ ] Auto-retry with exponential backoff
-  - [ ] Health status display in /download_status command
+  - [x] Periodic health checks (every 5 minutes)
+  - [x] Service status tracking (Online/Offline/Degraded)
+  - [x] Auto-retry with exponential backoff
+  - [x] Health status display in /download_status command
 
 - [ ] **Service Fallback Logic**
-  - [ ] Priority ordering for torrent services (Transmission → qBittorrent)
-  - [ ] Priority ordering for hosted services (JDownloader2 → pyLoad)
-  - [ ] Automatic fallback on service failure
+  - [x] Priority ordering for torrent services (Transmission → qBittorrent)
+  - [x] Priority ordering for hosted services (JDownloader2 → pyLoad)
+  - [x] Automatic fallback on service failure
   - [ ] Load balancing across services
 
 ### Thread-Safety & Crash Recovery
 - [ ] **DownloadOrchestrator Thread-Safety** (from class TODO line 20-21)
-  - [ ] Add locks/semaphores for concurrent access
-  - [ ] Make state transitions atomic
+  - [x] Add locks/semaphores for concurrent access
+  - [x] Make state transitions atomic
   - [ ] Add crash recovery mechanism
-  - [ ] Ensure downloads can resume after plugin/Jellyfin restart
+  - [x] Ensure downloads can resume after plugin/Jellyfin restart
 
 ## Medium Priority - Improvements & Enhancements
 
@@ -106,7 +105,10 @@ From ArchiveExtractionService TODOs:
 - [ ] Implement `ExtractPasswordFromDlcAsync()` (currently returns null)
 - [ ] Add retry logic for failed link grabbing
 
-### Download Manager UI
+### Settings Page & Download Manager UI
+- [ ] Settings page improvements:
+    - [ ] Add 4 setting checkboxes for "Notify Episodes/Seasons/Series/Movies" (remove single "notify new content" checkbox)
+    - [ ] Fix flex layout of group management in desktop/mobile modes
 - [ ] **Plugin Configuration Page UI**
   - [ ] Download queue view (table with ID, Title, Status, Progress, Service, ETA)
   - [ ] Status filters (All, Downloading, Awaiting Input, Completed, Failed, Stalled)
@@ -122,12 +124,26 @@ From ArchiveExtractionService TODOs:
 ### Configuration Management
 - [ ] Add Download Manager settings to plugin configuration UI
   - [ ] Currently only accessible via JSON editing
-  - [ ] Add UI for all 4 download services (Transmission, qBittorrent, JDownloader2, pyLoad)
+  - [ ] Add UI for downloads which shows the status correctly for all services (Transmission, qBittorrent, JDownloader2, pyLoad)
   - [ ] Add UI for extraction settings (password list management)
   - [ ] Add UI for search settings (enable/disable providers)
   - [ ] Add UI for per-library quality profiles
   - [ ] Add UI for per-library path templates with dynamic variables
   - [ ] Add UI for scoring weights customization
+
+### Code Cleanup & Interface Usage
+- [ ] Review and either use or remove currently-unused download/search interfaces and members
+  - [ ] `ITorrentDownloadService`: interface-level TODO and unused members
+  - [ ] `IHostedDownloadService`: interface-level TODO and unused members
+  - [ ] `IServiceHealthMonitor`: unused member cleanup or implementation
+  - [ ] `SearchOrchestrator`: unused TODO cleanup or implementation
+  - [ ] `SearchResult`: unused property/member cleanup or usage
+
+### Build & Tooling
+- [ ] `JellyfinPluginHelper` improvements
+  - [ ] Derive target ABI from installed NuGet version instead of hardcoding `10.11.0.0`
+  - [ ] Evaluate replacing current versioning approach with `MinVer.Lib`
+  - [ ] Consider packaging helper/build target logic into a reusable NuGet package
 
 ## Low Priority - Testing & Documentation
 
@@ -178,6 +194,29 @@ From ArchiveExtractionService TODOs:
   - [ ] State machine diagram
   - [ ] Workflow diagrams
 
+### Docker Compose & Infra
+- [ ] Improve `docker-compose.yml` examples and service notes
+  - [ ] Add/document rate-limiting example
+  - [ ] Add and validate `gluetun` integration
+  - [ ] Document whether `51XXX` ports are required for RPC or web UI
+  - [ ] Clarify whether the relevant service exposes a web UI and whether it should be routed via Traefik
+
+## Optional / Future Considerations
+
+- [ ] Alternative integrations:
+    - [ ] Consider Seer (integrates with Sonarr/Radarr) - https://github.com/seerr-team/seerr
+    - [ ] Evaluate vs. torrents vs. JDownloader tradeoffs
+    - [ ] German torrents harder to find vs. EngSub anime preference
+    - [ ] Jackett Search integration
+    - [ ] Prowlarr Search integration
+
+## Notes
+
+- **Torrent vs Hosted**: Torrents preferred for anime (EngSub), JDownloader better for German content (despite captcha issues)
+- **Search Providers**: Focus on German DDL sites (filmfans.org, serienfans.org, hd-source.to, funxd.site)
+- **Priority**: Get automated download workflow (CommandAutoDownload) working first, then add search providers
+- **Testing**: Create comprehensive test environment with all 4 services before production use
+
 ## Completed Recently ✅
 
 - [x] SearchResult class enhancements (audio/subtitle languages, bitrate, release name, upload date)
@@ -204,25 +243,3 @@ From ArchiveExtractionService TODOs:
 - [x] CommandDownload (manual download with IMDB ID)
 - [x] CommandDownloadStatus (global overview)
 - [x] CommandDownloadCancel
-
-## Optional / Future Considerations
-
-- [ ] Settings page improvements:
-  - [ ] Add 4 setting checkboxes for "Notify Episodes/Seasons/Series/Movies" (remove single "notify new content" checkbox)
-  - [ ] Fix flex layout of group management in desktop/mobile modes
-
-- [ ] Alternative integrations:
-  - [ ] Consider Seer (integrates with Sonarr/Radarr) - https://github.com/seerr-team/seerr
-  - [ ] Evaluate vs. torrents vs. JDownloader tradeoffs
-  - [ ] German torrents harder to find vs. EngSub anime preference
-
-- [ ] Discord integration:
-  - [ ] Research Discord OAuth plugins
-  - [ ] Evaluate group/permission management in Discord OAuth context
-
-## Notes
-
-- **Torrent vs Hosted**: Torrents preferred for anime (EngSub), JDownloader better for German content (despite captcha issues)
-- **Search Providers**: Focus on German DDL sites (filmfans.org, serienfans.org, hd-source.to, funxd.site)
-- **Priority**: Get automated download workflow (CommandAutoDownload) working first, then add search providers
-- **Testing**: Create comprehensive test environment with all 4 services before production use

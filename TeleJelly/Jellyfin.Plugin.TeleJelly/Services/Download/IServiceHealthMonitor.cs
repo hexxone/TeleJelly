@@ -2,15 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.TeleJelly.Classes.Models;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
 public interface IServiceHealthMonitor
 {
     Task CheckAllServicesAsync(CancellationToken ct);
-    // TODO unused ??
     ServiceHealthStatus? GetServiceHealth(string serviceName);
+    IEnumerable<ServiceHealthStatus> GetAllServiceHealth();
     IEnumerable<ITorrentDownloadService> GetAvailableTorrentServices();
     IEnumerable<IHostedDownloadService> GetAvailableHostedServices();
 }

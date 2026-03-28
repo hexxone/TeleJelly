@@ -7,7 +7,7 @@
   "category": "Authentication",
   "imageUrl": "https://raw.githubusercontent.com/hexxone/TeleJelly/refs/heads/main/TeleJelly/thumb.jpg",
   "targetAbi": "10.11.0.0",
-  "timestamp": "2026-01-11T00:01:27Z",
-  "version": "1.0.11.1",
-  "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.12-alpha.0.1"
+  "timestamp": "2026-03-28T07:30:15Z",
+  "version": "1.0.11.4",
+  "changelog": "Automatic Release by Github Actions:  https://github.com/hexxone/TeleJelly/releases/tag/1.0.12-alpha.0.4"
 }

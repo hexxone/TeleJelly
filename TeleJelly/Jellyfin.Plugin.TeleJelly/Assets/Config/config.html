@@ -358,6 +358,22 @@
                     <form id="DownloadManagerForm">
                         <fieldset class="verticalSection">
                             <legend><h3>Download Manager</h3></legend>
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="DownloadStatusFilter">Status filter</label>
+                                <select class="emby-select-withcolor emby-select" id="DownloadStatusFilter">
+                                    <option value="All">All</option>
+                                    <option value="Downloading">Downloading</option>
+                                    <option value="AwaitingSearchResult">Awaiting Search</option>
+                                    <option value="AwaitingPathVars">Awaiting Path Variables</option>
+                                    <option value="AwaitingPathConfirm">Awaiting Path Confirm</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Failed">Failed</option>
+                                    <option value="Stalled">Stalled</option>
+                                </select>
+                            </div>
+                            <div class="paperList" id="ServiceHealthList">
+                                <!-- Service health will be dynamically inserted here -->
+                            </div>
                             <div class="paperList" id="DownloadList">
                                 <!-- Downloads will be dynamically inserted here -->
                             </div>
