@@ -1,5 +1,11 @@
 # TeleJelly TODO List
 
+- Issue: <https://github.com/hexxone/TeleJelly/issues/8>
+  - User got Stuck on Login Screen without notice or error
+  - Try to catch http/https errors as well & show proper message?
+  - Add better instructions to README for HTTP/HTTPS/rev-proxy
+  - Add better instructions to CONFIG-Page for HTTP/HTTPS/rev-proxy
+
 ## High Priority - Download Manager Core Features
 
 ### Missing Download Service Implementations
