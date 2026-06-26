@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y nodejs npm && \
 COPY ["TeleJelly.sln", "./"]
 COPY ["Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj", "Jellyfin.Plugin.TeleJelly/"]
 COPY ["JellyfinPluginHelper/JellyfinPluginHelper.csproj", "JellyfinPluginHelper/"]
+COPY ["TeleJelly.Tests/TeleJelly.Tests.csproj", "TeleJelly.Tests/"]
 RUN dotnet restore
 
 # full copy + build

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,14 +11,15 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download.Search.Providers;
 
 internal abstract class GenericHtmlSearchProviderBase : ISearchProvider
 {
-    private static readonly HttpClient _httpClient = new();
+    private readonly ISearchDocumentFetcher _fetcher;
     private readonly ILogger _logger;
 
-    protected GenericHtmlSearchProviderBase(string name, string searchUrlTemplate, ILogger logger)
+    protected GenericHtmlSearchProviderBase(string name, string searchUrlTemplate, ILogger logger, ISearchDocumentFetcher? fetcher = null)
     {
         Name = name;
         SearchUrlTemplate = searchUrlTemplate;
         _logger = logger;
+        _fetcher = fetcher ?? new HttpClientSearchDocumentFetcher();
     }
 
     public string Name { get; }
@@ -38,7 +38,7 @@ internal abstract class GenericHtmlSearchProviderBase : ISearchProvider
             var url = string.Format(System.Globalization.CultureInfo.InvariantCulture, SearchUrlTemplate, Uri.EscapeDataString(term));
             try
             {
-                var html = await _httpClient.GetStringAsync(url, ct);
+                var html = await _fetcher.GetStringAsync(new Uri(url, UriKind.Absolute), ct);
                 links.AddRange(ExtractCandidateLinks(html));
             }
             catch (Exception ex)
@@ -63,7 +63,7 @@ internal abstract class GenericHtmlSearchProviderBase : ISearchProvider
         return results;
     }
 
-    private static IEnumerable<string> ExtractCandidateLinks(string html)
+    internal static IEnumerable<string> ExtractCandidateLinks(string html)
     {
         // Keep extractor intentionally broad because most providers differ and some are not stable.
         var linkRegex = new Regex(@"(magnet:\?xt=urn:btih:[^""'\s<]+|https?://[^""'\s<]+)", RegexOptions.IgnoreCase);

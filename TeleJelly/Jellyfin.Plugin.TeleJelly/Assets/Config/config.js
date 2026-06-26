@@ -2,6 +2,7 @@ const LinkPrefix = "l:";
 
 const tgConfigPage = {
     pluginUniqueId: "4b71013d-00ba-470c-9e4d-0c451a435328",
+    autoRefreshIntervalMs: 5000,
 
     // Track modified groups separately from loaded config
     modifiedGroups: new Map(),
@@ -15,6 +16,7 @@ const tgConfigPage = {
         ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then(
             (config) => {
                 tgConfigPage.populateConfiguration(page, config);
+                tgConfigPage.populateDownloadManagerConfig(page, config);
                 tgConfigPage.populateGroups(page, config);
             }
         );
@@ -38,6 +40,55 @@ const tgConfigPage = {
 
         // Update Telegram Login-Page URL (use LoginBaseUrl if set, otherwise current origin)
         tgConfigPage.updateLoginUrl(page, config.LoginBaseUrl);
+    },
+
+    populateDownloadManagerConfig: (page, config) => {
+        const textarea = page.querySelector("#DownloadManagerConfigJson");
+        if (!textarea) {
+            return;
+        }
+
+        textarea.value = JSON.stringify(config.DownloadManager || {}, null, 2);
+    },
+
+    parseDownloadManagerConfig: (page) => {
+        const textarea = page.querySelector("#DownloadManagerConfigJson");
+        if (!textarea) {
+            return {};
+        }
+
+        const raw = (textarea.value || "").trim();
+        if (!raw.length) {
+            return {};
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
+                throw new Error("the value must be a JSON object");
+            }
+
+            return parsed;
+        } catch (error) {
+            window.Dashboard.alert(`Download Manager JSON is invalid: ${error.message || error}`);
+            return null;
+        }
+    },
+
+    formatDownloadManagerConfig: (page) => {
+        const parsed = tgConfigPage.parseDownloadManagerConfig(page);
+        if (parsed === null) {
+            return;
+        }
+
+        page.querySelector("#DownloadManagerConfigJson").value = JSON.stringify(parsed, null, 2);
+    },
+
+    reloadDownloadManagerConfig: (page) => {
+        ApiClient.getPluginConfiguration(tgConfigPage.pluginUniqueId).then((config) => {
+            tgConfigPage.populateDownloadManagerConfig(page, config);
+            window.Dashboard.alert("Download manager JSON reloaded from saved configuration.");
+        });
     },
 
     updateLoginUrl: (page, loginBaseUrl) => {
@@ -123,6 +174,16 @@ Sign in with Telegram
         });
     },
 
+    loadDownloadLogs: (page) => {
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl("/TeleJelly/DownloadManager/logs?limit=200"),
+            type: "GET",
+            dataType: "json"
+        }).then((logs) => {
+            tgConfigPage.populateDownloadLogs(page, logs);
+        });
+    },
+
     populateDownloads: (page, downloads) => {
         const listContainer = page.querySelector("#DownloadList");
         listContainer.innerHTML = "";
@@ -135,26 +196,19 @@ Sign in with Telegram
         const header = document.createElement("div");
         header.className = "listItem listItem-border";
         header.style.display = "grid";
-        header.style.gridTemplateColumns = "2fr 1fr 0.7fr 1fr 1fr 0.8fr";
+        header.style.gridTemplateColumns = "2fr 1fr 0.7fr 1fr 1fr 1.4fr";
         header.style.fontWeight = "bold";
         header.style.padding = "0.5em";
-        header.innerHTML = "<div>Title</div><div>Status</div><div>Progress</div><div>Service</div><div>Started</div><div>Action</div>";
+        header.innerHTML = "<div>Title</div><div>Status</div><div>Progress</div><div>Service</div><div>Started</div><div>Actions</div>";
         listContainer.appendChild(header);
 
         downloads.forEach(dl => {
             const item = document.createElement("div");
             item.className = "listItem listItem-border";
             item.style.display = "grid";
-            item.style.gridTemplateColumns = "2fr 1fr 0.7fr 1fr 1fr 0.8fr";
+            item.style.gridTemplateColumns = "2fr 1fr 0.7fr 1fr 1fr 1.4fr";
             item.style.alignItems = "center";
             item.style.padding = "0.5em";
-
-            const cancelBtn = document.createElement("button");
-            cancelBtn.is = "emby-button";
-            cancelBtn.type = "button";
-            cancelBtn.className = "raised button-cancel emby-button";
-            cancelBtn.textContent = "Cancel";
-            cancelBtn.onclick = () => tgConfigPage.cancelDownload(page, dl.Id);
 
             const title = document.createElement("div");
             title.textContent = `${dl.Title} (${dl.Year || "?"})`;
@@ -166,13 +220,51 @@ Sign in with Telegram
             service.textContent = dl.ServiceName || "n/a";
             const started = document.createElement("div");
             started.textContent = new Date(dl.StartedAt).toLocaleString();
+            const actions = document.createElement("div");
+            actions.style.display = "flex";
+            actions.style.gap = "0.5em";
+            actions.style.flexWrap = "wrap";
+
+            if (["Downloading", "Extracting", "Analyzing", "Organizing"].includes(dl.Status)) {
+                const cancelBtn = document.createElement("button");
+                cancelBtn.is = "emby-button";
+                cancelBtn.type = "button";
+                cancelBtn.className = "raised button-cancel emby-button";
+                cancelBtn.textContent = "Cancel";
+                cancelBtn.onclick = () => tgConfigPage.cancelDownload(page, dl.Id);
+                actions.appendChild(cancelBtn);
+            } else {
+                const retryBtn = document.createElement("button");
+                retryBtn.is = "emby-button";
+                retryBtn.type = "button";
+                retryBtn.className = "raised button-submit emby-button";
+                retryBtn.textContent = "Retry";
+                retryBtn.onclick = () => tgConfigPage.retryDownload(page, dl.Id);
+                actions.appendChild(retryBtn);
+            }
+
+            const removeBtn = document.createElement("button");
+            removeBtn.is = "emby-button";
+            removeBtn.type = "button";
+            removeBtn.className = "raised button-alt emby-button";
+            removeBtn.textContent = "Remove";
+            removeBtn.onclick = () => tgConfigPage.removeDownload(page, dl.Id, false);
+            actions.appendChild(removeBtn);
+
+            const cleanBtn = document.createElement("button");
+            cleanBtn.is = "emby-button";
+            cleanBtn.type = "button";
+            cleanBtn.className = "raised button-alt emby-button";
+            cleanBtn.textContent = "Clean Files";
+            cleanBtn.onclick = () => tgConfigPage.removeDownload(page, dl.Id, true);
+            actions.appendChild(cleanBtn);
 
             item.appendChild(title);
             item.appendChild(status);
             item.appendChild(progress);
             item.appendChild(service);
             item.appendChild(started);
-            item.appendChild(cancelBtn);
+            item.appendChild(actions);
             listContainer.appendChild(item);
         });
     },
@@ -196,6 +288,51 @@ Sign in with Telegram
         });
     },
 
+    populateDownloadLogs: (page, logs) => {
+        const logContainer = page.querySelector("#DownloadManagerLogList");
+        if (!logContainer) return;
+
+        logContainer.innerHTML = "";
+        if (!logs || logs.length === 0) {
+            logContainer.innerHTML = '<div class="listItem">No activity recorded yet.</div>';
+            return;
+        }
+
+        logs.forEach((log) => {
+            const row = document.createElement("div");
+            const levelClass = (log.Level || "").toLowerCase();
+            row.className = `listItem listItem-border download-log-entry is-${levelClass}`;
+
+            const timestamp = document.createElement("div");
+            timestamp.className = "log-timestamp";
+            timestamp.textContent = log.TimestampUtc
+                ? new Date(log.TimestampUtc).toLocaleString()
+                : "Unknown time";
+
+            const level = document.createElement("div");
+            level.className = "log-level";
+            level.textContent = log.Level || "Info";
+
+            const message = document.createElement("div");
+            message.className = "log-message";
+            const source = document.createElement("div");
+            source.className = "log-source";
+            source.textContent = log.Source || "DownloadManager";
+            const text = document.createElement("div");
+            text.className = "log-message-text";
+            text.textContent = log.Message || "";
+            message.appendChild(source);
+            message.appendChild(text);
+
+            row.appendChild(timestamp);
+            row.appendChild(level);
+            row.appendChild(message);
+            logContainer.appendChild(row);
+        });
+
+        logContainer.scrollTop = logContainer.scrollHeight;
+    },
+
     cancelDownload: (page, downloadId) => {
         if (!confirm("Cancel this download?")) return;
 
@@ -205,6 +342,32 @@ Sign in with Telegram
         }).then(() => {
             tgConfigPage.loadDownloads(page);
             window.Dashboard.alert('Download canceled.');
+        });
+    },
+
+    retryDownload: (page, downloadId) => {
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl(`/TeleJelly/DownloadManager/downloads/${downloadId}/retry`),
+            type: "POST"
+        }).then(() => {
+            tgConfigPage.loadDownloads(page);
+            window.Dashboard.alert('Download retry started.');
+        });
+    },
+
+    removeDownload: (page, downloadId, deleteFiles) => {
+        const prompt = deleteFiles
+            ? "Remove this download and delete managed staging files?"
+            : "Remove this download record?";
+        if (!confirm(prompt)) return;
+
+        const query = deleteFiles ? "?deleteFiles=true" : "";
+        window.ApiClient.ajax({
+            url: window.ApiClient.getUrl(`/TeleJelly/DownloadManager/downloads/${downloadId}${query}`),
+            type: "DELETE"
+        }).then(() => {
+            tgConfigPage.loadDownloads(page);
+            window.Dashboard.alert(deleteFiles ? 'Download and files removed.' : 'Download removed.');
         });
     },
 
@@ -324,6 +487,12 @@ Sign in with Telegram
 
     saveConfig: (page) => {
         return new Promise((resolve) => {
+            const parsedDownloadManagerConfig = tgConfigPage.parseDownloadManagerConfig(page);
+            if (parsedDownloadManagerConfig === null) {
+                resolve(false);
+                return;
+            }
+
             window.ApiClient.getPluginConfiguration(
                 tgConfigPage.pluginUniqueId
             ).then((config) => {
@@ -338,6 +507,7 @@ Sign in with Telegram
                 config.ForcedUrlScheme = page.querySelector("#ForcedUrlScheme").value || "none";
                 config.EnableBotService = page.querySelector("#EnableBotService").checked;
                 config.EnableInlineQueries = page.querySelector("#EnableInlineQueries").checked;
+                config.DownloadManager = parsedDownloadManagerConfig;
 
                 // save it
                 window.ApiClient.updatePluginConfiguration(
@@ -346,7 +516,7 @@ Sign in with Telegram
                 ).then(function (result) {
                     window.Dashboard.processPluginConfigurationUpdateResult(result);
                     tgConfigPage.loadConfiguration(page);
-                    resolve();
+                    resolve(true);
                 });
             });
         });
@@ -772,6 +942,21 @@ Sign in with Telegram
         } else {
             tokenField.type = "password";
         }
+    },
+
+    startAutoRefresh: (page) => {
+        tgConfigPage.stopAutoRefresh(page);
+        page.__teleJellyAutoRefresh = window.setInterval(() => {
+            tgConfigPage.loadDownloads(page);
+            tgConfigPage.loadDownloadLogs(page);
+        }, tgConfigPage.autoRefreshIntervalMs);
+    },
+
+    stopAutoRefresh: (page) => {
+        if (page.__teleJellyAutoRefresh) {
+            window.clearInterval(page.__teleJellyAutoRefresh);
+            page.__teleJellyAutoRefresh = null;
+        }
     }
 };
 
@@ -842,6 +1027,7 @@ export default function (view) {
     tgConfigPage.loadConfiguration(view);
     tgConfigPage.loadRequests(view);
     tgConfigPage.loadDownloads(view);
+    tgConfigPage.loadDownloadLogs(view);
 
     tgConfigPage.populateFolders(view).then(() => {
         const inputs = [
@@ -882,6 +1068,16 @@ export default function (view) {
     view.querySelector("#SaveConfig").addEventListener("click", async (e) => {
         e.preventDefault();
         await tgConfigPage.saveConfig(view);
+    });
+
+    view.querySelector("#FormatDownloadManagerConfig").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.formatDownloadManagerConfig(view);
+    });
+
+    view.querySelector("#ReloadDownloadManagerConfig").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.reloadDownloadManagerConfig(view);
     });
 
     // Group management events
@@ -938,6 +1134,11 @@ export default function (view) {
     view.querySelector("#DownloadStatusFilter").addEventListener("change", () => {
         tgConfigPage.loadDownloads(view);
     });
+    view.querySelector("#RefreshDownloadLogs").addEventListener("click", (e) => {
+        e.preventDefault();
+        tgConfigPage.loadDownloadLogs(view);
+        window.Dashboard.alert('Download manager log refreshed');
+    });
 
     // Bot token validation
     let debounce;
@@ -949,6 +1150,11 @@ export default function (view) {
 
     // Note: Login URL and branding widget are now set dynamically in populateConfiguration
     // based on LoginBaseUrl value via updateLoginUrl()
+
+    tgConfigPage.startAutoRefresh(view);
+    const cleanupAutoRefresh = () => tgConfigPage.stopAutoRefresh(view);
+    view.addEventListener("viewhide", cleanupAutoRefresh, {once: true});
+    view.addEventListener("pagehide", cleanupAutoRefresh, {once: true});
 
     window.Dashboard.hideLoadingMsg();
 }

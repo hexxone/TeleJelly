@@ -1,5 +1,6 @@
-bin/
-obj/
+**/bin/
+**/obj/
+**/TestResults/
 .vs/
 .idea/
 publish/
@@ -9,3 +10,5 @@ manifest.json
 .DS_Store
 .env
 *.zip
+**/*.mp4
+docker-data/

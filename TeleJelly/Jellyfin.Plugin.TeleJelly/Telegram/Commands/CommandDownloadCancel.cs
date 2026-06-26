@@ -54,7 +54,7 @@ public class CommandDownloadCancel : ICommandBase
 
         try
         {
-            await _orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Canceled);
+            await _orchestrator.CancelDownloadAsync(downloadId, cancellationToken);
 
             await client.SendMessage(
                 message.Chat.Id,

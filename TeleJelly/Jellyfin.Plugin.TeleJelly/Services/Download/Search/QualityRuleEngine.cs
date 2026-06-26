@@ -6,14 +6,14 @@ using Jellyfin.Plugin.TeleJelly.Classes.Models;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 
-public class QualityRuleEngine
+public sealed class QualityRuleEngine
 {
     /// <summary>
     ///     Scores a search result based on the quality profile criteria.
     ///     Returns 0 if the result doesn't meet hard requirements (size limits, minimum seeders, required languages).
     ///     Higher scores indicate better quality matches.
     /// </summary>
-    public double ScoreResult(SearchResult result, QualityProfile profile)
+    public static double ScoreResult(SearchResult result, QualityProfile profile)
     {
         double score = 0;
 
@@ -130,19 +130,38 @@ public class QualityRuleEngine
             }
         }
 
-        // 9. Preferred Audio Languages Score (Bonus for each match)
+        // 9. Audio Codec Score (Best matching codec wins)
+        var bestAudioCodecIndex = result.AudioCodecs
+            .Select(codec => profile.PreferredAudioCodecs.FindIndex(preferred =>
+                preferred.Equals(codec, StringComparison.OrdinalIgnoreCase)))
+            .Where(index => index >= 0)
+            .DefaultIfEmpty(-1)
+            .Min();
+
+        if (bestAudioCodecIndex >= 0)
+        {
+            score += (profile.PreferredAudioCodecs.Count - bestAudioCodecIndex) * weights.AudioCodecPerPosition;
+        }
+
+        // 10. Preferred Audio Languages Score (Bonus for each match)
         var preferredAudioMatches = profile.PreferredAudioLanguages
             .Count(preferred => result.AudioLanguages.Any(available =>
                 available.Equals(preferred, StringComparison.OrdinalIgnoreCase)));
         score += preferredAudioMatches * weights.PreferredAudioLanguagePerMatch;
 
-        // 10. Preferred Subtitle Languages Score (Bonus for each match)
+        // 11. Preferred Subtitle Languages Score (Bonus for each match)
         var preferredSubtitleMatches = profile.PreferredSubtitleLanguages
             .Count(preferred => result.SubtitleLanguages.Any(available =>
                 available.Equals(preferred, StringComparison.OrdinalIgnoreCase)));
         score += preferredSubtitleMatches * weights.PreferredSubtitleLanguagePerMatch;
 
-        // 11. Seeder Score (More seeders = more reliable, capped)
+        // 12. Bitrate Score (Higher bitrate gets a bounded bonus when known)
+        if (result.Bitrate.HasValue && result.Bitrate.Value > 0)
+        {
+            score += Math.Min(result.Bitrate.Value / 1000d * weights.BitratePerMbps, weights.MaxBitrateBonus);
+        }
+
+        // 13. Seeder Score (More seeders = more reliable, capped)
         // Note: Only applies to torrents - hosted downloads always have Seeders = 0
         if (result.ServiceType == DownloadServiceType.Torrent)
         {
@@ -150,32 +169,6 @@ public class QualityRuleEngine
         }
 
         return score;
-    }
-
-    /// <summary>
-    ///     Selects the best search result from the provided collection of search results based on the specified quality profile.
-    ///     Includes age-based scoring that adapts to both absolute freshness and relative spread.
-    /// </summary>
-    /// <param name="results">A collection of search results to evaluate.</param>
-    /// <param name="profile">The quality profile containing criteria used to score and determine the best result.</param>
-    /// <returns>The search result with the highest score that meets the quality criteria, or null if no suitable result is found.</returns>
-    public SearchResult? SelectBestResult(IEnumerable<SearchResult> results, QualityProfile profile)
-    {
-        var resultsList = results.ToList();
-
-        // Calculate age context once for all results
-        var ageContext = CalculateAgeContext(resultsList, profile.Weights);
-
-        return resultsList
-            .Select(r =>
-            {
-                var baseScore = ScoreResult(r, profile);
-                var finalScore = ApplyAgeMultiplier(r, baseScore, ageContext);
-                return new { Result = r, Score = finalScore };
-            })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .FirstOrDefault()?.Result;
     }
 
     /// <summary>
@@ -263,42 +256,9 @@ public class QualityRuleEngine
     }
 
     /// <summary>
-    ///     Applies age-based multiplier to a base score.
-    ///     Newer results get higher multipliers, older results get lower multipliers.
-    /// </summary>
-    private double ApplyAgeMultiplier(SearchResult result, double baseScore, AgeContext context)
-    {
-        // If no age info or base score is 0 (disqualified), return as-is
-        if (!context.HasDateInfo || baseScore == 0 || !result.UploadedDate.HasValue)
-        {
-            return baseScore;
-        }
-
-        // Calculate relative position within date range
-        double relativeAge;
-        if (context.DateSpreadDays > 0)
-        {
-            var ageInDays = (context.NewestDate - result.UploadedDate.Value).TotalDays;
-            relativeAge = ageInDays / context.DateSpreadDays; // 0.0 (newest) to 1.0 (oldest)
-        }
-        else
-        {
-            relativeAge = 0.0; // All same date
-        }
-
-        // Invert: newest gets full bonus, oldest gets no bonus
-        var recencyFactor = 1.0 - relativeAge;
-
-        // Apply multiplier
-        var ageMultiplier = 1.0 + (context.FinalAgeImpact * recencyFactor);
-
-        return baseScore * ageMultiplier;
-    }
-
-    /// <summary>
     ///     Context information for age-based scoring across all results.
     /// </summary>
-    private class AgeContext
+    private sealed class AgeContext
     {
         public bool HasDateInfo { get; set; }
         public DateTime NewestDate { get; set; }
@@ -421,6 +381,18 @@ public class QualityRuleEngine
             }
         }
 
+        // Audio codecs
+        var bestAudioCodecIndex = result.AudioCodecs
+            .Select(codec => profile.PreferredAudioCodecs.FindIndex(preferred =>
+                preferred.Equals(codec, StringComparison.OrdinalIgnoreCase)))
+            .Where(index => index >= 0)
+            .DefaultIfEmpty(-1)
+            .Min();
+        if (bestAudioCodecIndex >= 0)
+        {
+            breakdown.AudioCodecScore = (profile.PreferredAudioCodecs.Count - bestAudioCodecIndex) * weights.AudioCodecPerPosition;
+        }
+
         // Languages
         var preferredAudioMatches = profile.PreferredAudioLanguages
             .Count(preferred => result.AudioLanguages.Any(available =>
@@ -432,6 +404,12 @@ public class QualityRuleEngine
                 available.Equals(preferred, StringComparison.OrdinalIgnoreCase)));
         breakdown.SubtitleLanguageScore = preferredSubtitleMatches * weights.PreferredSubtitleLanguagePerMatch;
 
+        // Bitrate
+        if (result.Bitrate.HasValue && result.Bitrate.Value > 0)
+        {
+            breakdown.BitrateScore = Math.Min(result.Bitrate.Value / 1000d * weights.BitratePerMbps, weights.MaxBitrateBonus);
+        }
+
         // Seeders
         if (result.ServiceType == DownloadServiceType.Torrent)
         {
@@ -439,8 +417,9 @@ public class QualityRuleEngine
         }
 
         breakdown.BaseQualityScore = breakdown.BaseScore + breakdown.ResolutionScore + breakdown.CodecScore +
-                                     breakdown.HdrScore + breakdown.SourceScore + breakdown.AudioLanguageScore +
-                                     breakdown.SubtitleLanguageScore + breakdown.SeederScore;
+                                     breakdown.HdrScore + breakdown.SourceScore + breakdown.AudioCodecScore +
+                                     breakdown.AudioLanguageScore + breakdown.SubtitleLanguageScore +
+                                     breakdown.BitrateScore + breakdown.SeederScore;
 
         // Age scoring (if all results provided)
         if (allResults != null)
@@ -475,51 +454,5 @@ public class QualityRuleEngine
         breakdown.TotalScore = breakdown.BaseQualityScore * breakdown.AgeMultiplier;
 
         return breakdown;
-    }
-}
-
-public sealed class ScoringBreakdown
-{
-    public string Title { get; set; } = string.Empty;
-    public string ServiceType { get; set; } = string.Empty;
-    public bool Disqualified { get; set; }
-    public string? DisqualificationReason { get; set; }
-
-    public double BaseScore { get; set; }
-    public double ResolutionScore { get; set; }
-    public double CodecScore { get; set; }
-    public double HdrScore { get; set; }
-    public double SourceScore { get; set; }
-    public double AudioLanguageScore { get; set; }
-    public double SubtitleLanguageScore { get; set; }
-    public double SeederScore { get; set; }
-    public double BaseQualityScore { get; set; }
-
-    public double AgeMultiplier { get; set; } = 1.0;
-    public double AgeBonus { get; set; }
-    public DateTime? UploadedDate { get; set; }
-    public double DaysOld { get; set; }
-    public double DateSpreadDays { get; set; }
-    public double AbsoluteFreshness { get; set; }
-    public double BaseAgeImpact { get; set; }
-    public double FinalAgeImpact { get; set; }
-
-    public double TotalScore { get; set; }
-
-    public override string ToString()
-    {
-        if (Disqualified)
-        {
-            return $"[DISQUALIFIED] {Title} ({ServiceType}): {DisqualificationReason}";
-        }
-
-        var baseInfo = $"{Title} ({ServiceType}): Total={TotalScore:F0} [Base={BaseScore:F0}, Res={ResolutionScore:F0}, Codec={CodecScore:F0}, HDR={HdrScore:F0}, Source={SourceScore:F0}, Audio={AudioLanguageScore:F0}, Subs={SubtitleLanguageScore:F0}, Seeders={SeederScore:F0}]";
-
-        if (AgeMultiplier > 1.0)
-        {
-            baseInfo += $" | Age: {AgeMultiplier:F3}x (+{AgeBonus:F0}), {DaysOld:F0}d old, Spread={DateSpreadDays:F0}d, Fresh={AbsoluteFreshness:F2}, Impact={FinalAgeImpact:F3}";
-        }
-
-        return baseInfo;
     }
 }

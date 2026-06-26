@@ -24,12 +24,13 @@ public class ManagedDownload
     public DownloadServiceType ServiceType { get; set; }
     public double ProgressPercentage { get; set; }
     public DateTime StartedAt { get; set; }
+    public DateTime LastStatusChangeAt { get; set; }
+    public DateTime? LastProgressAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public string? OriginalDownloadPath { get; set; }
     public string? CurrentStagingPath { get; set; }
     public string? SuggestedDestinationPath { get; set; }
     public string? UserConfirmedPath { get; set; }
-    public string? PathTemplate { get; set; }
     public string? TargetLibraryId { get; set; }
     public bool RequiresExtraction { get; set; }
     public string[]? TriedPasswords { get; set; }
@@ -37,7 +38,7 @@ public class ManagedDownload
     public Dictionary<string, string>? FilledPathVariables { get; set; }
     public SearchResult[]? SearchResults { get; set; }
     public MediaFileGroup[]? AnalyzedFiles { get; set; }
-    public long MessageId { get; set; }
+    public int StartAttempts { get; set; }
 }
 
 public enum DownloadServiceType

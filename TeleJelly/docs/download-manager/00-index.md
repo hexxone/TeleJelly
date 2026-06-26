@@ -1,4 +1,4 @@
-# Download Manager Docs Index
+# Download Manager Docs
 
 This folder documents the current `Download Manager` implementation in `Jellyfin.Plugin.TeleJelly`.
 
@@ -19,6 +19,10 @@ Files:
   Runtime behavior, health checks, API endpoints, and common failure points.
 - [40-search-and-provider-extension.md](40-search-and-provider-extension.md)
   Search system notes, provider strategy, and rough instructions for adding a new provider.
+- [50-finish-plan.md](50-finish-plan.md)
+  Concrete execution plan to finish the download manager, including testing and local Docker Compose strategy.
+- [60-local-test-stack.md](60-local-test-stack.md)
+  Local Docker Compose setup for running Jellyfin and the downloader backends together during development.
 
 Related docs:
 

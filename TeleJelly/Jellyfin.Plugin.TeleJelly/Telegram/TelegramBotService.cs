@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
+using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
@@ -120,10 +121,22 @@ internal sealed class TelegramBotService : ITelegramBotService
         {
             BotClientWrapper.Client = new TelegramBotClient(_botToken);
 
+            var receiverOptions = new ReceiverOptions
+            {
+                AllowedUpdates = new[]
+                {
+                    UpdateType.Message,
+                    UpdateType.CallbackQuery,
+                    UpdateType.InlineQuery,
+                    UpdateType.ChatMember
+                }
+            };
+
             BotClientWrapper.Client.StartReceiving(
                 HandleUpdateAsync,
                 HandlePollingErrorAsync,
-                cancellationToken: _cancellationTokenSource.Token
+                receiverOptions,
+                _cancellationTokenSource.Token
             );
 
             BotInfo = await BotClientWrapper.Client.GetMe();
@@ -351,21 +364,70 @@ internal sealed class TelegramBotService : ITelegramBotService
 
                 if (pendingPathEdit != null)
                 {
-                    pendingPathEdit.UserConfirmedPath = message.Text.Trim();
-                    pendingPathEdit.SuggestedDestinationPath = message.Text.Trim();
-                    var started = await orchestratorForPathEdit.InitiateDownloadAsync(pendingPathEdit.Id, cancellationToken);
-                    if (BotClientWrapper.Client != null)
+                    try
                     {
-                        await BotClientWrapper.Client.SendMessage(
-                            message.Chat.Id,
-                            started
-                                ? $"✅ Download started for <b>{pendingPathEdit.Title}</b>.\nPath: <code>{pendingPathEdit.UserConfirmedPath}</code>"
-                                : $"❌ Failed to start download: {pendingPathEdit.ErrorMessage ?? "No available service."}",
-                            ParseMode.Html,
-                            cancellationToken: cancellationToken);
-                    }
+                        var rawPath = message.Text.Trim();
+                        var library = string.IsNullOrWhiteSpace(pendingPathEdit.TargetLibraryId)
+                            ? null
+                            : _libraryManager.GetItemById(pendingPathEdit.TargetLibraryId);
+                        var pathTemplater = ServiceProvider.GetService<PathTemplateService>();
 
-                    return;
+                        if (library?.Path == null || pathTemplater == null)
+                        {
+                            if (BotClientWrapper.Client != null)
+                            {
+                                await BotClientWrapper.Client.SendMessage(
+                                    message.Chat.Id,
+                                    "❌ Could not resolve the target library path for this download.",
+                                    cancellationToken: cancellationToken);
+                            }
+
+                            return;
+                        }
+
+                        var resolvedPath = await pathTemplater.ResolvePathAsync(library.Path, rawPath);
+                        if (!await pathTemplater.ValidatePathAsync(resolvedPath))
+                        {
+                            if (BotClientWrapper.Client != null)
+                            {
+                                await BotClientWrapper.Client.SendMessage(
+                                    message.Chat.Id,
+                                    "❌ The provided path is invalid.",
+                                    cancellationToken: cancellationToken);
+                            }
+
+                            return;
+                        }
+
+                        pendingPathEdit.UserConfirmedPath = resolvedPath;
+                        pendingPathEdit.SuggestedDestinationPath = resolvedPath;
+                        var started = await orchestratorForPathEdit.InitiateDownloadAsync(pendingPathEdit.Id, cancellationToken);
+                        if (BotClientWrapper.Client != null)
+                        {
+                            await BotClientWrapper.Client.SendMessage(
+                                message.Chat.Id,
+                                started
+                                    ? $"✅ Download started for <b>{pendingPathEdit.Title}</b>.\nPath: <code>{pendingPathEdit.UserConfirmedPath}</code>"
+                                    : $"❌ Failed to start download: {pendingPathEdit.ErrorMessage ?? "No available service."}",
+                                ParseMode.Html,
+                                cancellationToken: cancellationToken);
+                        }
+
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to process custom path reply for download {DownloadId}", pendingPathEdit.Id);
+                        if (BotClientWrapper.Client != null)
+                        {
+                            await BotClientWrapper.Client.SendMessage(
+                                message.Chat.Id,
+                                "❌ Failed to process the custom path you provided.",
+                                cancellationToken: cancellationToken);
+                        }
+
+                        return;
+                    }
                 }
             }
         }
@@ -518,8 +580,7 @@ internal sealed class TelegramBotService : ITelegramBotService
 
         Logger.LogInformation("Received callback query: {Data}", callbackQuery.Data);
 
-        var parts = callbackQuery.Data.Split('_');
-        if (parts.Length < 3 || parts[0] != "dl" || !Guid.TryParse(parts[1], out var downloadId))
+        if (!DownloadFlowPresentation.TryParseDownloadCallback(callbackQuery.Data, out var downloadId, out var action, out var value))
         {
             await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Invalid callback data.", cancellationToken: cancellationToken);
             return;
@@ -547,9 +608,6 @@ internal sealed class TelegramBotService : ITelegramBotService
             await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Only the download initiator can interact with this.", true, cancellationToken: cancellationToken);
             return;
         }
-
-        var action = parts[2];
-        var value = parts.Length > 3 ? parts[3] : null;
 
         try
         {
@@ -635,22 +693,14 @@ internal sealed class TelegramBotService : ITelegramBotService
 
                 case "pathvar":
                 {
-                    var pathVarPrefix = $"dl_{download.Id}_pathvar_";
-                    var encodedPayload = callbackQuery.Data.StartsWith(pathVarPrefix, StringComparison.Ordinal)
-                        ? callbackQuery.Data[pathVarPrefix.Length..]
-                        : string.Empty;
-                    var separatorIndex = encodedPayload.IndexOf('_');
-                    if (separatorIndex < 1 || separatorIndex + 1 >= encodedPayload.Length)
+                    if (!DownloadFlowPresentation.TryParsePathVariableSelection(download.Id, callbackQuery.Data, out var name, out var selectedValue))
                     {
                         await BotClientWrapper.Client.AnswerCallbackQuery(callbackQuery.Id, "Invalid path variable value.", cancellationToken: cancellationToken);
                         break;
                     }
 
-                    var name = Uri.UnescapeDataString(encodedPayload[..separatorIndex]);
-                    var selectedValue = Uri.UnescapeDataString(encodedPayload[(separatorIndex + 1)..]);
-
                     download.FilledPathVariables ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    download.FilledPathVariables[name] = selectedValue;
+                    download.FilledPathVariables[name!] = selectedValue!;
 
                     await ShowDynamicPathVariableSelection(orchestrator, download, callbackQuery, cancellationToken);
                     break;
@@ -686,7 +736,7 @@ internal sealed class TelegramBotService : ITelegramBotService
                     break;
 
                 case "retry":
-                    if (parts.Length >= 4 && parts[3].Equals("extraction", StringComparison.OrdinalIgnoreCase) &&
+                    if (value != null && value.Equals("extraction", StringComparison.OrdinalIgnoreCase) &&
                         download.Status == DownloadStatus.ExtractionFailed)
                     {
                         if (BotClientWrapper.Client != null)
@@ -716,7 +766,7 @@ internal sealed class TelegramBotService : ITelegramBotService
                     break;
 
                 case "cancel":
-                    await orchestrator.UpdateDownloadStatus(downloadId, DownloadStatus.Canceled);
+                    await orchestrator.CancelDownloadAsync(downloadId, cancellationToken);
                     if (BotClientWrapper.Client != null)
                     {
                         await BotClientWrapper.Client.EditMessageText(
@@ -787,7 +837,8 @@ internal sealed class TelegramBotService : ITelegramBotService
         {
             try
             {
-                proposedPath = await pathTemplater.ApplyTemplateAsync(
+                proposedPath = await pathTemplater.ResolveTemplatePathAsync(
+                    library.Path,
                     librarySettings.PathTemplate,
                     download,
                     download.FilledPathVariables ?? new Dictionary<string, string>(),
@@ -846,6 +897,17 @@ internal sealed class TelegramBotService : ITelegramBotService
         }
 
         var config = TeleJellyPlugin.Instance!.Configuration.DownloadManager;
+        if (!config.Search.Enabled)
+        {
+            await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "Automated search is disabled.");
+            await BotClientWrapper.Client!.EditMessageText(
+                callbackQuery.Message!.Chat.Id,
+                callbackQuery.Message.MessageId,
+                "❌ Automated search is disabled in the download manager configuration.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
         var librarySettings = config.LibrarySettings.FirstOrDefault(l => l.LibraryId == download.TargetLibraryId) ?? new LibrarySettings();
         var query = download.MediaType == MediaType.Series && download.Season.HasValue
             ? $"{download.Title} {download.Year} S{download.Season:00}"
@@ -857,7 +919,8 @@ internal sealed class TelegramBotService : ITelegramBotService
             librarySettings.QualityProfile,
             maxResults: 5,
             cancellationToken,
-            config.Search.EnabledServices);
+            config.Search.EnabledServices,
+            config.MaxDownloadSizeBytes);
 
         if (rankedResults.Count == 0)
         {
@@ -871,12 +934,21 @@ internal sealed class TelegramBotService : ITelegramBotService
         }
 
         download.SearchResults = rankedResults.ToArray();
+        if (DownloadFlowPresentation.ShouldAutoSelectSearchResult(rankedResults))
+        {
+            var selectedResult = rankedResults[0];
+            download.LinkOrMagnet = selectedResult.DownloadLink;
+            download.SourcePassword = selectedResult.Password;
+            await ShowDynamicPathVariableSelection(orchestrator, download, callbackQuery, cancellationToken);
+            return;
+        }
+
         await orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.AwaitingSearchResult);
 
         var buttons = rankedResults
             .Select((result, index) =>
             {
-                var label = $"{index + 1}. {result.Title}";
+                var label = $"{index + 1}. {DownloadFlowPresentation.BuildSearchResultLabel(result)}";
                 if (label.Length > 55)
                 {
                     label = label[..55];

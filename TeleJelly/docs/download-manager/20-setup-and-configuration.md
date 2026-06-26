@@ -2,6 +2,8 @@
 
 ## Minimum setup checklist
 
+For a local all-in-one development environment, start with [60-local-test-stack.md](60-local-test-stack.md).
+
 To get the feature working end to end, configure all of the following:
 
 1. Enable the download manager itself.
@@ -25,13 +27,13 @@ Important top-level fields:
 - `TmdbApiKey`
   Required for metadata enrichment and normal orchestration.
 - `MaxDownloadSizeBytes`
-  Hard ceiling for accepted downloads.
+  Hard ceiling for accepted downloads when the result size is known.
 - `DownloadTimeoutMinutes`
   Timeout budget for download progression.
 - `MaxConcurrentDownloads`
-  Upper bound for concurrent managed items.
+  Upper bound for simultaneous active backend downloads. Additional jobs stay queued in `Pending`.
 - `StalledNoSeedsTimeoutMinutes`
-  Torrent stall threshold when there are no seeds.
+  Torrent stall threshold when the backend reports no seeds or peers.
 - `StalledNoProgressTimeoutMinutes`
   General stall threshold when progress stops.
 - `AutoRemoveCompletedAfterDays`
@@ -41,7 +43,6 @@ Important top-level fields:
 - `WhitelistUsernames`
   Restrict who may use the feature.
 - `TriggerLibraryScanAfterOrganize`
-- `AutoAddToJellyfinLibrary`
 - `LibrarySettings`
   Per-library destination rules and quality preferences.
 
@@ -112,6 +113,7 @@ Operational note:
 
 - the code now also tries passwords scraped from the source provider page and stored on the managed download.
 - the static password list is still useful as a fallback for providers that hide or omit passwords.
+- managed downloads also persist whether extraction is required and how many password candidates were attempted so failed extractions can be retried with context.
 
 The default placeholder passwords in the config model should be treated as development defaults, not production-ready values.
 
@@ -122,13 +124,12 @@ The default placeholder passwords in the config model should be treated as devel
 - `Enabled`
 - `CheckIntervalMinutes`
 - `MaxConsecutiveFailures`
-- `AutoDisableUnhealthyServices`
 
 Current implementation detail:
 
 - the monitor marks services `Online`, `Degraded`, or `Offline`,
 - unhealthy services are filtered out by the health monitor before selection,
-- `AutoDisableUnhealthyServices` exists in config but the current code mainly uses health state filtering rather than rewriting config.
+- when a service crosses the offline threshold, the Telegram bot sends a one-time warning to linked chats so admins can investigate instead of mutating saved service config.
 
 ## Library configuration
 
@@ -139,6 +140,12 @@ Each `LibrarySettings` item defines how finished media is organized:
 - `PathTemplate`
 - `DynamicVariables`
 - `QualityProfile`
+
+`QualityProfile` scoring now also uses:
+
+- preferred audio codecs
+- detected bitrate bonus
+- age-aware ranking via `GetScoringBreakdown()`
 
 ### Path templates
 

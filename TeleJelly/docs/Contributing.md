@@ -25,8 +25,9 @@ When incrementing the version of Jellyfin, remember to set the correct `TargetAb
 1. Run `git clone https://github.com/hexxone/TeleJelly.git`
 2. Open `TeleJelly.sln` file with Visual Studio or Rider IDE, restore Nuget packages
 3. Copy `example.env`-file to `.env` and fill out the variables
-4. Choose to run Profile `Docker Test`
-5. Afterward Jellyfin with TeleJelly should be reachable under: <https://jellyfin.localhost:8443/>
+4. From the `TeleJelly/` folder, run `docker compose up -d` for the local stack
+5. If you want the bundled HTTPS reverse-proxy example as well, run `docker compose --profile proxy up -d`
+6. Afterward Jellyfin with TeleJelly should be reachable under: <http://localhost:8096/> or, with the proxy profile, under <https://jellyfin.localhost:8443/>
 
 > Note: the "invalid" SSL certificate warning is normal.
 > You can, however, get a "real" one working with traefik with ease.

@@ -22,7 +22,6 @@ internal sealed class TelegramBackgroundService : IHostedService, IDisposable
     private readonly TelegramBotClientWrapper _botClientWrapper;
     private readonly ICommandBase[] _commands;
     private readonly ILogger<TelegramBackgroundService> _logger;
-    private readonly TeleJellyPlugin _plugin;
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -41,7 +40,6 @@ internal sealed class TelegramBackgroundService : IHostedService, IDisposable
     public TelegramBackgroundService(IServiceProvider serviceProvider, ILogger<TelegramBackgroundService> logger,
         TelegramBotClientWrapper botClientWrapper, ICommandProvider commandProvider)
     {
-        _plugin = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
         _logger = logger;
         _botClientWrapper = botClientWrapper;
         _serviceProvider = serviceProvider;
@@ -82,11 +80,13 @@ internal sealed class TelegramBackgroundService : IHostedService, IDisposable
     /// <returns></returns>
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        var plugin = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
+
         // Subscribe to configuration changes
-        _plugin.ConfigurationChanged += _configHookOnOnConfigChange;
+        plugin.ConfigurationChanged += _configHookOnOnConfigChange;
 
         // Initial configuration
-        ConfigureBot(_plugin.Configuration);
+        ConfigureBot(plugin.Configuration);
 
         // Start inactivity check timer
         _inactivityTimer = new Timer(
@@ -107,7 +107,9 @@ internal sealed class TelegramBackgroundService : IHostedService, IDisposable
     /// <returns></returns>
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _plugin.ConfigurationChanged -= _configHookOnOnConfigChange;
+        var plugin = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
+
+        plugin.ConfigurationChanged -= _configHookOnOnConfigChange;
 
         DisposeBotService();
 
@@ -169,6 +171,8 @@ internal sealed class TelegramBackgroundService : IHostedService, IDisposable
 
     private void CheckForInactivity(object? state)
     {
+        var plugin = TeleJellyPlugin.Instance ?? throw new ArgumentException("TeleJellyPlugin Instance null.");
+
         if (_botService?.StartTime == null)
         {
             return; // Bot not running
@@ -185,7 +189,7 @@ internal sealed class TelegramBackgroundService : IHostedService, IDisposable
             inactivityDuration.TotalHours);
 
         // Trigger reconfiguration
-        ConfigureBot(_plugin.Configuration);
+        ConfigureBot(plugin.Configuration);
     }
 
     /// <summary>

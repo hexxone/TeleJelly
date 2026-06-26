@@ -39,7 +39,7 @@ const string GitProject = "TeleJelly";
 const string GitManifestBranch = "dist";
 const string GitManifestPath = "manifest.json";
 
-const string TargetAbi = "10.11.0.0"; // TODO get from installed nuget version?
+const string TargetAbi = "10.11.0.0";
 const string ChangelogPrefix = "Automatic Release by Github Actions: ";
 
 const string ManifestUrl = $"https://raw.githubusercontent.com/{GitUser}/{GitProject}/{GitManifestBranch}/{GitManifestPath}";
@@ -50,9 +50,6 @@ if (args.Length != 3)
     Console.WriteLine("Actual arguments: " + string.Join(", ", args));
     return;
 }
-
-// TODO make nuget package with automatic build target??
-// TODO use MinVer.Lib instead: https://github.com/adamralph/minver/issues/1006
 
 var version = args[0];
 var solutionDir = args[1];

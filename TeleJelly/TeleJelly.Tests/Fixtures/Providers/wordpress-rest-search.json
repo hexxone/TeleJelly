@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "title": "Example Movie 2024 1080p",
+    "url": "https://example.test/releases/example-movie-2024/",
+    "type": "post",
+    "subtype": "post",
+    "_links": {
+      "self": [
+        {
+          "href": "https://example.test/wp-json/wp/v2/posts/1"
+        }
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "title": "Ignored Attachment",
+    "url": "https://example.test/wp-content/uploads/poster.jpg",
+    "type": "attachment",
+    "subtype": "attachment"
+  }
+]

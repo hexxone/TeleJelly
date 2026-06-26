@@ -2,7 +2,7 @@
 
 ## What the feature does
 
-The download manager turns a Telegram command into a managed media acquisition pipeline:
+The download manager turns a Telegram command into a guided download workflow:
 
 1. A user starts an automated download with `/autodownload <imdb_id>`.
 2. The plugin resolves metadata from the IMDb/TMDb side.
@@ -11,7 +11,7 @@ The download manager turns a Telegram command into a managed media acquisition p
 5. The selected item is sent to a torrent client or hosted-link downloader.
 6. The plugin monitors the download, extracts archives when needed, analyzes the media files, organizes them into the target library path, and optionally triggers a Jellyfin scan.
 
-The feature is not a thin download client wrapper. It is an orchestrated workflow with persistence, status transitions, service health tracking, archive handling, quality scoring, and final media organization.
+In plain language: the plugin helps a user choose what to download, sends it to the right downloader, watches the progress, unpacks it when needed, and moves the finished media into Jellyfin.
 
 ## Main building blocks
 
@@ -114,7 +114,7 @@ If the staging area contains archives, `ArchiveExtractionService`:
 - now also tries any password extracted from the source search result,
 - falls back to no-password last.
 
-This is intentionally simple right now. The service still has open TODOs for disk-space checks, recursive extraction policy, archive cleanup, and more accurate progress reporting.
+The extraction service now includes free-space checks, optional archive cleanup, multipart archive handling, and a configurable limit for nested archives. Progress reporting is still approximate because it depends on what the archive reader can report.
 
 ### 6. Analysis and organize
 
@@ -134,4 +134,4 @@ The hosted service starts automatically with the plugin and does three important
 - processes all downloads every 10 seconds,
 - performs service health checks on startup and then on the configured interval.
 
-That means the download manager is designed to survive plugin restarts and continue progressing work without user re-entry.
+That means the download manager is designed to survive plugin restarts. Recovery is functional for saved records, but the detailed restart behavior still needs more end-to-end testing for every workflow state.

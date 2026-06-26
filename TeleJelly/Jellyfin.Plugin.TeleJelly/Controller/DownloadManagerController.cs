@@ -4,21 +4,30 @@ using System.Linq;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Health;
+using Jellyfin.Plugin.TeleJelly.Services.Logging;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.TeleJelly.Controller;
 
 [ApiController]
 [Route("TeleJelly/DownloadManager")]
+[Authorize(Policy = "RequiresElevation")]
 public class DownloadManagerController : ControllerBase
 {
     private readonly IServiceHealthMonitor _healthMonitor;
+    private readonly IDownloadManagerLogStore _logStore;
     private readonly IDownloadOrchestrator _orchestrator;
 
-    public DownloadManagerController(IDownloadOrchestrator orchestrator, IServiceHealthMonitor healthMonitor)
+    public DownloadManagerController(
+        IDownloadOrchestrator orchestrator,
+        IServiceHealthMonitor healthMonitor,
+        IDownloadManagerLogStore logStore)
     {
         _orchestrator = orchestrator;
         _healthMonitor = healthMonitor;
+        _logStore = logStore;
     }
 
     [HttpGet("downloads")]
@@ -33,14 +42,8 @@ public class DownloadManagerController : ControllerBase
         return Ok(downloads.OrderByDescending(d => d.StartedAt));
     }
 
-    [HttpGet("health")]
-    public ActionResult<IEnumerable<ServiceHealthStatus>> GetHealth()
-    {
-        return Ok(_healthMonitor.GetAllServiceHealth());
-    }
-
-    [HttpPost("downloads/{id}/cancel")]
-    public async Task<IActionResult> CancelDownload(Guid id)
+    [HttpGet("downloads/{id}")]
+    public ActionResult<ManagedDownload> GetDownload(Guid id)
     {
         var download = _orchestrator.GetDownload(id);
         if (download == null)
@@ -48,17 +51,54 @@ public class DownloadManagerController : ControllerBase
             return NotFound();
         }
 
-        await _orchestrator.UpdateDownloadStatus(id, DownloadStatus.Canceled);
+        return Ok(download);
+    }
+
+    [HttpGet("health")]
+    public ActionResult<IEnumerable<ServiceHealthStatus>> GetHealth()
+    {
+        return Ok(_healthMonitor.GetAllServiceHealth());
+    }
+
+    [HttpGet("logs")]
+    public ActionResult<IEnumerable<DownloadManagerLogEntry>> GetLogs([FromQuery] int limit = 200)
+    {
+        return Ok(_logStore.GetRecent(limit));
+    }
+
+    [HttpPost("downloads/{id}/cancel")]
+    public async Task<IActionResult> CancelDownload(Guid id)
+    {
+        var canceled = await _orchestrator.CancelDownloadAsync(id, HttpContext.RequestAborted);
+        if (!canceled)
+        {
+            return NotFound();
+        }
+
+        return Ok();
+    }
+
+    [HttpPost("downloads/{id}/retry")]
+    public async Task<IActionResult> RetryDownload(Guid id)
+    {
+        var retried = await _orchestrator.RetryDownloadAsync(id, HttpContext.RequestAborted);
+        if (!retried)
+        {
+            return NotFound();
+        }
+
         return Ok();
     }
 
     [HttpDelete("downloads/{id}")]
-    public IActionResult RemoveDownload(Guid id)
+    public async Task<IActionResult> RemoveDownload(Guid id, [FromQuery] bool deleteFiles = false)
     {
-        // In a real implementation, this would also clean up files.
-        // For now, we'll just remove it from the orchestrator's list.
-        // This method would need to be added to the orchestrator.
-        // _orchestrator.RemoveDownload(id);
+        var removed = await _orchestrator.RemoveDownloadAsync(id, deleteFiles, HttpContext.RequestAborted);
+        if (!removed)
+        {
+            return NotFound();
+        }
+
         return NoContent();
     }
 }

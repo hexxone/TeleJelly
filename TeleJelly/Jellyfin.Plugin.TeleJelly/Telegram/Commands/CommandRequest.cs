@@ -56,7 +56,7 @@ internal class CommandRequest : ICommandBase
             return;
         }
 
-        var requestService = telegramBotService.ServiceProvider.GetRequiredService<RequestService>();
+        var requestService = telegramBotService.ServiceProvider.GetRequiredService<IRequestService>();
 
         if (!TryExtractImdbId(message.Text, out var imdbId))
         {
@@ -123,7 +123,7 @@ internal class CommandRequest : ICommandBase
         return false;
     }
 
-    private static async Task<string?> BuildRequestListMessageAsync(TelegramGroup? group, RequestService requestService, CancellationToken cancellationToken)
+    private static async Task<string?> BuildRequestListMessageAsync(TelegramGroup? group, IRequestService requestService, CancellationToken cancellationToken)
     {
         var snapshot = await requestService.GetRequestsAsync(cancellationToken).ConfigureAwait(false);
         if (snapshot.Count == 0)
@@ -273,7 +273,7 @@ internal class CommandRequest : ICommandBase
         ITelegramBotClient botClient,
         ChatId chatId,
         TelegramGroup? group,
-        RequestService requestService,
+        IRequestService requestService,
         CancellationToken cancellationToken)
     {
         var listText = await BuildRequestListMessageAsync(group, requestService, cancellationToken)
@@ -297,7 +297,7 @@ internal class CommandRequest : ICommandBase
         ITelegramBotClient botClient,
         Message message,
         string imdbId,
-        RequestService requestService,
+        IRequestService requestService,
         CancellationToken cancellationToken)
     {
         var userId = message.From?.Id.ToString(CultureInfo.InvariantCulture) ?? "unknown";

@@ -1,11 +1,17 @@
 using Jellyfin.Plugin.TeleJelly.Services;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Health;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Hosted;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Search.Providers;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Search.Providers.Catalog;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Torrents;
+using Jellyfin.Plugin.TeleJelly.Services.Logging;
 using Jellyfin.Plugin.TeleJelly.Telegram;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly;
 
@@ -29,6 +35,10 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<INotificationService, NotificationService>();
 
         // Download manager services
+        serviceCollection.AddSingleton<DownloadManagerLogStore>();
+        serviceCollection.AddSingleton<IDownloadManagerLogStore>(serviceProvider => serviceProvider.GetRequiredService<DownloadManagerLogStore>());
+        serviceCollection.AddSingleton<IDownloadManagerLogWriter>(serviceProvider => serviceProvider.GetRequiredService<DownloadManagerLogStore>());
+        serviceCollection.AddSingleton<ILoggerProvider, TeleJellyLoggerProvider>();
         serviceCollection.AddSingleton<IDownloadOrchestrator, DownloadOrchestrator>();
         serviceCollection.AddSingleton<ArchiveExtractionService>();
         serviceCollection.AddSingleton<MediaAnalyzerService>();
@@ -54,12 +64,12 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<ISearchProvider, ByteToSearchProvider>();
 
         // Register download clients (torrent services)
-        serviceCollection.AddScoped<ITorrentDownloadService, TransmissionService>();
-        serviceCollection.AddScoped<ITorrentDownloadService, QBittorrentService>();
+        serviceCollection.AddSingleton<ITorrentDownloadService, TransmissionService>();
+        serviceCollection.AddSingleton<ITorrentDownloadService, QBittorrentService>();
 
         // Register download clients (hosted services)
-        serviceCollection.AddScoped<IHostedDownloadService, JDownloader2Service>();
-        serviceCollection.AddScoped<IHostedDownloadService, PyLoadService>();
+        serviceCollection.AddSingleton<IHostedDownloadService, JDownloader2Service>();
+        serviceCollection.AddSingleton<IHostedDownloadService, PyLoadService>();
 
         // listen for commands in the background.
         serviceCollection.AddHostedService<TelegramBackgroundService>();

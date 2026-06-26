@@ -26,7 +26,8 @@ public class SearchOrchestrator
         QualityProfile profile,
         int maxResults,
         CancellationToken ct,
-        IEnumerable<string>? enabledProviders = null)
+        IEnumerable<string>? enabledProviders = null,
+        long maxDownloadSizeBytes = 0)
     {
         var allResults = new List<SearchResult>();
 
@@ -56,25 +57,34 @@ public class SearchOrchestrator
             return [];
         }
 
-        var ranked = allResults
+        var eligibleResults = allResults
+            .Where(result => result.FileSizeBytes <= 0 || maxDownloadSizeBytes <= 0 || result.FileSizeBytes <= maxDownloadSizeBytes)
+            .ToList();
+
+        if (eligibleResults.Count == 0)
+        {
+            _logger.LogInformation(
+                "Discarded all {ResultCount} search results for query {Query} because they exceeded the configured size limit of {SizeLimit} bytes",
+                allResults.Count,
+                query,
+                maxDownloadSizeBytes);
+            return [];
+        }
+
+        var ranked = eligibleResults
             .Select(result =>
             {
-                var score = _qualityEngine.ScoreResult(result, profile);
-                result.QualityScore = score;
-                return result;
+                var breakdown = _qualityEngine.GetScoringBreakdown(result, profile, eligibleResults);
+                result.QualityScore = breakdown.TotalScore;
+                return new { Result = result, Breakdown = breakdown };
             })
-            .Where(r => r.QualityScore > 0)
-            .OrderByDescending(r => r.QualityScore)
-            .ThenByDescending(r => r.Seeders)
+            .Where(entry => !entry.Breakdown.Disqualified && entry.Breakdown.TotalScore > 0)
+            .OrderByDescending(entry => entry.Breakdown.TotalScore)
+            .ThenByDescending(entry => entry.Result.Seeders)
             .Take(maxResults)
+            .Select(entry => entry.Result)
             .ToArray();
 
         return ranked;
-    }
-
-    public async Task<SearchResult?> FindBestMatch(string query, string? imdbId, QualityProfile profile, CancellationToken ct, IEnumerable<string>? enabledProviders = null)
-    {
-        var ranked = await SearchAndRankAsync(query, imdbId, profile, 1, ct, enabledProviders);
-        return ranked.FirstOrDefault();
     }
 }

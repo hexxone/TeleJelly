@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Jellyfin.Plugin.TeleJelly;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
@@ -32,6 +33,40 @@ public class CommandAutoDownload : ICommandBase
         if (client == null)
         {
             botService.Logger.LogError("Telegram Bot Client wrapper is null in CommandAutoDownload.");
+            return;
+        }
+
+        var downloadManagerConfig = TeleJellyPlugin.Instance?.Configuration.DownloadManager;
+        if (downloadManagerConfig?.Enabled != true)
+        {
+            await client.SendMessage(
+                message.Chat.Id,
+                "Download manager is disabled.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        if (downloadManagerConfig.WhitelistUsernames.Count > 0)
+        {
+            var username = message.From?.Username;
+            var isWhitelisted = !string.IsNullOrWhiteSpace(username) &&
+                                downloadManagerConfig.WhitelistUsernames.Contains(username, StringComparer.OrdinalIgnoreCase);
+            if (!isWhitelisted)
+            {
+                await client.SendMessage(
+                    message.Chat.Id,
+                    "You are not allowed to use the download manager.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+        }
+
+        if (!downloadManagerConfig.Search.Enabled)
+        {
+            await client.SendMessage(
+                message.Chat.Id,
+                "Automated search is disabled in the download manager configuration.",
+                cancellationToken: cancellationToken);
             return;
         }
 

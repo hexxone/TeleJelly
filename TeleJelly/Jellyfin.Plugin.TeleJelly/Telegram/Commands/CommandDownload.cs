@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Jellyfin.Plugin.TeleJelly;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
@@ -35,6 +36,31 @@ public class CommandDownload : ICommandBase
             return;
         }
 
+        var downloadManagerConfig = TeleJellyPlugin.Instance?.Configuration.DownloadManager;
+        if (downloadManagerConfig?.Enabled != true)
+        {
+            await client.SendMessage(
+                message.Chat.Id,
+                "Download manager is disabled.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        if (downloadManagerConfig.WhitelistUsernames.Count > 0)
+        {
+            var username = message.From?.Username;
+            var isWhitelisted = !string.IsNullOrWhiteSpace(username) &&
+                                downloadManagerConfig.WhitelistUsernames.Contains(username, StringComparer.OrdinalIgnoreCase);
+            if (!isWhitelisted)
+            {
+                await client.SendMessage(
+                    message.Chat.Id,
+                    "You are not allowed to use the download manager.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+        }
+
         var args = message.Text?.Split(' ', 3) ?? [];
         if (args.Length < 2)
         {
@@ -48,6 +74,15 @@ public class CommandDownload : ICommandBase
 
         var imdbId = args[1];
         var link = args.Length > 2 ? args[2] : null;
+
+        if (link == null && !downloadManagerConfig.Search.Enabled)
+        {
+            await client.SendMessage(
+                message.Chat.Id,
+                "Automated search is disabled. Provide a direct link or enable search first.",
+                cancellationToken: cancellationToken);
+            return;
+        }
 
         if (!imdbId.StartsWith("tt"))
         {

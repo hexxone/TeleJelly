@@ -22,7 +22,6 @@ public class DownloadManagerSettings
     public int AutoRemoveFailedDays { get; set; } = 3;
     public List<string> WhitelistUsernames { get; set; } = [];
     public bool TriggerLibraryScanAfterOrganize { get; set; } = true;
-    public bool AutoAddToJellyfinLibrary { get; set; } = true;
     public List<LibrarySettings> LibrarySettings { get; set; } = [];
 }
 
@@ -87,6 +86,9 @@ public class ExtractionSettings
     public List<string> Passwords { get; set; } = ["password", "123456"];
     public bool ExtractPasswordsFromDlc { get; set; } = true;
     public bool NotifyOnFailure { get; set; } = true;
+    public bool DeleteArchivesAfterExtraction { get; set; } = false;
+    public int RecursiveExtractionDepth { get; set; } = 0;
+    public int FreeSpaceMarginPercent { get; set; } = 20;
 }
 
 public class SearchSettings
@@ -100,7 +102,6 @@ public class HealthMonitoringSettings
     public bool Enabled { get; set; } = true;
     public int CheckIntervalMinutes { get; set; } = 5;
     public int MaxConsecutiveFailures { get; set; } = 3;
-    public bool AutoDisableUnhealthyServices { get; set; } = false;
 }
 
 public class LibrarySettings
@@ -132,7 +133,8 @@ public class QualityProfile
     public List<string> RequiredSubtitleLanguages { get; set; } = ["ger", "eng"];
     public List<string> PreferredSubtitleLanguages { get; set; } = ["ger", "eng"];
     public List<string> PreferredCodecs { get; set; } = ["H.265", "H.264"];
-    public List<string> PreferredHDR { get; set; } = ["Dolby Vision", "HDR10", "SDR"];
+    public List<string> PreferredAudioCodecs { get; set; } = ["Atmos", "DTS-HD MA", "DTS-HD", "TrueHD", "DDP5.1", "DD5.1", "AAC"];
+    public List<string> PreferredHDR { get; set; } = ["Dolby Vision", "HDR10+", "HDR10", "HDR"];
     public List<string> PreferredSources { get; set; } = ["BluRay", "WEB-DL", "WEBRip"];
 
     public int MinimumSeeders { get; set; } = 3;
@@ -146,10 +148,13 @@ public class ScoringWeights
     public int CodecPerPosition { get; set; } = 100;
     public int HdrPerPosition { get; set; } = 100;
     public int SourcePerPosition { get; set; } = 100;
+    public int AudioCodecPerPosition { get; set; } = 80;
     public int PreferredAudioLanguagePerMatch { get; set; } = 50;
     public int PreferredSubtitleLanguagePerMatch { get; set; } = 50;
     public int SeederMultiplier { get; set; } = 10;
     public int MaxSeederBonus { get; set; } = 500;
+    public int BitratePerMbps { get; set; } = 8;
+    public int MaxBitrateBonus { get; set; } = 250;
 
     public int RecentReleaseThresholdDays { get; set; } = 30;
     public int ModerateAgeThresholdDays { get; set; } = 90;

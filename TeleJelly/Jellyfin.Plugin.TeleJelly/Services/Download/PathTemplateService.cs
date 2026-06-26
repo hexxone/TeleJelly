@@ -76,10 +76,48 @@ internal sealed class PathTemplateService
         // Clean up empty directory separators that might result from missing optional values
         var separator = Path.DirectorySeparatorChar.ToString();
         resultPath = resultPath.Replace(separator + separator, separator);
+        resultPath = resultPath.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
         _logger.LogInformation("Applied path template. Original: '{Template}', Result: '{ResultPath}'", template, resultPath);
 
         return Task.FromResult(resultPath);
+    }
+
+    public async Task<string> ResolveTemplatePathAsync(
+        string libraryRoot,
+        string template,
+        ManagedDownload download,
+        Dictionary<string, string> userVars,
+        string originalFileName)
+    {
+        var templatedPath = await ApplyTemplateAsync(template, download, userVars, originalFileName);
+        return await ResolvePathAsync(libraryRoot, templatedPath);
+    }
+
+    public Task<string> ResolvePathAsync(string libraryRoot, string destinationPath)
+    {
+        if (string.IsNullOrWhiteSpace(libraryRoot))
+        {
+            throw new ArgumentException("Library root path must not be empty.", nameof(libraryRoot));
+        }
+
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
+        }
+
+        var resolvedPath = Path.IsPathFullyQualified(destinationPath)
+            ? destinationPath
+            : Path.Combine(libraryRoot, destinationPath);
+
+        var fullPath = Path.GetFullPath(resolvedPath);
+        _logger.LogInformation(
+            "Resolved destination path. Library root: '{LibraryRoot}', Input: '{InputPath}', Result: '{ResolvedPath}'",
+            libraryRoot,
+            destinationPath,
+            fullPath);
+
+        return Task.FromResult(fullPath);
     }
 
     public Task<bool> ValidatePathAsync(string path)

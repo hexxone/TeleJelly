@@ -1,0 +1,36 @@
+name: TeleJelly Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore tools
+        working-directory: TeleJelly
+        run: dotnet tool restore
+
+      - name: Run deterministic suite with coverage
+        working-directory: TeleJelly
+        run: dotnet test TeleJelly.sln --filter "TestCategory!=LiveSearch" --collect:"XPlat Code Coverage;Format=cobertura" --results-directory TestResults
+
+      - name: Build HTML coverage summary
+        working-directory: TeleJelly
+        run: dotnet tool run reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"TestResults/CoverageReport" -reporttypes:"HtmlSummary;Cobertura"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: telejelly-coverage-report
+          path: TeleJelly/TestResults/CoverageReport

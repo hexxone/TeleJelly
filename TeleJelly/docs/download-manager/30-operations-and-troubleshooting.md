@@ -104,6 +104,6 @@ Check:
 
 ## Operational notes for future work
 
-- The controller delete endpoint is still incomplete and should be finished if true lifecycle management is needed.
-- Health monitoring config already contains `AutoDisableUnhealthyServices`, but current behavior is primarily based on runtime health filtering.
-- Archive extraction still has several TODOs recorded directly in the service source and should be treated as functional but not finished.
+- The controller now supports cancel, retry, remove, and remove-with-file-cleanup flows for download records.
+- Health monitoring now keeps services in runtime `Online`/`Degraded`/`Offline` state and sends a one-shot Telegram warning when a service drops offline.
+- Archive extraction is wired into the normal lifecycle before analysis and organization. Failed retries preserve password-attempt context on the managed download record.

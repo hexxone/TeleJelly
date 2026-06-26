@@ -56,6 +56,17 @@
                                 <li>Enter all TG-Usernames which should be part of the Group.</li>
                                 <li>When finished editing Groups, click on "Save Groups".</li>
                             </ol>
+
+                            <div class="telejelly-callout">
+                                <strong>HTTPS / Reverse Proxy Checklist</strong>
+                                <ol>
+                                    <li>Use a public HTTPS URL for Jellyfin. The Telegram Login Widget does not work on plain HTTP.</li>
+                                    <li>Run the BotFather <i>/setdomain</i> command with that exact external host name.</li>
+                                    <li>Set "Server Domain and Base URL" to the same external base URL that users open in their browser.</li>
+                                    <li>If Jellyfin sits behind a reverse proxy which terminates TLS, set "Enforce External URL Scheme" to <i>https</i>.</li>
+                                    <li>If login gets stuck after Telegram returns, first verify the browser address bar still shows the public HTTPS domain and not an internal container host or plain HTTP URL.</li>
+                                </ol>
+                            </div>
                         </fieldset>
                     </form>
                 </div>
@@ -141,10 +152,9 @@
                                     <label class="inputLabel inputLabelUnfocused" for="LoginBaseUrl">Server Domain and Base URL:</label>
                                     <input class="sso-text" id="LoginBaseUrl" is="emby-input" maxlength="200" type="url"/>
                                     <div class="fieldDescription">
-                                        The Base-Domain (and BaseURL if configured) which should be used to log-in on the Server.
-                                        If set, this needs to be the same domain as used for the @BotFather /setdomain command.
-                                        You can leave this empty if you want.
-                                        This will mainly be used for telling your Telegram-users this Server's URL.
+                                        Enter the exact external base URL that users open in their browser, including any reverse-proxy base path.
+                                        If you use this field, it should match the host configured in the @BotFather <i>/setdomain</i> command.
+                                        Leave it empty only if Jellyfin already knows the correct public URL by itself.
                                     </div>
                                 </div>
                             </div>
@@ -175,9 +185,9 @@
                                     </select>
                                 </div>
                                 <div class="fieldDescription checkboxFieldDescription">
-                                    Should the Plugin force a Specific protocol Scheme on it's returned URLS?
-                                    This is probably useful if your jellyfin is running behind a Reverse Proxy which
-                                    does "SSL-stripping" (like Traefik). <strong>If you are unsure, leave this setting turned off (None).</strong>
+                                    Force the protocol used in generated URLs.
+                                    Set this to <strong>https</strong> when Jellyfin runs behind a reverse proxy which terminates TLS and forwards plain HTTP internally.
+                                    <strong>If you are unsure, leave this setting on None.</strong>
                                 </div>
                             </div>
 
@@ -358,6 +368,9 @@
                     <form id="DownloadManagerForm">
                         <fieldset class="verticalSection">
                             <legend><h3>Download Manager</h3></legend>
+                            <div class="fieldDescription">
+                                Live overview of managed downloads and backend health. The activity log below auto-refreshes every 5 seconds while this page is open.
+                            </div>
                             <div class="inputContainer">
                                 <label class="inputLabel inputLabelUnfocused" for="DownloadStatusFilter">Status filter</label>
                                 <select class="emby-select-withcolor emby-select" id="DownloadStatusFilter">
@@ -366,7 +379,9 @@
                                     <option value="AwaitingSearchResult">Awaiting Search</option>
                                     <option value="AwaitingPathVars">Awaiting Path Variables</option>
                                     <option value="AwaitingPathConfirm">Awaiting Path Confirm</option>
+                                    <option value="ExtractionFailed">Extraction Failed</option>
                                     <option value="Completed">Completed</option>
+                                    <option value="Canceled">Canceled</option>
                                     <option value="Failed">Failed</option>
                                     <option value="Stalled">Stalled</option>
                                 </select>
@@ -382,6 +397,60 @@
                                     is="emby-button"
                                     type="button">
                                 <span>Refresh List</span>
+                            </button>
+                        </fieldset>
+                    </form>
+                </div>
+
+                <!-- Download Manager Config Section -->
+                <div class="block">
+                    <form id="DownloadManagerConfigForm">
+                        <fieldset class="verticalSection">
+                            <legend><h3>Download Manager Configuration</h3></legend>
+                            <div class="fieldDescription">
+                                Raw JSON editor for the <code>DownloadManager</code> section of the plugin configuration.
+                                Use this for advanced settings until a proper form UI exists.
+                                Changes are only applied when you click <strong>Save Configuration</strong>.
+                            </div>
+                            <textarea class="emby-textarea download-manager-json"
+                                      id="DownloadManagerConfigJson"
+                                      is="emby-textarea"
+                                      spellcheck="false"></textarea>
+                            <div class="button-row">
+                                <button class="raised button-alt emby-button"
+                                        id="FormatDownloadManagerConfig"
+                                        is="emby-button"
+                                        type="button">
+                                    <span>Format JSON</span>
+                                </button>
+                                <button class="raised button-alt emby-button"
+                                        id="ReloadDownloadManagerConfig"
+                                        is="emby-button"
+                                        type="button">
+                                    <span>Reload Saved JSON</span>
+                                </button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+
+                <!-- Download Manager Activity Log Section -->
+                <div class="block">
+                    <form id="DownloadManagerLogsForm">
+                        <fieldset class="verticalSection">
+                            <legend><h3>Download Manager Activity Log</h3></legend>
+                            <div class="fieldDescription">
+                                Recent background activity from download-manager services.
+                                This view auto-refreshes every 5 seconds while the page is open.
+                            </div>
+                            <div class="paperList download-log-list" id="DownloadManagerLogList">
+                                <!-- Download manager logs will be dynamically inserted here -->
+                            </div>
+                            <button class="raised button-alt block emby-button"
+                                    id="RefreshDownloadLogs"
+                                    is="emby-button"
+                                    type="button">
+                                <span>Refresh Logs</span>
                             </button>
                         </fieldset>
                     </form>

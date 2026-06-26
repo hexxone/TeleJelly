@@ -2,7 +2,7 @@
 
 ## Current search design
 
-The search layer is centered around `ISearchProvider`:
+The search layer is centered around `ISearchProvider`. Each provider knows how to ask one website or service for possible downloads.
 
 ```csharp
 public interface ISearchProvider
@@ -12,7 +12,7 @@ public interface ISearchProvider
 }
 ```
 
-Important implications:
+Important behavior:
 
 - providers receive both a human query and an optional IMDb ID,
 - providers are free to prefer IMDb-first search when the site supports or benefits from it,
@@ -30,7 +30,7 @@ Important implications:
 
 ### Structured providers
 
-The preferred path is `ConfigurableStructuredSearchProvider` in `Services/Download/Search/Providers/StructuredSearchProviders.cs`.
+The preferred path is `ConfigurableStructuredSearchProvider` in `Services/Download/Search/Providers/ConfigurableStructuredSearchProvider.cs`.
 
 It exists for providers where we can define:
 
@@ -88,7 +88,7 @@ Then choose the adapter shape based on the site:
 3. Create a dedicated provider class when the site has custom APIs, forum flows, login/session requirements, anti-bot constraints, or protected intermediate forms.
 4. Leave the provider disabled if the only path would be brittle scraping that is likely to break quickly.
 
-## Implementation expectations
+## Expectations for a useful provider
 
 A new provider should follow these rules:
 
@@ -103,7 +103,7 @@ A new provider should follow these rules:
 - Shape the payload for the downloader that will receive it.
   For hosted downloads, multiple direct part links can be bundled together.
 
-The key design principle is: do not stop at “found a post URL”. The provider should get as close as possible to the real downloadable payload.
+The key design principle is: do not stop at "found a post URL". The provider should get as close as possible to the real downloadable payload, because the rest of the workflow needs something it can send to Transmission, qBittorrent, JDownloader2, or pyLoad.
 
 ## Rough steps to add a provider
 

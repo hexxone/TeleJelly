@@ -57,7 +57,7 @@ internal sealed class NotificationService : IDisposable, INotificationService
     private readonly ILibraryManager _libraryManager;
     private readonly ILogger<NotificationService> _logger;
     private readonly ConcurrentDictionary<Guid, DateTime> _pendingNotifications = new();
-    private readonly RequestService _requestService;
+    private readonly IRequestService _requestService;
     private readonly Timer _timer;
 
     /// <summary>
@@ -69,7 +69,7 @@ internal sealed class NotificationService : IDisposable, INotificationService
         ILogger<NotificationService> logger,
         ILibraryManager libraryManager,
         TelegramBotClientWrapper botClientWrapper,
-        RequestService requestService)
+        IRequestService requestService)
     {
         _logger = logger;
         _botClientWrapper = botClientWrapper;

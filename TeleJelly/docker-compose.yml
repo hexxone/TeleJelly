@@ -1,92 +1,155 @@
-﻿name: TeleJelly-debug
+name: telejelly
 
 networks:
-    default:
-        name: jellyfin-network
-        driver: bridge
+  default:
+    name: telejelly-network
+    driver: bridge
 
 volumes:
-    traefik-le:
-    downloads:
+  traefik-le:
 
 services:
-    traefik:
-        image: traefik:v3
-        command:
-            - --api.dashboard=true
-            - --providers.docker=true
-            - --providers.docker.exposedbydefault=false
-            - --entrypoints.web.address=:80
-            - --entrypoints.websecure.address=:443
-            - --certificatesresolvers.myresolver.acme.tlschallenge=true
-            - --certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}
-            - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.traefik-ui.rule=Host(`traefik.${SERVER_HOST}`)
-            - traefik.http.routers.traefik-ui.entrypoints=websecure
-            - traefik.http.routers.traefik-ui.tls=true
-            # TODO rate-limiting example..
-            - traefik.http.services.traefik-ui.loadbalancer.server.port=8080
-        ports:
-            - "8800:80"
-            - "8443:443"
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-            - traefik-le:/letsencrypt
+  traefik:
+    profiles: ["proxy"]
+    image: traefik:v3
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+      - --certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik-ui.rule=Host(`traefik.${SERVER_HOST}`)
+      - traefik.http.routers.traefik-ui.entrypoints=websecure
+      - traefik.http.routers.traefik-ui.tls=true
+      - traefik.http.routers.traefik-ui.tls.certresolver=myresolver
+      - traefik.http.routers.traefik-ui.service=api@internal
+      - traefik.http.middlewares.traefik-rate-limit.ratelimit.average=20
+      - traefik.http.middlewares.traefik-rate-limit.ratelimit.burst=40
+      - traefik.http.routers.traefik-ui.middlewares=traefik-rate-limit
+    ports:
+      - "8800:80"
+      - "8443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-le:/letsencrypt
+    restart: unless-stopped
 
-    jellyfin:
-        build:
-            context: .
-            dockerfile: Dockerfile
-            args:
-                DOTNET_VERSION: "9.0"
-                JELLYFIN_VERSION: "10.11"
-        volumes:
-            - ./docker-example/jellyfin-media:/media
-            - downloads:/downloads
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${SERVER_HOST}`)
-            - traefik.http.routers.jellyfin.entrypoints=websecure
-            - traefik.http.routers.jellyfin.tls=true
-            - traefik.http.services.jellyfin.loadbalancer.server.port=8096
-        environment:
-            - TZ=UTC
-        depends_on:
-            - traefik
+  jellyfin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DOTNET_VERSION: "9.0"
+        JELLYFIN_VERSION: "10.11"
+    container_name: telejelly-jellyfin
+    environment:
+      TZ: UTC
+    ports:
+      - "8096:8096"
+    volumes:
+# Cannot overwrite config! It currently contains the built plugin in container.
+#      - ./docker-data/jellyfin/config:/config
+      - ./docker-data/jellyfin/cache:/cache
+      - ./docker-data/downloads:/downloads
+      - ./docker-data/library:/media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${SERVER_HOST}`)
+      - traefik.http.routers.jellyfin.entrypoints=websecure
+      - traefik.http.routers.jellyfin.tls=true
+      - traefik.http.routers.jellyfin.tls.certresolver=myresolver
+      - traefik.http.middlewares.jellyfin-rate-limit.ratelimit.average=50
+      - traefik.http.middlewares.jellyfin-rate-limit.ratelimit.burst=100
+      - traefik.http.routers.jellyfin.middlewares=jellyfin-rate-limit
+      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+    depends_on:
+      - transmission
+      - qbittorrent
+      - pyload-ng
+      - jdownloader-2
+      - fixture-http
+    restart: unless-stopped
 
-    transmission:
-        image: linuxserver/transmission
-        environment:
-            - PUID=1000
-            - PGID=1000
-            - TZ=UTC
-            - TRANSMISSION_WEB_HOME=/combustion-release/
-        volumes:
-            - ./docker-example/transmission-config:/config
-            - downloads:/downloads
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.jellyfin.rule=Host(`transmission.${SERVER_HOST}`)
-            - traefik.http.routers.jellyfin.entrypoints=websecure
-            - traefik.http.routers.jellyfin.tls=true
-            - traefik.http.services.jellyfin.loadbalancer.server.port=9091
-# TODO Add & use "gluetun"
-# TODO what are 51XXX ports? needed for RPC? or actually web-ui?
-#        ports:
-#            - "9091:9091"
-#            - "51413:51413"
-#            - "51413:51413/udp"
-        restart: unless-stopped
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: telejelly-transmission
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: UTC
+      USER: telejelly
+      PASS: telejelly
+      PEERPORT: 51413
+      TRANSMISSION_WEB_HOME: /combustion-release/
+    ports:
+      - "9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+    volumes:
+      - ./docker-data/transmission/config:/config
+      - ./docker-data/downloads:/downloads
+      - ./docker-data/transmission/watch:/watch
+    restart: unless-stopped
 
-    jdownloader:
-        image: jlesage/jdownloader-2
-# TODO Add & use "gluetun"
-# TODO has web-ui ? needs traefik ?
-#        ports:
-#            - "5800:5800"
-        volumes:
-            - ./docker-example/jdownloader-config:/config
-            - downloads:/output
-        restart: unless-stopped
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: telejelly-qbittorrent
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: UTC
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: 6881
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - ./docker-data/qbittorrent/config:/config
+      - ./docker-data/downloads:/downloads
+    restart: unless-stopped
+
+  pyload-ng:
+    image: lscr.io/linuxserver/pyload-ng:latest
+    container_name: telejelly-pyload
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: UTC
+    ports:
+      - "8000:8000"
+      - "9666:9666"
+    volumes:
+      - ./docker-data/pyload/config:/config
+      - ./docker-data/downloads:/downloads
+    restart: unless-stopped
+
+  jdownloader-2:
+    image: jlesage/jdownloader-2:latest
+    container_name: telejelly-jdownloader
+    environment:
+      USER_ID: 1000
+      GROUP_ID: 1000
+      TZ: UTC
+    ports:
+      - "5800:5800"
+      - "3129:3129"
+    volumes:
+      - ./docker-data/jdownloader/config:/config:rw
+      - ./docker-data/downloads:/downloads:rw
+      - ./docker-data/downloads:/output:rw
+    restart: unless-stopped
+
+  fixture-http:
+    image: nginx:alpine
+    container_name: telejelly-fixture-http
+    ports:
+      - "18080:80"
+    volumes:
+      - ./docker-data/fixtures/http:/usr/share/nginx/html:ro
+    restart: unless-stopped

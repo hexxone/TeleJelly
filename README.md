@@ -1,3 +1,10 @@
+<h1 align="center">TeleJelly Plugin</h1>
+<h4 align="center">
+A <a href="https://core.telegram.org/widgets/login">Telegram Login Widget</a> "SSO"-provider for <a href="https://jellyfin.org/">Jellyfin</a>.
+</h4>
+
+---
+
 <p align="center">
 <img alt="Logo" src="https://raw.githubusercontent.com/hexxone/TeleJelly/main/TeleJelly/thumb.jpg" height=256 />
 <br/>
@@ -19,17 +26,17 @@
 </a>
 </p>
 
-<h1 align="center">TeleJelly Plugin</h1>
+---
 
-A Plugin for logging into [Jellyfin](https://jellyfin.org/) using
-the [Telegram Login Widget](https://core.telegram.org/widgets/login) as "SSO" provider.
+TeleJelly is a Plugin for [Jellyfin](https://jellyfin.org/) which allows you and your users to Login using
+the [Telegram Login Widget](https://core.telegram.org/widgets/login) as a "Single Sign On" provider.
 
-Allows for simple Group creation/editing/deleting in order to manage Admins/Users/Library-access.
+The plugin allows for simple Group creation/editing/deleting in order to manage Admins, Users and Library-access.
 
-Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plugin-ldapauth)
-and [jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso).
-
+Inspired by [jellyfin-plugin-ldapauth](https://github.com/jellyfin/jellyfin-plugin-ldapauth) and [jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso).
 Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plugin-template).
+
+---
 
 ## Contents
 
@@ -44,9 +51,12 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 - [Demo Video](#demo-video)
 - [Installation](#installation)
 - [Configuration](#configuration)
+- [HTTPS / Reverse Proxy](#https--reverse-proxy)
 - [Known issues](#known-issues)
 - [Documentation](./TeleJelly/docs/README.md)
 - [How to Contribute](./TeleJelly/docs/Contributing.md)
+
+---
 
 ## Usage
 
@@ -103,6 +113,8 @@ Created from [jellyfin-plugin-template](https://github.com/jellyfin/jellyfin-plu
 2. A valid, public SSL certificate is needed for the Login Widget to work (e.g. LetsEncrypt).
 3. A Telegram Bot (token) is required to cryptographically validate the User Login credentials.
 
+---
+
 ## Bot Interaction
 
 The Telegram bot will only listen to commands, send notifications, and sync usernames if the `Enable bot service`
@@ -117,6 +129,7 @@ If the checkbox is **not activated**, you can still log in with configured group
 
 If a Telegram-group is successfully linked to a TeleJelly-group, the bot will listen for chat events:
 
+- Telegram only sends the membership updates needed for automatic syncing when the bot is an administrator in that group.
 - User joins chat && `Sync Usernames` enabled -> User gets added to TeleJelly group automatically if he has a Username
   set.
 - User left chat && `Sync Usernames` enabled -> User gets removed from TeleJelly group automatically if he has a
@@ -184,6 +197,8 @@ To enable inline search, you need to configure it in **two places**:
 >
 > **Only enable this feature if you trust all users in your TeleJelly groups** and understand that they can share search results anywhere on Telegram.
 
+---
+
 ## Demo Video
 
 _Note: Video & Screenshots are taken
@@ -191,6 +206,8 @@ with [my custom CSS theme](https://gist.github.com/hexxone/f00eecb130fa1ca12b3a4
 The Logo is AI-generated._
 
 https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
+
+---
 
 ## Screenshots (outdated)
 
@@ -217,6 +234,8 @@ https://github.com/user-attachments/assets/48b908e7-c08e-4669-9d61-079c30cd229f
 ![Config Page 1](./screenshots/02.png)
 
 </details>
+
+---
 
 ## Installation
 
@@ -250,6 +269,13 @@ Don't trust the downloads? You can also do it by yourself.
 6. extract the `.zip`-content into your Jellyfin server folder `config/plugins/TeleJelly` (create it if non-existing)
 7. restart Jellyfin server
 
+For local development and download-manager testing, the bundled Docker stack now lives in [TeleJelly/docker-compose.yml](./TeleJelly/docker-compose.yml):
+
+- Start the local stack with `cd TeleJelly && docker compose up -d`
+- Start the same stack with the HTTPS Traefik example via `cd TeleJelly && docker compose --profile proxy up -d`
+
+---
+
 ## Configuration
 
 1. Make a new Bot & get the Token via [@Botfather](https://t.me/BotFather)
@@ -266,9 +292,33 @@ Don't trust the downloads? You can also do it by yourself.
 To give other users access without making them Admins:
 
 1. Create a new Group on the TeleJelly Config page (e.g., "Friends").
-2. Add the Bot to your corresponding Telegram Group.
+2. Add the Bot to your corresponding Telegram Group and promote it to an administrator if you want automatic join/leave syncing.
 3. Run `/link` inside that Telegram Group to connect it to the TeleJelly Group.
 4. If "Sync Usernames" is enabled, users joining the chat are automatically added to the plugin access list.
+5. `/register` remains useful as a manual backfill for users who were already in the chat before linking or before sync was enabled.
+
+---
+
+## HTTPS / Reverse Proxy
+
+If Telegram login returns successfully but Jellyfin stays on the login page, loops back to the login screen, or shows a generic connection failure, the problem is usually a mismatch between the public HTTPS URL, the BotFather domain, and the URL TeleJelly generates for the callback flow.
+
+Use this checklist:
+
+1. Expose Jellyfin on one public HTTPS URL and make sure users always use that same host name.
+2. Run `@BotFather` -> `/setdomain` and set the exact external host name that serves Jellyfin.
+3. In the TeleJelly config page, set `Server Domain and Base URL` to that same external URL, including any base path from your reverse proxy.
+4. If your reverse proxy terminates TLS and forwards plain HTTP to Jellyfin, set `Enforce External URL Scheme` to `https`.
+5. Confirm the browser address bar still shows your public `https://.../sso/Telegram` URL during the full login roundtrip and does not switch to `http://`, a container host, or an internal LAN-only name.
+6. If you use Traefik, Nginx, or Caddy with additional auth/rate-limit middleware, ensure the `/sso/Telegram` route is forwarded cleanly and that Jellyfin still sees the original host.
+
+Common symptoms of a bad setup:
+
+- Telegram login widget loads, but the final redirect silently lands back on the login page.
+- Jellyfin reports a generic "connection failure" after Telegram authentication succeeded.
+- The login URL shown in the TeleJelly config page points to the wrong host, wrong scheme, or misses the reverse-proxy base path.
+
+---
 
 ## Known issues
 
@@ -287,6 +337,8 @@ To give other users access without making them Admins:
 
 - If your server is publicly reachable, make sure to take care of rate limiting with your reverse proxy;
   otherwise adversaries might be able to lag the system.
+
+---
 
 ## [Documentation](./TeleJelly/docs/README.md)
 

@@ -46,7 +46,7 @@ internal sealed class RequestService : IRequestService
     private readonly IApplicationPaths _applicationPaths;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
     private readonly object _lock = new();
-    private readonly ILogger<RequestService> _logger;
+    private readonly ILogger _logger;
     private bool _loaded;
 
     private List<MediaRequest> _requests = [];

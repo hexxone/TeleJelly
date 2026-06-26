@@ -44,21 +44,25 @@
 form {
     max-width: 100% !important;
     display: flex;
+    width: 100%;
+    min-width: 0;
 }
 
 fieldset {
     background-color: #20202067;
     border-color: #000;
     border-radius: .5rem;
+    box-sizing: border-box;
     padding: 1.5em;
+    width: 100%;
+    min-width: 0;
 }
 
 /* Card styling (vertical content inside) */
 .block {
     display: flex;
     flex-direction: column;
-    /*max-width: var(--card-max);*/
-    /*width: 100%;*/
+    min-width: 0;
     padding: 1rem;
     box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
 }
@@ -124,6 +128,12 @@ fieldset {
     margin-top: 0.25em;
 }
 
+.verticalSection {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
 .sso-role-mapping-container,
 .sso-bordered-list {
     /*
@@ -154,9 +164,9 @@ fieldset {
     border: 1px dotted #777;
     display: block;
     padding: 1rem;
-    max-width: min(var(--card-max), 70vw);
+    max-width: 100%;
     max-height: 14em;
-    overflow: scroll;
+    overflow: auto;
 }
 
 .sectionTitleContainer > * {
@@ -170,6 +180,24 @@ fieldset {
     position: relative;
     display: flex;
     flex-direction: column;
+}
+
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.telejelly-callout {
+    background: rgba(0, 164, 220, 0.08);
+    border: 1px solid rgba(0, 164, 220, 0.35);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+}
+
+.telejelly-callout ol {
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
 }
 
 @media (min-width: 1050px) {
@@ -192,7 +220,7 @@ fieldset {
 @media (min-width: 1050px) {
     .grid-4-columns {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 1rem;
         margin-bottom: 1rem;
     }
@@ -282,6 +310,61 @@ fieldset {
     max-height: 30rem;
     overflow: auto;
     border-radius: .5rem;
+}
+
+.download-manager-json {
+    min-height: 28rem;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+}
+
+.download-log-list {
+    max-height: 32rem;
+    overflow: auto;
+    border-radius: 0.5rem;
+}
+
+.download-log-entry {
+    display: grid;
+    grid-template-columns: 11rem 7rem minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    padding: 0.5rem;
+}
+
+.download-log-entry .log-timestamp,
+.download-log-entry .log-level,
+.download-log-entry .log-source {
+    opacity: 0.8;
+}
+
+.download-log-entry .log-message {
+    word-break: break-word;
+}
+
+.download-log-entry.is-error .log-level {
+    color: #ff8b8b;
+}
+
+.download-log-entry.is-warning .log-level {
+    color: #ffd166;
+}
+
+.download-log-entry.is-information .log-level {
+    color: #7bdff2;
+}
+
+.download-log-entry.is-debug .log-level {
+    color: #b8c0ff;
+}
+
+@media (max-width: 900px) {
+    .download-log-entry {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
 }
 
 /* Telegram Settings Sections */

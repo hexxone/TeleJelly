@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Health;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -66,6 +67,12 @@ public class CommandDownloadStatus : ICommandBase
 
             sb.AppendLine(CultureInfo.InvariantCulture, $"<b>{download.Title} ({download.Year})</b>");
             sb.AppendLine(CultureInfo.InvariantCulture, $"Status: <i>{download.Status}</i> {download.ProgressPercentage:F1}%{etaString}");
+            if (download.RequiresExtraction)
+            {
+                var attemptedPasswords = download.TriedPasswords?.Length ?? 0;
+                sb.AppendLine(CultureInfo.InvariantCulture, $"Extraction: required{(attemptedPasswords > 0 ? $" | password candidates: {attemptedPasswords}" : string.Empty)}");
+            }
+
             if (!string.IsNullOrEmpty(download.ErrorMessage))
             {
                 sb.AppendLine(CultureInfo.InvariantCulture, $"Error: <pre>{download.ErrorMessage}</pre>");
