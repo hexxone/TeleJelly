@@ -45,3 +45,13 @@ That stack is intended for manual and smoke testing:
 - verify that the final file lands under the selected Jellyfin library path.
 
 These checks are not a replacement for unit tests. They catch integration problems that only appear when containers, shared folders, credentials, and downloader APIs all interact.
+
+## JDownloader2
+
+Get all links:
+
+```bash
+curl -H 'Content-Type: application/json' \
+  --data '{"params":[{}]}' \
+  http://127.0.0.1:3128/downloadsV2/queryLinks
+```

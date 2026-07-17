@@ -111,7 +111,7 @@ internal class ConfigurableStructuredSearchProvider : ISearchProvider
                     continue;
                 }
 
-                foreach (var result in BuildSearchResults(document))
+                foreach (var result in await BuildSearchResultsAsync(document, ct))
                 {
                     if (seenDownloadLinks.Add(result.DownloadLink))
                     {
@@ -323,10 +323,10 @@ internal class ConfigurableStructuredSearchProvider : ISearchProvider
         return new PostDocument(pageUrl, string.IsNullOrWhiteSpace(title) ? fallbackTitle ?? string.Empty : title, finalHtml, uploadedDate);
     }
 
-    private IEnumerable<SearchResult> BuildSearchResults(PostDocument document)
+    private async Task<IEnumerable<SearchResult>> BuildSearchResultsAsync(PostDocument document, CancellationToken ct)
     {
         var decodedText = DecodeHtml(StripTags(document.ContentHtml));
-        var payloads = ExtractDownloadPayloads(document.ContentHtml).ToArray();
+        var payloads = (await ExtractDownloadPayloadsAsync(document.ContentHtml, ct)).ToArray();
         if (payloads.Length == 0)
         {
             return [];
@@ -362,15 +362,29 @@ internal class ConfigurableStructuredSearchProvider : ISearchProvider
         }).ToArray();
     }
 
-    private IEnumerable<string> ExtractDownloadPayloads(string html)
+    private async Task<IEnumerable<string>> ExtractDownloadPayloadsAsync(string html, CancellationToken ct)
     {
         var fileCrypt = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var affiliateLinks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var directLinks = new List<string>();
+        var availability = await ProviderAvailabilityFilter.FindOnlineLinksAsync(html, _fetcher, _logger, ct);
+        var onlineLinks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var onlineLink in availability.OnlineLinks)
+        {
+            if (TryMakeAbsolute(onlineLink, out var absoluteOnlineLink))
+            {
+                onlineLinks.Add(NormalizeUrl(absoluteOnlineLink));
+            }
+        }
 
         foreach (Match match in LinkRegex.Matches(html))
         {
             if (!TryMakeAbsolute(WebUtility.HtmlDecode(match.Groups["url"].Value), out var absoluteUrl))
+            {
+                continue;
+            }
+
+            if (availability.HasIndicators && !onlineLinks.Contains(NormalizeUrl(absoluteUrl)))
             {
                 continue;
             }

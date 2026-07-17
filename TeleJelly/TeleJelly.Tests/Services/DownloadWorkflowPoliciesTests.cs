@@ -9,6 +9,23 @@ namespace TeleJelly.Tests.Services;
 [Category("Unit")]
 public class DownloadWorkflowPoliciesTests
 {
+    [TestCase(DownloadStatus.AwaitingMediaType)]
+    [TestCase(DownloadStatus.AwaitingSeason)]
+    public void IsValidTransition_AllowsAutoSelectedResultToRequestPathVariables(DownloadStatus from)
+    {
+        Assert.That(
+            DownloadWorkflowPolicies.IsValidTransition(from, DownloadStatus.AwaitingPathVars),
+            Is.True);
+    }
+
+    [Test]
+    public void IsValidTransition_AllowsEditingTypeFromReadyDialog()
+    {
+        Assert.That(
+            DownloadWorkflowPolicies.IsValidTransition(DownloadStatus.AwaitingPathConfirm, DownloadStatus.AwaitingMediaType),
+            Is.True);
+    }
+
     [Test]
     public void TryUpdateProgress_UpdatesTimestampOnlyForMeaningfulChanges()
     {
@@ -22,6 +39,19 @@ public class DownloadWorkflowPoliciesTests
         Assert.That(download.ProgressPercentage, Is.EqualTo(42.0).Within(0.001));
         Assert.That(download.LastProgressAt, Is.EqualTo(now));
         Assert.That(unchanged, Is.False);
+    }
+
+    [Test]
+    public void TryUpdateBackendStatus_PersistsReadableTorrentState()
+    {
+        var download = CreateDownload();
+
+        var changed = DownloadWorkflowPolicies.TryUpdateBackendStatus(download, new { State = "stalledDL" });
+        var unchanged = DownloadWorkflowPolicies.TryUpdateBackendStatus(download, new { State = "stalledDL" });
+
+        Assert.That(changed, Is.True);
+        Assert.That(unchanged, Is.False);
+        Assert.That(download.BackendStatusText, Is.EqualTo("Stalled; waiting for peers"));
     }
 
     [Test]
@@ -88,7 +118,21 @@ public class DownloadWorkflowPoliciesTests
         Assert.That(reason, Is.Null);
     }
 
+    [Test]
+    public void TryGetHostedFailureReason_ReturnsBackendDetail()
+    {
+        var progress = new { Status = "Failed: Captcha unsupported: powcaptcha.com" };
+
+        var failed = DownloadWorkflowPolicies.TryGetHostedFailureReason(progress, out var reason);
+
+        Assert.That(failed, Is.True);
+        Assert.That(reason, Is.EqualTo("Captcha unsupported: powcaptcha.com"));
+    }
+
     [TestCase(DownloadStatus.AwaitingPathConfirm, DownloadStatus.Pending, true)]
+    [TestCase(DownloadStatus.Pending, DownloadStatus.Resolving, true)]
+    [TestCase(DownloadStatus.Resolving, DownloadStatus.Downloading, true)]
+    [TestCase(DownloadStatus.Resolving, DownloadStatus.Extracting, false)]
     [TestCase(DownloadStatus.Extracting, DownloadStatus.ExtractionFailed, true)]
     [TestCase(DownloadStatus.Completed, DownloadStatus.Downloading, false)]
     [TestCase(DownloadStatus.Canceled, DownloadStatus.AwaitingPathConfirm, true)]

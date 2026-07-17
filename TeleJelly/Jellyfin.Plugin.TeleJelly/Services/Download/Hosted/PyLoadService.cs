@@ -10,7 +10,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.HostedDownload;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download.Hosted;

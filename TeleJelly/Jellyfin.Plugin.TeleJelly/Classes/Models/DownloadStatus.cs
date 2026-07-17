@@ -9,6 +9,7 @@ public enum DownloadStatus
     AwaitingSearchResult,
     AwaitingPathVars,
     AwaitingPathConfirm,
+    Resolving,
     Downloading,
     Extracting,
     ExtractionFailed,

@@ -1,42 +1,51 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using JDownloader;
-using JDownloader.Model;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.HostedDownload;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download.Hosted;
 
-internal sealed class JDownloader2Service : IHostedDownloadService
+internal sealed class JDownloader2Service : IHostedDownloadService, IDeferredHostedDownloadService, IDisposable
 {
+    private const string CrawlerPrefix = "crawler:";
     private static JDownloader2Settings? Config => TeleJellyPlugin.Instance?.Configuration.DownloadManager.HostedServices.JDownloader2;
 
-    private readonly JDownloaderClient _client;
+    private readonly IJDownloader2ServiceBackend _legacyJDownloader;
     private readonly ILogger _logger;
-    private DeviceData? _device;
+    private readonly IJDownloader2ServiceBackend _myJDownloader;
 
     public JDownloader2Service(ILogger<JDownloader2Service> logger)
     {
         _logger = logger;
-        _client = new JDownloaderClient(new JDownloaderClientOptions { AppKey = "TeleJelly" });
+        _myJDownloader = new MyJDownloader2Service(logger);
+        _legacyJDownloader = new LegacyJDownloader2Service(logger);
     }
 
     public string ServiceName => "JDownloader2";
 
     public bool IsEnabled => Config?.Enabled ?? false;
 
+    private IJDownloader2ServiceBackend ActiveBackend =>
+        Config?.ConnectionMode == JDownloader2ConnectionMode.LocalOnly
+            ? _legacyJDownloader
+            : _myJDownloader;
+
     public bool CanHandle(string linkOrFile)
     {
         if (string.IsNullOrWhiteSpace(linkOrFile))
         {
             return false;
+        }
+
+        if (TryGetLocalDlcPath(linkOrFile, out var dlcPath))
+        {
+            return File.Exists(dlcPath);
         }
 
         return SplitLinks(linkOrFile)
@@ -46,98 +55,73 @@ internal sealed class JDownloader2Service : IHostedDownloadService
 
     public async Task<string> AddDownloadAsync(string linkOrFile, CancellationToken ct)
     {
-        await GetDeviceClient(ct);
-        var packageName = $"TeleJelly_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
-
-        var result = await _client.LinkGrabberV2.AddLinks(new AddLinksQuery
+        if (!TryGetLocalDlcPath(linkOrFile, out var dlcPath))
         {
-            Links = linkOrFile,
-            AutoStart = true,
-            PackageName = packageName,
-            DestinationFolder = Config?.StagingPath
-        });
-
-        if (result == null)
-        {
-            _logger.LogError("Failed to add links to JDownloader.");
-            throw new Exception("Failed to add links to JDownloader.");
+            return await ActiveBackend.AddDownloadAsync(linkOrFile, ct);
         }
 
-        _logger.LogInformation("Sent links to JDownloader2. Polling for package creation...");
-        var newPackage = await WaitForPackageAsync(result.Id, packageName, ct);
-
-        if (newPackage != null)
-        {
-            _logger.LogInformation("Found new JDownloader package: {PackageName}", newPackage.Name);
-            return newPackage.Uuid.ToString(CultureInfo.InvariantCulture);
-        }
-
-        _logger.LogError("Could not find the newly added package in JDownloader.");
-        throw new Exception("Could not find the newly added package in JDownloader.");
+        var content = await File.ReadAllBytesAsync(dlcPath, ct);
+        var crawlerJobId = await ActiveBackend.AddContainerAsync(content, "DLC", ct);
+        DeleteTemporaryContainerFile(dlcPath);
+        return CrawlerPrefix + crawlerJobId;
     }
 
-    public async Task<object?> GetProgressAsync(string downloadId, CancellationToken ct)
+    public bool IsDeferredDownload(string downloadId)
     {
-        await GetDeviceClient(ct);
-        if (!long.TryParse(downloadId, NumberStyles.Any, CultureInfo.InvariantCulture, out var packageId))
-        {
-            throw new ArgumentException("Invalid downloadId format", nameof(downloadId));
-        }
-
-        var packages = await _client.DownloadsV2.QueryPackages(new PackageQuery([packageId]));
-
-        return packages.FirstOrDefault();
+        return downloadId.StartsWith(CrawlerPrefix, StringComparison.Ordinal);
     }
 
-    public async Task<string?> GetDownloadDirectoryAsync(string downloadId, CancellationToken ct)
+    public async Task<DeferredHostedDownloadProgress> ContinueDownloadAsync(string downloadId, CancellationToken ct)
     {
-        if (await GetProgressAsync(downloadId, ct) is FilePackage package)
+        if (!IsDeferredDownload(downloadId))
         {
-            return package.SaveTo;
+            return new DeferredHostedDownloadProgress(true, false, "Ready", downloadId);
         }
 
-        return null;
+        var crawlerJobId = downloadId[CrawlerPrefix.Length..];
+        var progress = await ActiveBackend.GetContainerImportProgressAsync(crawlerJobId, ct);
+        if (progress.IsFailed)
+        {
+            return new DeferredHostedDownloadProgress(false, true, progress.StatusText);
+        }
+
+        if (!progress.IsComplete)
+        {
+            return new DeferredHostedDownloadProgress(false, false, progress.StatusText);
+        }
+
+        var resolvedDownloadId = await ActiveBackend.CompleteContainerImportAsync(crawlerJobId, ct);
+        return new DeferredHostedDownloadProgress(true, false, "All DLC links resolved and moved to Downloads", resolvedDownloadId);
     }
 
-    public async Task<FileInfo[]> GetCompletedFilesAsync(string downloadId, CancellationToken ct)
+    public Task<object?> GetProgressAsync(string downloadId, CancellationToken ct)
     {
-        if (await GetProgressAsync(downloadId, ct) is not FilePackage package || package.Status != "Finished")
-        {
-            return [];
-        }
-
-        var links = await _client.DownloadsV2.QueryLinks(new LinkQuery([package.UUID]));
-
-        return links.Select(link => new FileInfo(Path.Combine(package.SaveTo, link.Name))).ToArray();
+        return ActiveBackend.GetProgressAsync(downloadId, ct);
     }
 
-    public async Task RemoveDownloadAsync(string downloadId, bool deleteFiles, CancellationToken ct)
+    public Task<string?> GetDownloadDirectoryAsync(string downloadId, CancellationToken ct)
     {
-        await GetDeviceClient(ct);
-        if (!long.TryParse(downloadId, NumberStyles.Any, CultureInfo.InvariantCulture, out var packageId))
-        {
-            throw new ArgumentException("Invalid downloadId format", nameof(downloadId));
-        }
-
-        await _client.DownloadsV2.RemoveLinks(null, [packageId]);
-
-        _logger.LogInformation("Removed download {DownloadId} from JDownloader2", downloadId);
+        return ActiveBackend.GetDownloadDirectoryAsync(downloadId, ct);
     }
 
-    public async Task<bool> TestConnectionAsync(CancellationToken ct)
+    public Task<FileInfo[]> GetCompletedFilesAsync(string downloadId, CancellationToken ct)
     {
-        try
+        return ActiveBackend.GetCompletedFilesAsync(downloadId, ct);
+    }
+
+    public Task RemoveDownloadAsync(string downloadId, bool deleteFiles, CancellationToken ct)
+    {
+        if (IsDeferredDownload(downloadId))
         {
-            await GetDeviceClient(ct);
-            await _client.Device.Ping();
-            _logger.LogInformation("JDownloader2 connection test successful");
-            return true;
+            return ActiveBackend.CancelContainerImportAsync(downloadId[CrawlerPrefix.Length..], ct);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "JDownloader2 connection test failed");
-            return false;
-        }
+
+        return ActiveBackend.RemoveDownloadAsync(downloadId, deleteFiles, ct);
+    }
+
+    public Task<bool> TestConnectionAsync(CancellationToken ct)
+    {
+        return ActiveBackend.TestConnectionAsync(ct);
     }
 
     public Task<string?> ExtractPasswordFromDlcAsync(byte[] dlcContent, CancellationToken ct)
@@ -173,67 +157,39 @@ internal sealed class JDownloader2Service : IHostedDownloadService
         }
     }
 
+    public void Dispose()
+    {
+        _myJDownloader.Dispose();
+        _legacyJDownloader.Dispose();
+    }
+
     private static IEnumerable<string> SplitLinks(string linkOrFile)
     {
         return linkOrFile
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
-    private async Task<DeviceData> GetDeviceClient(CancellationToken ct)
+    private static bool TryGetLocalDlcPath(string linkOrFile, out string path)
     {
-        if (_device != null)
+        path = string.Empty;
+        if (!Uri.TryCreate(linkOrFile, UriKind.Absolute, out var uri) ||
+            !uri.IsFile ||
+            !uri.LocalPath.EndsWith(".dlc", StringComparison.OrdinalIgnoreCase))
         {
-            return _device;
+            return false;
         }
 
-        if (Config == null)
-        {
-            throw new Exception("No JDownloader API configured.");
-        }
-
-        await _client.Connect(Config.Email, Config.Password);
-        if (!_client.IsConnected)
-        {
-            throw new Exception("Failed to connect to My.JDownloader API. Check email and password.");
-        }
-
-        var devices = await _client.ListDevices();
-        _device = devices.Devices.FirstOrDefault(d => d.Name == Config.DeviceName);
-        if (_device == null)
-        {
-            throw new Exception($"JDownloader device '{Config.DeviceName}' not found.");
-        }
-
-        _client.SetWorkingDevice(_device);
-        return _device;
+        path = uri.LocalPath;
+        return true;
     }
 
-    private async Task<CrawledPackage?> WaitForPackageAsync(long resultId, string packageName, CancellationToken ct)
+    private static void DeleteTemporaryContainerFile(string path)
     {
-        const int maxPollAttempts = 15;
-        var pollDelay = TimeSpan.FromSeconds(2);
-
-        for (var attempt = 1; attempt <= maxPollAttempts; attempt++)
+        var tempRoot = Path.GetFullPath(Path.GetTempPath());
+        var filePath = Path.GetFullPath(path);
+        if (filePath.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(filePath))
         {
-            ct.ThrowIfCancellationRequested();
-
-            var collected = await _client.LinkGrabberV2.QueryPackages(new CrawledPackageQuery([resultId])) ?? [];
-            var newPackage = collected
-                .OrderByDescending(package => package.Uuid)
-                .FirstOrDefault(package => string.Equals(package.Name, packageName, StringComparison.OrdinalIgnoreCase))
-                ?? collected.OrderByDescending(package => package.Uuid).FirstOrDefault();
-
-            if (newPackage != null)
-            {
-                return newPackage;
-            }
-
-            if (attempt < maxPollAttempts)
-            {
-                await Task.Delay(pollDelay, ct);
-            }
+            File.Delete(filePath);
         }
-
-        return null;
     }
 }

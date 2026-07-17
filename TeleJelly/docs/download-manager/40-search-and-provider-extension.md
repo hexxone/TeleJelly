@@ -21,10 +21,16 @@ Important behavior:
 `SearchOrchestrator` then:
 
 - filters providers by `Search.EnabledServices`,
-- invokes each provider,
+- invokes each provider in parallel,
+- searches the canonical title and a bounded set of TMDB localized/alternative titles,
 - catches provider-local failures so one site does not break the entire search,
+- rejects results whose year/season conflicts or whose title matches neither the canonical nor an alternative title,
 - scores results through `QualityRuleEngine`,
 - returns the top matches.
+
+TMDB localized and alternative titles are resolved once with the IMDb metadata and persisted on the managed download. The German `de-DE` localized title is included explicitly because translated release titles are not guaranteed to appear in TMDB's alternative-title endpoint. German, Austrian, and Swiss aliases are searched first because the configured providers primarily publish German releases. Search fan-out is capped per provider, while the full persisted alias set remains available for result validation.
+
+Title validation deliberately runs before quality scoring. Normalization ignores punctuation, separators, case, and diacritics, and accepts either a complete normalized title phrase or strong multi-token overlap. A matching year by itself is never enough. This prevents broad WordPress searches such as `Airplane 1980` from admitting unrelated 1980 releases while still accepting localized titles such as `Die unglaubliche Reise in einem verrückten Flugzeug`.
 
 ## Current provider groups
 
@@ -71,6 +77,15 @@ Current examples:
 - `nima4k.org`
 - `disco-load.cc`
 - `byte.to`
+
+These sites were rechecked in July 2026. Their public pages are reachable, but none currently provides a complete, deterministic path from a guest search to an actionable download payload that fits `ISearchProvider`:
+
+- `crawli.net` exposes a base64-wrapped search index and JavaScript hop pages, but the hop resolves only to another source post rather than a download payload;
+- `byte.to` has a stable `?q=` search form, but exact localized-title coverage and detail-page extraction are not reliable enough yet;
+- `nima4k.org` has a working POST search form but no result for the reproduction title;
+- `data-load.me` and `disco-load.cc` expose XenForo search forms that require session/token-aware POST handling and positive guest-visible samples before an adapter can be considered complete.
+
+They therefore remain disabled rather than returning source pages that a downloader cannot use.
 
 ## Rules for adding a new provider
 

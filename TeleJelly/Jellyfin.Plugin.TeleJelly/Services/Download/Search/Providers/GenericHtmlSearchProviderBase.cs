@@ -39,7 +39,18 @@ internal abstract class GenericHtmlSearchProviderBase : ISearchProvider
             try
             {
                 var html = await _fetcher.GetStringAsync(new Uri(url, UriKind.Absolute), ct);
-                links.AddRange(ExtractCandidateLinks(html));
+                var candidates = ExtractCandidateLinks(html).ToArray();
+                var availability = await ProviderAvailabilityFilter.FindOnlineLinksAsync(html, _fetcher, _logger, ct);
+                if (!availability.HasIndicators)
+                {
+                    links.AddRange(candidates);
+                    continue;
+                }
+
+                var onlineLinks = availability.OnlineLinks
+                    .Select(NormalizeUrl)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                links.AddRange(candidates.Where(candidate => onlineLinks.Contains(NormalizeUrl(candidate))));
             }
             catch (Exception ex)
             {
@@ -75,8 +86,22 @@ internal abstract class GenericHtmlSearchProviderBase : ISearchProvider
                 continue;
             }
 
+            if (value.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                value.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                value.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                value.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ||
+                value.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             yield return value;
         }
+    }
+
+    private static string NormalizeUrl(string url)
+    {
+        return System.Net.WebUtility.HtmlDecode(url).Split('#')[0].TrimEnd('/');
     }
 
     private static bool IsMagnet(string link)

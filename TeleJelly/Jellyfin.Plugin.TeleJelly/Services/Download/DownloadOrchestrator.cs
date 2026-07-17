@@ -7,10 +7,11 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.Library;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Health;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Hosted;
+using Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Torrents;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
@@ -24,9 +25,14 @@ public interface IDownloadOrchestrator
     Task UpdateDownloadStatus(Guid id, DownloadStatus newStatus, string? errorMessage = null);
     Task<bool> CancelDownloadAsync(Guid id, CancellationToken ct);
     Task<bool> RetryDownloadAsync(Guid id, CancellationToken ct);
+    Task<bool> RetryDownloadWithSourceAsync(Guid id, string source, CancellationToken ct, IEnumerable<string>? passwordCandidates = null);
+    Task SetTelegramMessageAsync(Guid id, int messageId, DateTime messageTimeUtc, CancellationToken ct);
+    ManagedDownload? GetDownloadByTelegramMessage(long chatId, int messageId);
+    Task MergePasswordCandidatesAsync(Guid id, IEnumerable<string> passwordCandidates, CancellationToken ct);
     Task<bool> RemoveDownloadAsync(Guid id, bool deleteFiles, CancellationToken ct);
     ManagedDownload? GetDownload(Guid id);
     IEnumerable<ManagedDownload> GetAllDownloads();
+    Task RefreshDownloadProgressAsync(Guid id, CancellationToken ct);
     Task ProcessAllDownloadsAsync(CancellationToken stoppingToken);
     Task<bool> InitiateDownloadAsync(Guid downloadId, CancellationToken ct);
     Task RestoreDownloadsAsync(CancellationToken ct);
@@ -52,6 +58,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
     private readonly string _persistencePath;
     private readonly IEnumerable<ITorrentDownloadService> _torrentServices;
     private readonly IServiceHealthMonitor _healthMonitor;
+    private readonly IDownloadLinkValidator? _linkValidator;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
 
     public DownloadOrchestrator(
@@ -64,7 +71,8 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
         MediaFileOrganizerService fileOrganizer,
         ILibraryManager libraryManager,
         IServerConfigurationManager configurationManager,
-        IServiceHealthMonitor healthMonitor)
+        IServiceHealthMonitor healthMonitor,
+        IDownloadLinkValidator? linkValidator = null)
     {
         _logger = logger;
         _torrentServices = torrentServices;
@@ -76,6 +84,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
         _libraryManager = libraryManager;
         _configurationManager = configurationManager;
         _healthMonitor = healthMonitor;
+        _linkValidator = linkValidator;
         _persistencePath = Path.Combine(_configurationManager.ApplicationPaths.DataPath, "TeleJelly_Downloads.json");
     }
 
@@ -97,6 +106,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             Id = Guid.NewGuid(),
             ImdbId = imdbId,
             Title = metadata.Title,
+            AlternativeTitles = metadata.AlternativeTitles,
             Year = metadata.Year,
             MediaType = metadata.MediaType,
             ChatId = chatId,
@@ -130,6 +140,13 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             }
 
             var previousStatus = download.Status;
+            var logErrorMessage = errorMessage;
+            if (!string.IsNullOrWhiteSpace(errorMessage) &&
+                newStatus is DownloadStatus.Failed or DownloadStatus.ExtractionFailed or DownloadStatus.Stalled)
+            {
+                errorMessage = DownloadFailureGuidance.Append(download, errorMessage);
+            }
+
             download.Status = newStatus;
             download.LastStatusChangeAt = DateTime.UtcNow;
             download.ErrorMessage = errorMessage;
@@ -144,7 +161,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                 download.Title,
                 previousStatus,
                 newStatus,
-                string.IsNullOrWhiteSpace(errorMessage) ? string.Empty : $": {errorMessage}");
+                string.IsNullOrWhiteSpace(logErrorMessage) ? string.Empty : $": {logErrorMessage}");
 
             await SaveDownloadsAsync();
         });
@@ -201,6 +218,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             await RemoveFromBackendAsync(download, false, ct);
 
             download.ProgressPercentage = 0;
+            download.BackendStatusText = null;
             download.LastProgressAt = null;
             download.OriginalDownloadPath = null;
             download.CurrentStagingPath = null;
@@ -223,6 +241,73 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
         }
 
         return true;
+    }
+
+    public async Task<bool> RetryDownloadWithSourceAsync(
+        Guid id,
+        string source,
+        CancellationToken ct,
+        IEnumerable<string>? passwordCandidates = null)
+    {
+        if (!_downloads.TryGetValue(id, out var download))
+        {
+            return false;
+        }
+
+        await WithDownloadLockAsync(id, async () =>
+        {
+            download.LinkOrMagnet = source;
+            MergePasswordCandidates(download, passwordCandidates ?? []);
+
+            // A replacement source means a full re-download, even when the previous
+            // attempt happened to fail later during extraction.
+            if (download.Status == DownloadStatus.ExtractionFailed)
+            {
+                download.Status = DownloadStatus.Failed;
+            }
+
+            await SaveDownloadsAsync();
+        });
+
+        return await RetryDownloadAsync(id, ct);
+    }
+
+    public async Task SetTelegramMessageAsync(Guid id, int messageId, DateTime messageTimeUtc, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await WithDownloadLockAsync(id, async () =>
+        {
+            if (_downloads.TryGetValue(id, out var download))
+            {
+                var messageChanged = download.TelegramMessageId != messageId;
+                download.TelegramMessageId = messageId;
+                if (!download.TelegramMessageCreatedAt.HasValue || messageChanged)
+                {
+                    download.TelegramMessageCreatedAt = messageTimeUtc;
+                }
+                download.TelegramMessageUpdatedAt = messageTimeUtc;
+                await SaveDownloadsAsync();
+            }
+        });
+    }
+
+    public ManagedDownload? GetDownloadByTelegramMessage(long chatId, int messageId)
+    {
+        return _downloads.Values.FirstOrDefault(download =>
+            download.ChatId == chatId && download.TelegramMessageId == messageId);
+    }
+
+    public async Task MergePasswordCandidatesAsync(Guid id, IEnumerable<string> passwordCandidates, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await WithDownloadLockAsync(id, async () =>
+        {
+            if (_downloads.TryGetValue(id, out var download))
+            {
+                MergePasswordCandidates(download, passwordCandidates);
+                await SaveDownloadsAsync();
+            }
+        });
     }
 
     public async Task<bool> RemoveDownloadAsync(Guid id, bool deleteFiles, CancellationToken ct)
@@ -256,6 +341,37 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
     public IEnumerable<ManagedDownload> GetAllDownloads()
     {
         return _downloads.Values;
+    }
+
+    public async Task RefreshDownloadProgressAsync(Guid id, CancellationToken ct)
+    {
+        if (!_downloads.TryGetValue(id, out var download) ||
+            download.Status is not (DownloadStatus.Resolving or DownloadStatus.Downloading or DownloadStatus.Stalled) ||
+            !_processingDownloads.TryAdd(id, 0))
+        {
+            return;
+        }
+
+        try
+        {
+            if (download.Status == DownloadStatus.Resolving)
+            {
+                await ContinueDeferredDownloadAsync(download, ct);
+            }
+            else
+            {
+                await CheckDownloadProgress(download, ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh download {DownloadId}", id);
+            await UpdateDownloadStatus(id, DownloadStatus.Failed, ex.Message);
+        }
+        finally
+        {
+            _processingDownloads.TryRemove(id, out _);
+        }
     }
 
     public async Task ProcessAllDownloadsAsync(CancellationToken stoppingToken)
@@ -504,11 +620,15 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             case DownloadStatus.Pending:
                 if (CanStartAnotherDownload(download.Id))
                 {
-                    await InitiateDownloadAsync(download.Id, stoppingToken);
+                    await InitiateDownloadCoreAsync(download.Id, stoppingToken);
                 }
                 break;
             case DownloadStatus.Downloading:
+            case DownloadStatus.Stalled:
                 await CheckDownloadProgress(download, stoppingToken);
+                break;
+            case DownloadStatus.Resolving:
+                await ContinueDeferredDownloadAsync(download, stoppingToken);
                 break;
             case DownloadStatus.Extracting:
                 await ExtractFiles(download, stoppingToken);
@@ -520,6 +640,52 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                 await OrganizeFiles(download, stoppingToken);
                 break;
         }
+    }
+
+    private async Task ContinueDeferredDownloadAsync(ManagedDownload download, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(download.ServiceDownloadId) || string.IsNullOrWhiteSpace(download.ServiceName))
+        {
+            await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "The deferred download has no backend job ID.");
+            return;
+        }
+
+        var service = _hostedServices.FirstOrDefault(candidate => candidate.ServiceName == download.ServiceName);
+        if (service is not IDeferredHostedDownloadService deferredService ||
+            !deferredService.IsDeferredDownload(download.ServiceDownloadId))
+        {
+            await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "The hosted service cannot resume the deferred container import.");
+            return;
+        }
+
+        var progress = await deferredService.ContinueDownloadAsync(download.ServiceDownloadId, ct);
+        var changed = DownloadWorkflowPolicies.TryUpdateBackendStatus(download, progress.StatusText);
+        if (progress.IsFailed)
+        {
+            await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, progress.StatusText);
+            return;
+        }
+
+        if (!progress.IsComplete)
+        {
+            if (changed)
+            {
+                await SaveDownloadsAsync();
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(progress.ResolvedDownloadId))
+        {
+            await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, "The DLC import completed without any download packages.");
+            return;
+        }
+
+        download.ServiceDownloadId = progress.ResolvedDownloadId;
+        download.BackendStatusText = progress.StatusText;
+        download.LastProgressAt = DateTime.UtcNow;
+        await UpdateDownloadStatus(download.Id, DownloadStatus.Downloading);
     }
 
     private async Task CheckDownloadProgress(ManagedDownload download, CancellationToken ct)
@@ -548,6 +714,10 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             var progress = await service.GetProgressAsync(download.ServiceDownloadId, ct);
             if (progress == null)
             {
+                hasChanges |= DownloadWorkflowPolicies.TryUpdateBackendStatus(
+                    download,
+                    $"Not found in {download.ServiceName}; waiting for the backend to report it again.");
+
                 if (existingPath != null)
                 {
                     await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
@@ -556,20 +726,35 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
                 if (HasDownloadTimedOut(download, out var timeoutReason))
                 {
-                    await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, timeoutReason);
+                    if (download.Status != DownloadStatus.Stalled)
+                    {
+                        await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, timeoutReason);
+                    }
+                    else if (hasChanges)
+                    {
+                        await SaveDownloadsAsync();
+                    }
+                }
+                else if (hasChanges)
+                {
+                    await SaveDownloadsAsync();
                 }
 
                 return;
             }
 
+            hasChanges |= DownloadWorkflowPolicies.TryUpdateBackendStatus(download, progress);
+
             var progressType = progress.GetType();
             var percentProperty = progressType.GetProperty("PercentDone") ?? progressType.GetProperty("Progress");
             var currentProgress = download.ProgressPercentage;
+            var progressChanged = false;
             if (percentProperty != null)
             {
                 var percentValue = Convert.ToDouble(percentProperty.GetValue(progress), System.Globalization.CultureInfo.InvariantCulture);
                 currentProgress = percentValue <= 1.0 ? percentValue * 100 : percentValue;
-                hasChanges |= TryUpdateProgress(download, currentProgress);
+                progressChanged = TryUpdateProgress(download, currentProgress);
+                hasChanges |= progressChanged;
             }
 
             if (currentProgress >= 100 &&
@@ -583,7 +768,21 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
             if (HasTorrentAvailabilityTimedOut(download, progress, out var noSeedsReason))
             {
-                await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, noSeedsReason);
+                if (download.Status != DownloadStatus.Stalled)
+                {
+                    await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, noSeedsReason);
+                }
+                else if (hasChanges)
+                {
+                    await SaveDownloadsAsync();
+                }
+
+                return;
+            }
+
+            if (download.Status == DownloadStatus.Stalled && progressChanged)
+            {
+                await UpdateDownloadStatus(download.Id, DownloadStatus.Downloading);
                 return;
             }
         }
@@ -598,6 +797,10 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             var progress = await service.GetProgressAsync(download.ServiceDownloadId, ct);
             if (progress == null)
             {
+                hasChanges |= DownloadWorkflowPolicies.TryUpdateBackendStatus(
+                    download,
+                    $"Not found in {download.ServiceName}; waiting for the backend to report it again.");
+
                 if (existingPath != null)
                 {
                     await UpdateDownloadStatus(download.Id, DownloadStatus.Extracting);
@@ -606,9 +809,28 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
                 if (HasDownloadTimedOut(download, out var timeoutReason))
                 {
-                    await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, timeoutReason);
+                    if (download.Status != DownloadStatus.Stalled)
+                    {
+                        await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, timeoutReason);
+                    }
+                    else if (hasChanges)
+                    {
+                        await SaveDownloadsAsync();
+                    }
+                }
+                else if (hasChanges)
+                {
+                    await SaveDownloadsAsync();
                 }
 
+                return;
+            }
+
+            hasChanges |= DownloadWorkflowPolicies.TryUpdateBackendStatus(download, progress);
+
+            if (DownloadWorkflowPolicies.TryGetHostedFailureReason(progress, out var hostedFailureReason))
+            {
+                await UpdateDownloadStatus(download.Id, DownloadStatus.Failed, hostedFailureReason);
                 return;
             }
 
@@ -619,6 +841,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             var linksDoneProp = progressType.GetProperty("LinksDone");
             var linksProp = progressType.GetProperty("Links");
             var currentProgress = download.ProgressPercentage;
+            var progressChanged = false;
 
             if (bytesTotalProp != null && bytesLoadedProp != null)
             {
@@ -627,7 +850,8 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                 if (bytesTotal > 0)
                 {
                     currentProgress = (double)bytesLoaded / bytesTotal * 100;
-                    hasChanges |= TryUpdateProgress(download, currentProgress);
+                    progressChanged = TryUpdateProgress(download, currentProgress);
+                    hasChanges |= progressChanged;
                 }
             }
             else if (linksDoneProp != null && linksProp != null)
@@ -637,7 +861,8 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                 if (links > 0)
                 {
                     currentProgress = (double)linksDone / links * 100;
-                    hasChanges |= TryUpdateProgress(download, currentProgress);
+                    progressChanged = TryUpdateProgress(download, currentProgress);
+                    hasChanges |= progressChanged;
                 }
             }
 
@@ -651,11 +876,25 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             {
                 return;
             }
+
+            if (download.Status == DownloadStatus.Stalled && progressChanged)
+            {
+                await UpdateDownloadStatus(download.Id, DownloadStatus.Downloading);
+                return;
+            }
         }
 
         if (HasDownloadTimedOut(download, out var reason))
         {
-            await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, reason);
+            if (download.Status != DownloadStatus.Stalled)
+            {
+                await UpdateDownloadStatus(download.Id, DownloadStatus.Stalled, reason);
+            }
+            else if (hasChanges)
+            {
+                await SaveDownloadsAsync();
+            }
+
             return;
         }
 
@@ -692,6 +931,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
             var config = TeleJellyPlugin.Instance!.Configuration.DownloadManager.Extraction;
             var passwords = config.Passwords
+                .Concat(download.PasswordCandidates ?? [])
                 .Concat(string.IsNullOrWhiteSpace(download.SourcePassword) ? [] : [download.SourcePassword!])
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
@@ -703,11 +943,16 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                 return;
             }
 
+            var learnedPasswords = new HashSet<string>(StringComparer.Ordinal);
             foreach (var archive in archives)
             {
                 try
                 {
-                    await _archiveExtractor.ExtractArchiveAsync(archive.FullName, extractionPath, passwords, new Progress<int>(), ct);
+                    var successfulPassword = await _archiveExtractor.ExtractArchiveAsync(archive.FullName, extractionPath, passwords, new Progress<int>(), ct);
+                    if (!string.IsNullOrWhiteSpace(successfulPassword))
+                    {
+                        learnedPasswords.Add(successfulPassword);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -718,6 +963,17 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                         : string.Empty;
                     await UpdateDownloadStatus(download.Id, DownloadStatus.ExtractionFailed, $"Failed to extract {archive.Name}{passwordInfo}.");
                     return;
+                }
+            }
+
+            if (learnedPasswords.Count > 0)
+            {
+                var newPasswords = learnedPasswords.Where(password => !config.Passwords.Contains(password, StringComparer.Ordinal)).ToArray();
+                if (newPasswords.Length > 0)
+                {
+                    config.Passwords.AddRange(newPasswords);
+                    TeleJellyPlugin.Instance.SaveConfiguration(TeleJellyPlugin.Instance.Configuration);
+                    _logger.LogInformation("Learned {PasswordCount} successful archive password(s)", newPasswords.Length);
                 }
             }
 
@@ -802,6 +1058,25 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
     public async Task<bool> InitiateDownloadAsync(Guid downloadId, CancellationToken ct)
     {
+        if (!_processingDownloads.TryAdd(downloadId, 0))
+        {
+            _logger.LogDebug("Download {DownloadId} is already being processed; ignoring duplicate start request", downloadId);
+            return _downloads.TryGetValue(downloadId, out var existing) &&
+                   existing.Status is DownloadStatus.Pending or DownloadStatus.Downloading;
+        }
+
+        try
+        {
+            return await InitiateDownloadCoreAsync(downloadId, ct);
+        }
+        finally
+        {
+            _processingDownloads.TryRemove(downloadId, out _);
+        }
+    }
+
+    private async Task<bool> InitiateDownloadCoreAsync(Guid downloadId, CancellationToken ct)
+    {
         if (TeleJellyPlugin.Instance?.Configuration.DownloadManager.Enabled != true)
         {
             await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "Download manager is disabled.");
@@ -819,6 +1094,18 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             _logger.LogError("Download {DownloadId} has no link or magnet", downloadId);
             await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "No download link specified");
             return false;
+        }
+
+        if (_linkValidator?.CanValidate(download.LinkOrMagnet) == true)
+        {
+            var linkStatus = await _linkValidator.ValidateAsync(download.LinkOrMagnet, ct);
+            if (linkStatus == DownloadLinkValidationStatus.Broken)
+            {
+                const string error = "The selected FileCrypt container is no longer available (404). Please choose another search result or source link.";
+                _logger.LogWarning("Download {DownloadId} was stopped because its FileCrypt container is broken", downloadId);
+                await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, error);
+                return false;
+            }
         }
 
         if (!CanStartAnotherDownload(downloadId))
@@ -839,6 +1126,11 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             return false;
         }
 
+        // Reserve the workflow before the backend call so duplicate UI actions
+        // cannot start the same download while package creation is in flight.
+        await UpdateDownloadStatus(downloadId, DownloadStatus.Pending);
+
+        var startErrors = new List<string>();
         foreach (var candidate in candidates)
         {
             var serviceName = candidate switch
@@ -878,21 +1170,26 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                     download.ServiceName = serviceName;
                     download.ServiceType = serviceType;
                     download.ProgressPercentage = 0;
+                    var isDeferred = candidate is IDeferredHostedDownloadService deferred && deferred.IsDeferredDownload(serviceDownloadId);
+                    download.BackendStatusText = isDeferred
+                        ? $"Queued for link resolution in {serviceName}"
+                        : $"Queued in {serviceName}";
                     download.LastProgressAt = DateTime.UtcNow;
                     download.StartAttempts++;
                     download.CompletedAt = null;
                     download.ErrorMessage = null;
 
-                    await UpdateDownloadStatus(downloadId, DownloadStatus.Downloading);
+                    await UpdateDownloadStatus(downloadId, isDeferred ? DownloadStatus.Resolving : DownloadStatus.Downloading);
                     return true;
                 }
                 catch (Exception ex)
                 {
+                    startErrors.Add($"{serviceName}: {ex.Message}");
                     _logger.LogWarning(ex,
                         "Attempt {Attempt} failed for download {DownloadId} using service {ServiceName}",
                         attempt, downloadId, serviceName);
 
-                    if (attempt >= 3)
+                    if (ex is DownloadRejectedException || attempt >= 3)
                     {
                         break;
                     }
@@ -903,7 +1200,11 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
             }
         }
 
-        await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, "Failed to start download on all available services.");
+        var errorMessage = startErrors
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .LastOrDefault() ?? "No available download service accepted the download.";
+        download.BackendStatusText = errorMessage;
+        await UpdateDownloadStatus(downloadId, DownloadStatus.Failed, errorMessage);
         return false;
     }
 
@@ -917,7 +1218,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
         var activeDownloadCount = _downloads.Values.Count(download =>
             download.Id != currentDownloadId &&
-            download.Status == DownloadStatus.Downloading);
+            download.Status is DownloadStatus.Resolving or DownloadStatus.Downloading);
 
         return activeDownloadCount < config.MaxConcurrentDownloads;
     }
@@ -964,10 +1265,15 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
 
     private bool IsHostedDownload(string linkOrMagnet)
     {
-        return !string.IsNullOrEmpty(linkOrMagnet) &&
-               Uri.TryCreate(linkOrMagnet, UriKind.Absolute, out var uri) &&
-               (uri.Scheme == "http" || uri.Scheme == "https") &&
-               !linkOrMagnet.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(linkOrMagnet) ||
+            !Uri.TryCreate(linkOrMagnet, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        return (uri.IsFile && uri.LocalPath.EndsWith(".dlc", StringComparison.OrdinalIgnoreCase)) ||
+               ((uri.Scheme == "http" || uri.Scheme == "https") &&
+                !linkOrMagnet.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task RestoreDownloadsAsync(CancellationToken ct)
@@ -981,6 +1287,7 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                 var restored = JsonSerializer.Deserialize<IEnumerable<ManagedDownload>>(json);
                 var config = TeleJellyPlugin.Instance?.Configuration.DownloadManager;
                 var restoredCount = 0;
+                var guidanceWasAdded = false;
 
                 foreach (var download in restored ?? [])
                 {
@@ -1001,12 +1308,24 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
                         }
                     }
 
+                    if (!string.IsNullOrWhiteSpace(download.ErrorMessage) &&
+                        download.Status is DownloadStatus.Failed or DownloadStatus.ExtractionFailed or DownloadStatus.Stalled)
+                    {
+                        var guidedError = DownloadFailureGuidance.Append(download, download.ErrorMessage);
+                        guidanceWasAdded |= !string.Equals(guidedError, download.ErrorMessage, StringComparison.Ordinal);
+                        download.ErrorMessage = guidedError;
+                    }
+
                     download.LastStatusChangeAt = download.LastStatusChangeAt == default ? download.StartedAt : download.LastStatusChangeAt;
                     _downloads.TryAdd(download.Id, download);
                     restoredCount++;
                 }
 
                 _logger.LogInformation("Restored {Count} persisted downloads.", restoredCount);
+                if (guidanceWasAdded)
+                {
+                    await SaveDownloadsAsync();
+                }
             }
         }
         catch (Exception ex)
@@ -1050,5 +1369,15 @@ internal sealed class DownloadOrchestrator : IDownloadOrchestrator
     private static bool IsValidTransition(DownloadStatus from, DownloadStatus to)
     {
         return DownloadWorkflowPolicies.IsValidTransition(from, to);
+    }
+
+    private static void MergePasswordCandidates(ManagedDownload download, IEnumerable<string> candidates)
+    {
+        download.PasswordCandidates = (download.PasswordCandidates ?? [])
+            .Concat(string.IsNullOrWhiteSpace(download.SourcePassword) ? [] : [download.SourcePassword!])
+            .Concat(candidates)
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 }

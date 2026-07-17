@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.TeleJelly.Services.Download.Search.Providers;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Search.Providers.Catalog;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;

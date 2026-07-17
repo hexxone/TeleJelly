@@ -13,10 +13,10 @@
             <!-- 1. The Plugin DLL itself -->
             <InputAssemblies Include="$(TargetPath)"/>
 
-            <!-- 2. ONLY Telegram.Bot; JDownloader (System.Text.Json; System.IO.Pipelines); Transmission.API.RPC (using ReferencePath to get implementation assembly) -->
+            <!-- 2. Merge plugin dependencies only. Framework assemblies must remain provided by Jellyfin's runtime. -->
             <InputAssemblies
                 Include="@(ReferencePath)"
-                Condition="'%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'JDownloader' Or '%(filename)' == 'Transmission.API.RPC' Or '%(filename)' == 'System.Text.Json' Or '%(filename)' == 'System.IO.Pipelines'"/>
+                Condition="'%(filename)' == 'Telegram.Bot' Or '%(filename)' == 'JDownloader' Or '%(filename)' == 'Transmission.API.RPC'"/>
 
             <!-- 3. Vital: Directories to look for other dependencies (System.*, etc.) -->
             <LibraryPath Include="@(ReferencePath->'%(RootDir)%(Directory)')"/>

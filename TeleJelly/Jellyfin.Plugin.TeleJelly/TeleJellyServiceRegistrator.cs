@@ -46,6 +46,8 @@ public class TeleJellyServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<MediaFileOrganizerService>();
         serviceCollection.AddSingleton<IServiceHealthMonitor, ServiceHealthMonitor>();
         serviceCollection.AddSingleton<QualityRuleEngine>();
+        serviceCollection.AddSingleton<ISearchDocumentFetcher, HttpClientSearchDocumentFetcher>();
+        serviceCollection.AddSingleton<IDownloadLinkValidator, FileCryptContainerValidator>();
         serviceCollection.AddSingleton<SearchOrchestrator>();
 
         // Search providers

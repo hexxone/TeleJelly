@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.Library;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 using NUnit.Framework;
@@ -88,6 +88,19 @@ public class QualityRuleEngineTests
         Assert.That(score, Is.Zero);
         Assert.That(breakdown.Disqualified, Is.True);
         Assert.That(breakdown.DisqualificationReason, Does.Contain("Missing required audio language"));
+    }
+
+    [Test]
+    public void ScoreResult_MatchesConfiguredLanguageCodesToProviderLanguageNames()
+    {
+        var result = CreateResult(audioLanguages: ["German", "English"], subtitleLanguages: ["German"]);
+        var profile = CreateProfile(requiredAudioLanguages: ["ger", "eng"], requiredSubtitleLanguages: ["ger"]);
+
+        var score = QualityRuleEngine.ScoreResult(result, profile);
+        var breakdown = _engine.GetScoringBreakdown(result, profile);
+
+        Assert.That(score, Is.GreaterThan(0));
+        Assert.That(breakdown.Disqualified, Is.False);
     }
 
     [Test]

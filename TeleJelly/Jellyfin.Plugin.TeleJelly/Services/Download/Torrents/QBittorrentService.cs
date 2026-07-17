@@ -9,7 +9,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.HostedDownload;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.Torrent;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download.Torrents;
@@ -23,10 +24,13 @@ internal sealed class QBittorrentService : ITorrentDownloadService, IDisposable
     private string? _authCookie;
 
     public QBittorrentService(ILogger<QBittorrentService> logger)
+        : this(logger, new HttpClientHandler { CookieContainer = new CookieContainer() })
+    {
+    }
+
+    internal QBittorrentService(ILogger<QBittorrentService> logger, HttpMessageHandler handler)
     {
         _logger = logger;
-        var cookieContainer = new CookieContainer();
-        var handler = new HttpClientHandler { CookieContainer = cookieContainer };
         _httpClient = new HttpClient(handler);
     }
 
@@ -48,13 +52,9 @@ internal sealed class QBittorrentService : ITorrentDownloadService, IDisposable
 
         await EnsureAuthenticatedAsync(ct);
 
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "urls", linkOrMagnet },
-            { "savepath", Config.StagingPath }
-        });
+        using var content = await CreateAddContentAsync(linkOrMagnet, Config.StagingPath, ct);
 
-        var response = await _httpClient.PostAsync(
+        using var response = await _httpClient.PostAsync(
             GetApiUrl("/api/v2/torrents/add"),
             content,
             ct
@@ -77,7 +77,44 @@ internal sealed class QBittorrentService : ITorrentDownloadService, IDisposable
             throw new Exception("Failed to add torrent to qBittorrent");
         }
 
+        DeleteTemporaryTorrentFile(linkOrMagnet);
         return newestTorrent.Hash;
+    }
+
+    private static async Task<HttpContent> CreateAddContentAsync(string linkOrMagnet, string savePath, CancellationToken ct)
+    {
+        if (Uri.TryCreate(linkOrMagnet, UriKind.Absolute, out var uri) &&
+            uri.IsFile &&
+            File.Exists(uri.LocalPath))
+        {
+            var multipart = new MultipartFormDataContent();
+            var torrentContent = new ByteArrayContent(await File.ReadAllBytesAsync(uri.LocalPath, ct));
+            torrentContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-bittorrent");
+            multipart.Add(torrentContent, "torrents", Path.GetFileName(uri.LocalPath));
+            multipart.Add(new StringContent(savePath), "savepath");
+            return multipart;
+        }
+
+        return new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "urls", linkOrMagnet },
+            { "savepath", savePath }
+        });
+    }
+
+    private static void DeleteTemporaryTorrentFile(string linkOrMagnet)
+    {
+        if (!Uri.TryCreate(linkOrMagnet, UriKind.Absolute, out var uri) || !uri.IsFile)
+        {
+            return;
+        }
+
+        var tempRoot = Path.GetFullPath(Path.GetTempPath());
+        var filePath = Path.GetFullPath(uri.LocalPath);
+        if (filePath.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
     }
 
     public async Task<object?> GetProgressAsync(string downloadId, CancellationToken ct)
@@ -204,7 +241,10 @@ internal sealed class QBittorrentService : ITorrentDownloadService, IDisposable
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadAsStringAsync(ct);
-        if (result != "Ok.")
+        // qBittorrent 5 may answer a successful login with 204 and no body,
+        // while older releases answer 200 with "Ok.". A 200 "Fails." response
+        // still needs to be treated as an authentication failure.
+        if (response.StatusCode != HttpStatusCode.NoContent && result != "Ok.")
         {
             _logger.LogError("qBittorrent authentication failed: {Result}", result);
             throw new Exception("Failed to authenticate with qBittorrent");

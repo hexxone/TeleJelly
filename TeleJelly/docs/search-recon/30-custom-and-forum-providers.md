@@ -54,6 +54,11 @@ Observed behavior:
 - Result pages fetched during recon often showed no hits for the sampled terms.
 - Public HTML clearly indicates XenForo quick-search/search-form structure.
 
+July 2026 recheck:
+
+- The public XenForo search form is reachable and exposes a per-response `_xfToken`.
+- A plain GET with search query parameters only renders the search form; the real search is a token/session-aware POST to `/search/search`.
+
 Current assessment:
 
 - Search route is known.
@@ -76,6 +81,8 @@ Observed behavior:
   - `/search/?keywords=<term>&c[title_only]=1&o=date`
 - Public samples fetched during recon returned `Keine Ergebnisse gefunden.` for tested terms.
 
+The July 2026 recheck confirmed that the site is reachable without a browser challenge, but its public search still requires the XenForo form POST flow and the sampled `Airplane` query produced no positive result.
+
 Current assessment:
 
 - Route shape is known.
@@ -88,8 +95,9 @@ Current assessment:
 
 Observed behavior:
 
-- Homepage search form exists, but only a light trace was collected.
-- The site did not yet get enough probing to define a stable adapter.
+- Homepage search is a stable GET form using `/?q=<term>`.
+- A July 2026 `Airplane` search returned many broad matches, including unrelated magazines and the 2025 film.
+- The exact localized 1980 title returned no result.
 
 Current assessment:
 
@@ -107,6 +115,8 @@ Observed behavior:
   - a search form posting to `/search`
 - The site also references `search.html?xrel_search_query=...` links in markup.
 
+The July 2026 recheck confirmed that `POST /search` with a `search` field works without a CAPTCHA, but returned no result for `Airplane`.
+
 Current assessment:
 
 - Search may be hybrid forum/custom index.
@@ -116,9 +126,11 @@ Current assessment:
 
 Observed behavior:
 
-- Front page reachable, but no stable adapter work completed.
-- Prior concern about anti-bot behavior is still valid.
+- The public search form is deterministic: `POST /all/` with `opt=1`, `cat=all`, and `key=<term>`.
+- Responses are wrapped in a base64 string that the normal page decodes with JavaScript.
+- Decoding exposes result titles and `/go/?/<id>/` hop URLs.
+- The hop page does not expose a final downloader payload; it redirects in JavaScript to a third-party source post.
 
 Current assessment:
 
-- Leave disabled until a deterministic guest-visible search flow is identified.
+- Leave disabled until indexed source posts can be turned into actionable containers, magnets, torrents, or direct host links without provider-specific guesswork.

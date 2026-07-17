@@ -5,6 +5,7 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 
 public class SearchResult
 {
+    public string Provider { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string DownloadLink { get; set; } = string.Empty;
     public string? Password { get; set; }
@@ -22,5 +23,6 @@ public class SearchResult
     public int? Bitrate { get; set; }
     public string Release { get; set; } = string.Empty;
     public double QualityScore { get; set; }
+    public bool QualityFallback { get; set; }
     public DateTime? UploadedDate { get; set; }
 }

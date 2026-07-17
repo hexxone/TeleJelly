@@ -89,7 +89,8 @@ That matches the TeleJelly default staging paths:
 
 - The LinuxServer image prints a temporary admin password to the container logs on first startup.
 - After first login, set a stable username/password in the Web UI before wiring it into TeleJelly.
-- Point TeleJelly's qBittorrent config to host `qbittorrent`, port `8080`.
+- In the VPN-routed Compose stack, qBittorrent shares Gluetun's network namespace. Point TeleJelly to host `gluetun`, port `8080`.
+- `http://localhost:8080` is only the host/browser address; from inside Jellyfin, `localhost` refers to Jellyfin itself.
 
 ### pyLoad-ng
 
@@ -98,9 +99,10 @@ That matches the TeleJelly default staging paths:
 
 ### JDownloader 2
 
-- Access the local GUI at `http://localhost:5800`.
 - The container has both `/downloads` and `/output` mounted to the same host path so TeleJelly's configured staging path can be used directly.
-- If My.JDownloader direct connection is needed, port `3129` is exposed.
+- For My.JDownloader mode, configure `Email`, `Password`, and `DeviceName`.
+- For local-only mode in the VPN-routed Compose stack, enable the deprecated Remote API and set `LocalApiBaseUrl` to `http://gluetun:3128`.
+- The JDownloader runtime configuration must be mounted at `/jdownloader/cfg`; mounting it at `/config` does not configure this image.
 
 ## Fixtures
 
@@ -120,13 +122,13 @@ This is useful for:
 
 ## Recommended Local TeleJelly Settings
 
-Use the service names as hosts from inside the Jellyfin container:
+Use the network endpoint visible from inside the Jellyfin container:
 
 - Transmission host: `transmission`
-- qBittorrent host: `qbittorrent`
+- qBittorrent host: `gluetun`
 - pyLoad host: `pyload-ng`
 
-For JDownloader 2, configure the device according to the local JDownloader/My.JDownloader setup you activate in the GUI.
+For JDownloader 2 local-only mode, use `http://gluetun:3128`. For My.JDownloader mode, configure the account and device name instead.
 
 ## Current Limitations
 

@@ -11,10 +11,12 @@ public class ManagedDownload
     public string UserId { get; set; } = string.Empty;
     public string? LinkOrMagnet { get; set; }
     public string? SourcePassword { get; set; }
+    public string[]? PasswordCandidates { get; set; }
     public DownloadStatus Status { get; set; }
     public string? ErrorMessage { get; set; }
     public string ImdbId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
+    public string[]? AlternativeTitles { get; set; }
     public int? Year { get; set; }
     public MediaType MediaType { get; set; }
     public int? Season { get; set; }
@@ -23,6 +25,7 @@ public class ManagedDownload
     public string? ServiceName { get; set; }
     public DownloadServiceType ServiceType { get; set; }
     public double ProgressPercentage { get; set; }
+    public string? BackendStatusText { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime LastStatusChangeAt { get; set; }
     public DateTime? LastProgressAt { get; set; }
@@ -39,6 +42,9 @@ public class ManagedDownload
     public SearchResult[]? SearchResults { get; set; }
     public MediaFileGroup[]? AnalyzedFiles { get; set; }
     public int StartAttempts { get; set; }
+    public int? TelegramMessageId { get; set; }
+    public DateTime? TelegramMessageCreatedAt { get; set; }
+    public DateTime? TelegramMessageUpdatedAt { get; set; }
 }
 
 public enum DownloadServiceType

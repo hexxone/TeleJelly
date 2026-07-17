@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.TeleJelly.Classes.Models;
 using Jellyfin.Plugin.TeleJelly.Services.Download;
-using Jellyfin.Plugin.TeleJelly;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
@@ -100,35 +100,46 @@ public class CommandAutoDownload : ICommandBase
             return;
         }
 
+        ManagedDownload? download = null;
+        var libraryCount = 0;
         try
         {
-            var download = await _orchestrator.BeginDownloadWorkflow(imdbId, message.Chat.Id, message.From.Id);
+            download = await _orchestrator.BeginDownloadWorkflow(imdbId, message.Chat.Id, message.From.Id);
 
-            var libraries = _libraryManager.GetUserRootFolder().Children.ToArray();
-            if (!libraries.Any())
-            {
-                await client.SendMessage(message.Chat.Id, "No libraries configured in Jellyfin.", cancellationToken: cancellationToken);
-                return;
-            }
-
-            var keyboardButtons = libraries
-                .Select(lib => InlineKeyboardButton.WithCallbackData(lib.Name ?? "Unnamed Library", $"dl_{download.Id}_library_{lib.Id}"))
-                .ToList();
-            keyboardButtons.Add(InlineKeyboardButton.WithCallbackData("Cancel", $"dl_{download.Id}_cancel"));
-
-            await client.SendMessage(
-                message.Chat.Id,
-                $"Starting automated download for <b>{download.Title} ({download.Year})</b>.\n\nPlease select the destination library:",
-                ParseMode.Html,
-                replyMarkup: new InlineKeyboardMarkup(keyboardButtons),
-                cancellationToken: cancellationToken);
+            libraryCount = _libraryManager.GetVirtualFolders().Count();
+            await botService.StartDownloadSelectionAsync(download, cancellationToken);
         }
         catch (Exception ex)
         {
-            await client.SendMessage(
+            botService.Logger.LogError(
+                ex,
+                "Failed to start automated download for IMDB ID {ImdbId}. DownloadId: {DownloadId}, UserId: {UserId}, ChatId: {ChatId}, LibraryCount: {LibraryCount}",
+                imdbId,
+                download?.Id,
+                message.From.Id,
                 message.Chat.Id,
-                $"Failed to start automated download: {ex.Message}",
+                libraryCount);
+
+            if (download != null)
+            {
+                await _orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.Failed, ex.Message);
+            }
+
+            var failureText = download?.ErrorMessage ??
+                              DownloadFailureGuidance.Append($"Failed to start automated download: {ex.Message}", imdbId);
+            if (download != null)
+            {
+                failureText = DownloadFailureGuidance.AppendReplyOption(failureText);
+            }
+
+            var failureMessage = await client.SendMessage(
+                message.Chat.Id,
+                $"❌ {failureText}",
                 cancellationToken: cancellationToken);
+            if (download != null)
+            {
+                await botService.RegisterFailedDownloadReplyAsync(failureMessage.MessageId, download.Id, cancellationToken);
+            }
         }
     }
 }

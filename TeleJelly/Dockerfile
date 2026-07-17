@@ -32,5 +32,10 @@ RUN dotnet publish Jellyfin.Plugin.TeleJelly/Jellyfin.Plugin.TeleJelly.csproj -c
 # Final stage using official Jellyfin image
 FROM jellyfin/jellyfin:${JELLYFIN_VERSION}
 
-COPY --from=build /app/publish/Jellyfin.Plugin.TeleJelly.dll /config/plugins/TeleJelly/
-COPY --from=build /src/meta.json /config/plugins/TeleJelly/
+COPY --from=build /app/publish/Jellyfin.Plugin.TeleJelly.dll /opt/telejelly/
+COPY --from=build /src/meta.json /opt/telejelly/
+COPY telejelly-entrypoint.sh /usr/local/bin/telejelly-entrypoint
+
+RUN chmod 0755 /usr/local/bin/telejelly-entrypoint
+
+ENTRYPOINT ["/usr/local/bin/telejelly-entrypoint"]

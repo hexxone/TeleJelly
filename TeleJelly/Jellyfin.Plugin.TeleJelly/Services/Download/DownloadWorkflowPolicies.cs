@@ -7,6 +7,35 @@ namespace Jellyfin.Plugin.TeleJelly.Services.Download;
 
 internal static class DownloadWorkflowPolicies
 {
+    internal static bool TryUpdateBackendStatus(ManagedDownload download, object progress)
+    {
+        var status = ReadProperty(progress, "Status", "State")?.ToString();
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            var linksDone = ReadIntProperty(progress, "LinksDone");
+            var links = ReadIntProperty(progress, "Links");
+            if (links is > 0 && linksDone.HasValue)
+            {
+                status = $"{linksDone.Value}/{links.Value} links completed";
+            }
+        }
+
+        return TryUpdateBackendStatus(download, status);
+    }
+
+    internal static bool TryUpdateBackendStatus(ManagedDownload download, string? status)
+    {
+        status = NormalizeBackendStatus(status);
+        if (string.IsNullOrWhiteSpace(status) ||
+            string.Equals(download.BackendStatusText, status, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        download.BackendStatusText = status;
+        return true;
+    }
+
     internal static bool TryUpdateProgress(ManagedDownload download, double progressPercentage, DateTime nowUtc)
     {
         if (progressPercentage < 0)
@@ -106,23 +135,43 @@ internal static class DownloadWorkflowPolicies
 
         return from switch
         {
-            DownloadStatus.Pending => to == DownloadStatus.Downloading,
+            DownloadStatus.Pending => to is DownloadStatus.Resolving or DownloadStatus.Downloading,
             DownloadStatus.AwaitingLibrary => to == DownloadStatus.AwaitingMediaType,
-            DownloadStatus.AwaitingMediaType => to is DownloadStatus.AwaitingSeason or DownloadStatus.AwaitingSearchResult or DownloadStatus.AwaitingPathConfirm,
-            DownloadStatus.AwaitingSeason => to is DownloadStatus.AwaitingSearchResult or DownloadStatus.AwaitingPathConfirm,
+            DownloadStatus.AwaitingMediaType => to is DownloadStatus.AwaitingSeason or DownloadStatus.AwaitingSearchResult or DownloadStatus.AwaitingPathVars or DownloadStatus.AwaitingPathConfirm,
+            DownloadStatus.AwaitingSeason => to is DownloadStatus.AwaitingSearchResult or DownloadStatus.AwaitingPathVars or DownloadStatus.AwaitingPathConfirm,
             DownloadStatus.AwaitingSearchResult => to is DownloadStatus.AwaitingPathVars or DownloadStatus.AwaitingPathConfirm,
             DownloadStatus.AwaitingPathVars => to is DownloadStatus.AwaitingPathVars or DownloadStatus.AwaitingPathConfirm,
-            DownloadStatus.AwaitingPathConfirm => to is DownloadStatus.Downloading or DownloadStatus.Pending,
+            DownloadStatus.AwaitingPathConfirm => to is DownloadStatus.AwaitingMediaType or DownloadStatus.Resolving or DownloadStatus.Downloading or DownloadStatus.Pending,
+            DownloadStatus.Resolving => to == DownloadStatus.Downloading,
             DownloadStatus.Downloading => to is DownloadStatus.Extracting or DownloadStatus.Stalled,
             DownloadStatus.Extracting => to is DownloadStatus.Analyzing or DownloadStatus.ExtractionFailed,
             DownloadStatus.ExtractionFailed => to == DownloadStatus.Extracting,
             DownloadStatus.Analyzing => to == DownloadStatus.Organizing,
             DownloadStatus.Organizing => to == DownloadStatus.Completed,
             DownloadStatus.Stalled => to is DownloadStatus.Downloading or DownloadStatus.Extracting,
-            DownloadStatus.Failed => to is DownloadStatus.AwaitingPathConfirm or DownloadStatus.Extracting,
+            DownloadStatus.Failed => to is DownloadStatus.AwaitingPathConfirm or DownloadStatus.Extracting or DownloadStatus.Resolving,
             DownloadStatus.Canceled => to == DownloadStatus.AwaitingPathConfirm,
             _ => false
         };
+    }
+
+    internal static bool TryGetHostedFailureReason(object progress, out string? reason)
+    {
+        reason = null;
+        var status = ReadStringProperty(progress, "Status");
+        const string failurePrefix = "Failed:";
+        if (status?.StartsWith(failurePrefix, StringComparison.OrdinalIgnoreCase) != true)
+        {
+            return false;
+        }
+
+        reason = status[failurePrefix.Length..].Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            reason = "The hosted download service reported a terminal failure.";
+        }
+
+        return true;
     }
 
     private static int? ReadIntProperty(object source, params string[] propertyNames)
@@ -147,6 +196,41 @@ internal static class DownloadWorkflowPolicies
         }
 
         return null;
+    }
+
+    private static object? ReadProperty(object source, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+            if (value != null)
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? NormalizeBackendStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return null;
+        }
+
+        return status.Trim() switch
+        {
+            "metaDL" => "Downloading torrent metadata",
+            "stalledDL" => "Stalled; waiting for peers",
+            "queuedDL" => "Queued in download client",
+            "pausedDL" => "Paused in download client",
+            "checkingDL" => "Checking downloaded data",
+            "forcedDL" => "Forced download",
+            "allocating" => "Allocating disk space",
+            "error" => "Download client reported an error",
+            var value => value
+        };
     }
 
     private static double? ReadDoubleProperty(object source, params string[] propertyNames)

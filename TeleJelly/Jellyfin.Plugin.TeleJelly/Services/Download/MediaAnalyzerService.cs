@@ -63,13 +63,13 @@ internal sealed class MediaAnalyzerService
         return Task.FromResult(groups.ToArray());
     }
 
-    public async Task<(string? Title, int? Year, MediaType MediaType)> GetMetadataFromImdbId(string imdbId)
+    public async Task<(string? Title, int? Year, MediaType MediaType, string[] AlternativeTitles)> GetMetadataFromImdbId(string imdbId)
     {
         var apiKey = TeleJellyPlugin.Instance?.Configuration.DownloadManager.TmdbApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             _logger.LogWarning("TMDb API key is not configured. Cannot fetch metadata.");
-            return (null, null, MediaType.Unknown);
+            return (null, null, MediaType.Unknown, []);
         }
 
         using var tmdbClient = new TMDbClient(apiKey);
@@ -80,19 +80,98 @@ internal sealed class MediaAnalyzerService
         if (result.MovieResults.Any())
         {
             var movie = result.MovieResults.First();
-            _logger.LogInformation("Found movie: {Title} ({Year})", movie.Title, movie.ReleaseDate?.Year);
-            return (movie.Title, movie.ReleaseDate?.Year, MediaType.Movie);
+            string? germanTitle = null;
+            try
+            {
+                germanTitle = (await tmdbClient.GetMovieAsync(movie.Id, language: "de-DE"))?.Title;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch the German localized title for movie {TmdbId}", movie.Id);
+            }
+
+            IEnumerable<(string Title, string Country)> alternativeTitleValues = [];
+            try
+            {
+                var alternativeTitles = await tmdbClient.GetMovieAlternativeTitlesAsync(movie.Id, country: null);
+                alternativeTitleValues = alternativeTitles?.Titles.Select(title => (title.Title, title.Iso_3166_1)) ?? [];
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch alternative titles for movie {TmdbId}; continuing with its primary and original titles", movie.Id);
+            }
+
+            var aliases = OrderAlternativeTitles(
+                movie.Title,
+                movie.OriginalTitle,
+                germanTitle,
+                alternativeTitleValues);
+            _logger.LogInformation("Found movie: {Title} ({Year}) with {AliasCount} alternative title(s)", movie.Title, movie.ReleaseDate?.Year, aliases.Length);
+            return (movie.Title, movie.ReleaseDate?.Year, MediaType.Movie, aliases);
         }
 
         if (result.TvResults.Any())
         {
             var tvShow = result.TvResults.First();
-            _logger.LogInformation("Found series: {Name} ({Year})", tvShow.Name, tvShow.FirstAirDate?.Year);
-            return (tvShow.Name, tvShow.FirstAirDate?.Year, MediaType.Series);
+            string? germanTitle = null;
+            try
+            {
+                germanTitle = (await tmdbClient.GetTvShowAsync(tvShow.Id, language: "de-DE"))?.Name;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch the German localized title for series {TmdbId}", tvShow.Id);
+            }
+
+            IEnumerable<(string Title, string Country)> alternativeTitleValues = [];
+            try
+            {
+                var alternativeTitles = await tmdbClient.GetTvShowAlternativeTitlesAsync(tvShow.Id);
+                alternativeTitleValues = alternativeTitles?.Results.Select(title => (title.Title, title.Iso_3166_1)) ?? [];
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch alternative titles for series {TmdbId}; continuing with its primary and original titles", tvShow.Id);
+            }
+
+            var aliases = OrderAlternativeTitles(
+                tvShow.Name,
+                tvShow.OriginalName,
+                germanTitle,
+                alternativeTitleValues);
+            _logger.LogInformation("Found series: {Name} ({Year}) with {AliasCount} alternative title(s)", tvShow.Name, tvShow.FirstAirDate?.Year, aliases.Length);
+            return (tvShow.Name, tvShow.FirstAirDate?.Year, MediaType.Series, aliases);
         }
 
         _logger.LogWarning("No movie or series found for IMDB ID: {ImdbId}", imdbId);
-        return (null, null, MediaType.Unknown);
+        return (null, null, MediaType.Unknown, []);
+    }
+
+    private static string[] OrderAlternativeTitles(
+        string? primaryTitle,
+        string? originalTitle,
+        string? germanTitle,
+        IEnumerable<(string Title, string Country)> alternativeTitles)
+    {
+        var preferredCountries = new HashSet<string>(["DE", "AT", "CH"], System.StringComparer.OrdinalIgnoreCase);
+        var aliases = new[]
+            {
+                (Title: primaryTitle, Country: (string?)null, Priority: 0),
+                (Title: originalTitle, Country: (string?)null, Priority: 1),
+                (Title: germanTitle, Country: "DE", Priority: 2)
+            }
+            .Concat(alternativeTitles.Select(title => (
+                Title: (string?)title.Title,
+                Country: (string?)title.Country,
+                Priority: preferredCountries.Contains(title.Country ?? string.Empty) ? 3 : 4)))
+            .Where(title => !string.IsNullOrWhiteSpace(title.Title))
+            .OrderBy(title => title.Priority)
+            .Select(title => title.Title!.Trim())
+            .Distinct(System.StringComparer.OrdinalIgnoreCase)
+            .Take(30)
+            .ToArray();
+
+        return aliases;
     }
 
     public Task<(int? Season, int? Episode)> ExtractSeasonAndEpisode(string fileName)

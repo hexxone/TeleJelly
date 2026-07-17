@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.Library;
 using Jellyfin.Plugin.TeleJelly.Classes.Models;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download.Search;
@@ -51,7 +51,7 @@ public sealed class QualityRuleEngine
         {
             var hasRequiredAudio = profile.RequiredAudioLanguages
                 .Any(required => result.AudioLanguages.Any(available =>
-                    available.Equals(required, StringComparison.OrdinalIgnoreCase)));
+                    LanguagesMatch(available, required)));
 
             if (!hasRequiredAudio)
             {
@@ -65,7 +65,7 @@ public sealed class QualityRuleEngine
         {
             var hasRequiredSubtitles = profile.RequiredSubtitleLanguages
                 .Any(required => result.SubtitleLanguages.Any(available =>
-                    available.Equals(required, StringComparison.OrdinalIgnoreCase)));
+                    LanguagesMatch(available, required)));
 
             if (!hasRequiredSubtitles)
             {
@@ -146,13 +146,13 @@ public sealed class QualityRuleEngine
         // 10. Preferred Audio Languages Score (Bonus for each match)
         var preferredAudioMatches = profile.PreferredAudioLanguages
             .Count(preferred => result.AudioLanguages.Any(available =>
-                available.Equals(preferred, StringComparison.OrdinalIgnoreCase)));
+                LanguagesMatch(available, preferred)));
         score += preferredAudioMatches * weights.PreferredAudioLanguagePerMatch;
 
         // 11. Preferred Subtitle Languages Score (Bonus for each match)
         var preferredSubtitleMatches = profile.PreferredSubtitleLanguages
             .Count(preferred => result.SubtitleLanguages.Any(available =>
-                available.Equals(preferred, StringComparison.OrdinalIgnoreCase)));
+                LanguagesMatch(available, preferred)));
         score += preferredSubtitleMatches * weights.PreferredSubtitleLanguagePerMatch;
 
         // 12. Bitrate Score (Higher bitrate gets a bounded bonus when known)
@@ -284,9 +284,7 @@ public sealed class QualityRuleEngine
         // Check hard requirements
         if (result.ServiceType == DownloadServiceType.Torrent && result.Seeders < profile.MinimumSeeders)
         {
-            breakdown.Disqualified = true;
-            breakdown.DisqualificationReason = $"Insufficient seeders: {result.Seeders} < {profile.MinimumSeeders}";
-            return breakdown;
+            AddDisqualification(breakdown, $"Insufficient seeders: {result.Seeders} < {profile.MinimumSeeders}");
         }
 
         if (result.FileSizeBytes > 0 && result.Resolution != null)
@@ -294,17 +292,13 @@ public sealed class QualityRuleEngine
             var maxSizeConfig = profile.MaxFileSizeByResolution.FirstOrDefault(r => r.Resolution == result.Resolution);
             if (maxSizeConfig != null && result.FileSizeBytes > maxSizeConfig.Bytes)
             {
-                breakdown.Disqualified = true;
-                breakdown.DisqualificationReason = $"File too large: {result.FileSizeBytes} > {maxSizeConfig.Bytes}";
-                return breakdown;
+                AddDisqualification(breakdown, $"File too large: {result.FileSizeBytes} > {maxSizeConfig.Bytes}");
             }
 
             var minSizeConfig = profile.MinFileSizeByResolution.FirstOrDefault(r => r.Resolution == result.Resolution);
             if (minSizeConfig != null && result.FileSizeBytes < minSizeConfig.Bytes)
             {
-                breakdown.Disqualified = true;
-                breakdown.DisqualificationReason = $"File too small: {result.FileSizeBytes} < {minSizeConfig.Bytes}";
-                return breakdown;
+                AddDisqualification(breakdown, $"File too small: {result.FileSizeBytes} < {minSizeConfig.Bytes}");
             }
         }
 
@@ -312,13 +306,11 @@ public sealed class QualityRuleEngine
         {
             var hasRequiredAudio = profile.RequiredAudioLanguages
                 .Any(required => result.AudioLanguages.Any(available =>
-                    available.Equals(required, StringComparison.OrdinalIgnoreCase)));
+                    LanguagesMatch(available, required)));
 
             if (!hasRequiredAudio)
             {
-                breakdown.Disqualified = true;
-                breakdown.DisqualificationReason = $"Missing required audio language. Required: [{string.Join(", ", profile.RequiredAudioLanguages)}], Available: [{string.Join(", ", result.AudioLanguages)}]";
-                return breakdown;
+                AddDisqualification(breakdown, $"Missing required audio language. Required: [{string.Join(", ", profile.RequiredAudioLanguages)}], Available: [{string.Join(", ", result.AudioLanguages)}]");
             }
         }
 
@@ -326,13 +318,11 @@ public sealed class QualityRuleEngine
         {
             var hasRequiredSubtitles = profile.RequiredSubtitleLanguages
                 .Any(required => result.SubtitleLanguages.Any(available =>
-                    available.Equals(required, StringComparison.OrdinalIgnoreCase)));
+                    LanguagesMatch(available, required)));
 
             if (!hasRequiredSubtitles)
             {
-                breakdown.Disqualified = true;
-                breakdown.DisqualificationReason = $"Missing required subtitle language. Required: [{string.Join(", ", profile.RequiredSubtitleLanguages)}], Available: [{string.Join(", ", result.SubtitleLanguages)}]";
-                return breakdown;
+                AddDisqualification(breakdown, $"Missing required subtitle language. Required: [{string.Join(", ", profile.RequiredSubtitleLanguages)}], Available: [{string.Join(", ", result.SubtitleLanguages)}]");
             }
         }
 
@@ -396,12 +386,12 @@ public sealed class QualityRuleEngine
         // Languages
         var preferredAudioMatches = profile.PreferredAudioLanguages
             .Count(preferred => result.AudioLanguages.Any(available =>
-                available.Equals(preferred, StringComparison.OrdinalIgnoreCase)));
+                LanguagesMatch(available, preferred)));
         breakdown.AudioLanguageScore = preferredAudioMatches * weights.PreferredAudioLanguagePerMatch;
 
         var preferredSubtitleMatches = profile.PreferredSubtitleLanguages
             .Count(preferred => result.SubtitleLanguages.Any(available =>
-                available.Equals(preferred, StringComparison.OrdinalIgnoreCase)));
+                LanguagesMatch(available, preferred)));
         breakdown.SubtitleLanguageScore = preferredSubtitleMatches * weights.PreferredSubtitleLanguagePerMatch;
 
         // Bitrate
@@ -454,5 +444,31 @@ public sealed class QualityRuleEngine
         breakdown.TotalScore = breakdown.BaseQualityScore * breakdown.AgeMultiplier;
 
         return breakdown;
+    }
+
+    private static void AddDisqualification(ScoringBreakdown breakdown, string reason)
+    {
+        breakdown.Disqualified = true;
+        breakdown.DisqualificationReasons.Add(reason);
+        breakdown.DisqualificationReason = string.Join("; ", breakdown.DisqualificationReasons);
+    }
+
+    private static bool LanguagesMatch(string left, string right)
+    {
+        return NormalizeLanguage(left).Equals(NormalizeLanguage(right), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeLanguage(string language)
+    {
+        return language.Trim().ToLowerInvariant() switch
+        {
+            "de" or "deu" or "ger" or "german" or "deutsch" => "de",
+            "en" or "eng" or "english" or "englisch" => "en",
+            "fr" or "fra" or "fre" or "french" or "français" or "französisch" => "fr",
+            "es" or "spa" or "spanish" or "español" or "spanisch" => "es",
+            "it" or "ita" or "italian" or "italiano" or "italienisch" => "it",
+            "jp" or "ja" or "jap" or "japan" or "japanese" or "japanisch" => "jp",
+            var normalized => normalized
+        };
     }
 }

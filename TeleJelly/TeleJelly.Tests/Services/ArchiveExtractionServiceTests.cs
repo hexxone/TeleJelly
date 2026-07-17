@@ -118,12 +118,16 @@ public class ArchiveExtractionServiceTests
     {
         using var scope = CreateExtractionScope();
         var service = new ArchiveExtractionService(new NullLogger<ArchiveExtractionService>());
+        var source = Directory.CreateTempSubdirectory();
         var destination = Directory.CreateTempSubdirectory();
+        var archivePath = Path.Combine(Path.GetTempPath(), $"plain-single-{Guid.NewGuid():N}.zip");
 
         try
         {
+            File.WriteAllText(Path.Combine(source.FullName, "plain-single.txt"), "plain single archive");
+            ZipFile.CreateFromDirectory(source.FullName, archivePath);
             await service.ExtractArchiveAsync(
-                GetFixturePath("Archives/plain-single.zip"),
+                archivePath,
                 destination.FullName,
                 ["wrong-password"],
                 new Progress<int>(),
@@ -135,7 +139,9 @@ public class ArchiveExtractionServiceTests
         }
         finally
         {
+            source.Delete(true);
             destination.Delete(true);
+            File.Delete(archivePath);
         }
     }
 

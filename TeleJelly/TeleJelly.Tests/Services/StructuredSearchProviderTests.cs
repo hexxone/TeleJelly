@@ -263,6 +263,39 @@ internal class StructuredSearchProviderTests
         });
     }
 
+    [Test]
+    public async Task ProviderAvailabilityFilter_OnlyKeepsExplicitlyOnlineLinks()
+    {
+        const string html = """
+            <a href="https://filecrypt.cc/Container/online.html"><img src="https://cdn.example/status-online.png"></a>
+            <a href="https://filecrypt.cc/Container/partial.html"><img src="https://cdn.example/status-partial.png"></a>
+            <a href="https://filecrypt.cc/Container/offline.html"><img src="https://cdn.example/status-offline.png"></a>
+            <a href="https://filecrypt.cc/Container/unmarked.html">Download</a>
+            """;
+
+        var availability = await ProviderAvailabilityFilter.FindOnlineLinksAsync(
+            html,
+            new FakeFetcher(),
+            new NullLogger<ConfigurableStructuredSearchProvider>(),
+            CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(availability.HasIndicators, Is.True);
+            Assert.That(availability.OnlineLinks, Is.EquivalentTo(new[] { "https://filecrypt.cc/Container/online.html" }));
+        });
+    }
+
+    [Test]
+    public void ProviderAvailabilityFilter_RecognizesDocumentedFileCryptOnlineBadge()
+    {
+        var onlineBadge = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAFoAAAAQCAMAAAChtZg6AAAAQlBMVEVUtyJUtyJUtyIAAABUtyJUtyJUuSL///+MzXSv26DZ7dJjvjz2+/Ts9ul/yGNyw1HP6cbF5LqY0oOk1pLj8t664K2/0IsaAAAABnRSTlMlke0A7omlLeG3AAAA4ElEQVQ4y7WU6W7DIBCEcZrM7HIZH33/V+0iR1Yr2cii8QgxHNL3Y2DXfbnhgY/rORjY4SY5N7SuRwl/t4BcRb9cI405kfQZu5Q29CL60chD6WdZEuU3Opd8OZHzMFiqhZQQ8haNoYO52DzCZNaFVua3i/CbjLmihQJOkVzqzcrSgy7cXKiGRojTjvYBPmGm2Kn+Fy2A9ztaUZclqmoqXYHMb8/HaJ/UtHQ9o68WYsIxeoq9PwQLVxWNMZ+ghVMYJ8GZWiUjK8ky4hi9lZTP5yUz4Ca97mxP1lSfaKq3qf4Al0IlL4HyaKwAAAAASUVORK5CYII=");
+
+        Assert.That(ProviderAvailabilityFilter.IsOnlineFileCryptBadge(onlineBadge), Is.True);
+        Assert.That(ProviderAvailabilityFilter.IsOnlineFileCryptBadge([1, 2, 3]), Is.False);
+    }
+
     private static string LoadFixture(string relativePath)
     {
         var fullPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", relativePath);
@@ -286,7 +319,13 @@ internal class StructuredSearchProviderTests
 
     internal sealed class FakeFetcher : ISearchDocumentFetcher
     {
+        public async Task<SearchDocumentResponse> GetResponseAsync(Uri uri, CancellationToken ct)
+        {
+            return new SearchDocumentResponse(System.Net.HttpStatusCode.OK, uri, await GetStringAsync(uri, ct));
+        }
+
         private readonly List<(Func<Uri, bool> Match, Func<Uri, string> Response)> _getHandlers = [];
+        private readonly List<(Func<Uri, bool> Match, Func<Uri, byte[]> Response)> _getBytesHandlers = [];
         private readonly List<(Func<Uri, bool> Match, Func<IReadOnlyDictionary<string, string>, string> Response)> _postHandlers = [];
 
         public void WhenGet(Func<Uri, bool> match, Func<Uri, string> response)
@@ -299,12 +338,28 @@ internal class StructuredSearchProviderTests
             _postHandlers.Add((match, response));
         }
 
+        public void WhenGetBytes(Func<Uri, bool> match, Func<Uri, byte[]> response)
+        {
+            _getBytesHandlers.Add((match, response));
+        }
+
         public Task<string> GetStringAsync(Uri uri, CancellationToken ct)
         {
             var handler = _getHandlers.LastOrDefault(x => x.Match(uri));
             if (handler.Match == null)
             {
                 throw new InvalidOperationException($"No GET handler configured for {uri}");
+            }
+
+            return Task.FromResult(handler.Response(uri));
+        }
+
+        public Task<byte[]> GetBytesAsync(Uri uri, CancellationToken ct)
+        {
+            var handler = _getBytesHandlers.LastOrDefault(x => x.Match(uri));
+            if (handler.Match == null)
+            {
+                throw new InvalidOperationException($"No byte GET handler configured for {uri}");
             }
 
             return Task.FromResult(handler.Response(uri));

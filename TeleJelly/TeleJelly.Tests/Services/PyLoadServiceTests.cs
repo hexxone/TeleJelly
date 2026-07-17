@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.TeleJelly;
 using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
-using Jellyfin.Plugin.TeleJelly.Services.Download;
 using Jellyfin.Plugin.TeleJelly.Services.Download.Hosted;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;

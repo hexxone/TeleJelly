@@ -36,7 +36,8 @@
         <PackageReference Include="Jellyfin.Model" Version="10.11.3"/>
         <PackageReference Include="Telegram.Bot" Version="22.8.1" PrivateAssets="All"/>
         <PackageReference Include="Transmission.API.RPC" Version="2.1.2"/>
-        <PackageReference Include="JDownloader.NET" Version="1.2.1"/>
+        <!-- 1.2+ targets .NET 10 and pulls System.Text.Json 10 into the .NET Standard fallback. -->
+        <PackageReference Include="JDownloader.NET" Version="1.1.0"/>
         <PackageReference Include="SharpCompress" Version="0.42.1"/>
         <PackageReference Include="TMDbLib" Version="2.3.0"/>
         <PackageReference Include="MinVer" Version="6.0.0">

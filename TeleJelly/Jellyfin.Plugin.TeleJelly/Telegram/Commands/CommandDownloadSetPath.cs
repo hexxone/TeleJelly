@@ -79,21 +79,23 @@ public class CommandDownloadSetPath : ICommandBase
 
                 if (success)
                 {
-                    await client.SendMessage(
+                    var statusMessage = await client.SendMessage(
                         message.Chat.Id,
                         $"✅ Path updated and download started for <b>{download.Title}</b>!\n" +
                         $"Path: <code>{customPath}</code>",
                         ParseMode.Html,
                         cancellationToken: cancellationToken);
+                    await _orchestrator.SetTelegramMessageAsync(download.Id, statusMessage.MessageId, statusMessage.Date.ToUniversalTime(), cancellationToken);
                 }
                 else
                 {
-                    await client.SendMessage(
+                    var failureMessage = await client.SendMessage(
                         message.Chat.Id,
                         $"✅ Path updated, but failed to start download.\n" +
-                        $"Error: {download.ErrorMessage ?? "No available download service."}",
+                        $"Error: {System.Net.WebUtility.HtmlEncode(DownloadFailureGuidance.AppendReplyOption(download.ErrorMessage ?? "No available download service."))}",
                         ParseMode.Html,
                         cancellationToken: cancellationToken);
+                    await botService.RegisterFailedDownloadReplyAsync(failureMessage.MessageId, download.Id, cancellationToken);
                 }
             }
             else
@@ -110,10 +112,12 @@ public class CommandDownloadSetPath : ICommandBase
         catch (Exception ex)
         {
             botService.Logger.LogError(ex, "Failed to set path for download {DownloadId}", downloadId);
-            await client.SendMessage(
+            await _orchestrator.UpdateDownloadStatus(download.Id, DownloadStatus.Failed, ex.Message);
+            var failureMessage = await client.SendMessage(
                 message.Chat.Id,
-                $"❌ Failed to set path: {ex.Message}",
+                $"❌ {DownloadFailureGuidance.AppendReplyOption(download.ErrorMessage ?? ex.Message)}",
                 cancellationToken: cancellationToken);
+            await botService.RegisterFailedDownloadReplyAsync(failureMessage.MessageId, download.Id, cancellationToken);
         }
     }
 }

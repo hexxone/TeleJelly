@@ -1,155 +1,199 @@
-name: telejelly
+name: telejelly-example
 
 networks:
-  default:
-    name: telejelly-network
-    driver: bridge
+    default:
+        name: telejelly-network
+        driver: bridge
 
 volumes:
-  traefik-le:
+    traefik-le:
 
 services:
-  traefik:
-    profiles: ["proxy"]
-    image: traefik:v3
-    command:
-      - --api.dashboard=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.myresolver.acme.tlschallenge=true
-      - --certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}
-      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.traefik-ui.rule=Host(`traefik.${SERVER_HOST}`)
-      - traefik.http.routers.traefik-ui.entrypoints=websecure
-      - traefik.http.routers.traefik-ui.tls=true
-      - traefik.http.routers.traefik-ui.tls.certresolver=myresolver
-      - traefik.http.routers.traefik-ui.service=api@internal
-      - traefik.http.middlewares.traefik-rate-limit.ratelimit.average=20
-      - traefik.http.middlewares.traefik-rate-limit.ratelimit.burst=40
-      - traefik.http.routers.traefik-ui.middlewares=traefik-rate-limit
-    ports:
-      - "8800:80"
-      - "8443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-le:/letsencrypt
-    restart: unless-stopped
+    # (Optional reverse proxy for https)
+    traefik:
+        profiles: [ "proxy" ]
+        image: traefik:v3
+        command:
+            - --api.dashboard=true
+            - --providers.docker=true
+            - --providers.docker.exposedbydefault=false
+            - --entrypoints.web.address=:80
+            - --entrypoints.websecure.address=:443
+            - --certificatesresolvers.myresolver.acme.tlschallenge=true
+            - --certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}
+            - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.traefik-ui.rule=Host(`traefik.${SERVER_HOST}`)
+            - traefik.http.routers.traefik-ui.entrypoints=websecure
+            - traefik.http.routers.traefik-ui.tls=true
+            - traefik.http.routers.traefik-ui.tls.certresolver=myresolver
+            - traefik.http.routers.traefik-ui.service=api@internal
+            - traefik.http.middlewares.traefik-rate-limit.ratelimit.average=20
+            - traefik.http.middlewares.traefik-rate-limit.ratelimit.burst=40
+            - traefik.http.routers.traefik-ui.middlewares=traefik-rate-limit
+        environment:
+            - TZ=${TZ}
+        ports:
+            - "8800:80"
+            - "8443:443"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - traefik-le:/letsencrypt
+        restart: unless-stopped
 
-  jellyfin:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        DOTNET_VERSION: "9.0"
-        JELLYFIN_VERSION: "10.11"
-    container_name: telejelly-jellyfin
-    environment:
-      TZ: UTC
-    ports:
-      - "8096:8096"
-    volumes:
-# Cannot overwrite config! It currently contains the built plugin in container.
-#      - ./docker-data/jellyfin/config:/config
-      - ./docker-data/jellyfin/cache:/cache
-      - ./docker-data/downloads:/downloads
-      - ./docker-data/library:/media
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${SERVER_HOST}`)
-      - traefik.http.routers.jellyfin.entrypoints=websecure
-      - traefik.http.routers.jellyfin.tls=true
-      - traefik.http.routers.jellyfin.tls.certresolver=myresolver
-      - traefik.http.middlewares.jellyfin-rate-limit.ratelimit.average=50
-      - traefik.http.middlewares.jellyfin-rate-limit.ratelimit.burst=100
-      - traefik.http.routers.jellyfin.middlewares=jellyfin-rate-limit
-      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
-    depends_on:
-      - transmission
-      - qbittorrent
-      - pyload-ng
-      - jdownloader-2
-      - fixture-http
-    restart: unless-stopped
+    # E.g.: https://jellyfin.localhost:8443 or http://localhost:8096
+    jellyfin:
+        container_name: jellyfin
+        # hostname: jellyfin
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                DOTNET_VERSION: "9.0"
+                JELLYFIN_VERSION: "10.11"
+        environment:
+            - TZ=${TZ}
+        ports:
+            - "8096:8096"
+        volumes:
+            - ./docker-data/jellyfin/config:/config
+            - ./docker-data/jellyfin/plugin-configurations:/config/plugins/configurations
+            - ./docker-data/jellyfin/cache:/cache
+            - ./docker-data/downloads:/downloads
+            - ./docker-data/library:/media
+        tmpfs:
+            - /config/plugins
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${SERVER_HOST}`)
+            - traefik.http.routers.jellyfin.entrypoints=websecure
+            - traefik.http.routers.jellyfin.tls=true
+            - traefik.http.routers.jellyfin.tls.certresolver=myresolver
+            - traefik.http.middlewares.jellyfin-rate-limit.ratelimit.average=50
+            - traefik.http.middlewares.jellyfin-rate-limit.ratelimit.burst=100
+            - traefik.http.routers.jellyfin.middlewares=jellyfin-rate-limit
+            - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+        depends_on:
+            - qbittorrent
+            - jdownloader2
+        #            - transmission
+        #            - pyload-ng
+        restart: unless-stopped
 
-  transmission:
-    image: lscr.io/linuxserver/transmission:latest
-    container_name: telejelly-transmission
-    environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: UTC
-      USER: telejelly
-      PASS: telejelly
-      PEERPORT: 51413
-      TRANSMISSION_WEB_HOME: /combustion-release/
-    ports:
-      - "9091:9091"
-      - "51413:51413"
-      - "51413:51413/udp"
-    volumes:
-      - ./docker-data/transmission/config:/config
-      - ./docker-data/downloads:/downloads
-      - ./docker-data/transmission/watch:/watch
-    restart: unless-stopped
+    # See https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
+    gluetun:
+        restart: always
+        image: qmcgaw/gluetun
+        container_name: gluetun
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        ports:
+            - "3128:3128" # JDownloader
+            - "8080:8080" # qBitTorrent
+            - 8888:8888/tcp # HTTP proxy
+            - 8388:8388/tcp # Shadowsocks
+            - 8388:8388/udp # Shadowsocks
+        volumes:
+            - ./docker-data/gluetun:/gluetun
+        env_file:
+            - ./gluetun-relays.env
+        environment:
+            - VPN_SERVICE_PROVIDER=mullvad
+            - VPN_TYPE=wireguard
+            # Wireguard:
+            - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+            - WIREGUARD_ADDRESSES=10.66.185.230/32
+            - SERVER_COUNTRIES=Germany,Netherlands
+            - SERVER_CITIES=Frankfurt,Amsterdam
+            # Timezone for accurate log times
+            - TZ=${TZ}
 
-  qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
-    container_name: telejelly-qbittorrent
-    environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: UTC
-      WEBUI_PORT: 8080
-      TORRENTING_PORT: 6881
-    ports:
-      - "8080:8080"
-      - "6881:6881"
-      - "6881:6881/udp"
-    volumes:
-      - ./docker-data/qbittorrent/config:/config
-      - ./docker-data/downloads:/downloads
-    restart: unless-stopped
+    # Host address: http://localhost:8080
+    # From Jellyfin: http://gluetun:8080 (qBittorrent shares Gluetun's network namespace)
+    # https://hub.docker.com/r/linuxserver/qbittorrent
+    qbittorrent:
+        image: lscr.io/linuxserver/qbittorrent:latest
+        container_name: qbittorrent
+        # hostname: qbittorrent
+        environment:
+            PUID: 1000
+            PGID: 1000
+            WEBUI_PORT: 8080
+            TORRENTING_PORT: 6881
+            TZ: ${TZ}
+#        ports:
+#            - "8080:8080"
+#            - "6881:6881"
+#            - "6881:6881/udp"
+        volumes:
+            - ./docker-data/qbittorrent/config:/config
+            - ./docker-data/downloads:/downloads
+        restart: unless-stopped
+        network_mode: "service:gluetun"
 
-  pyload-ng:
-    image: lscr.io/linuxserver/pyload-ng:latest
-    container_name: telejelly-pyload
-    environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: UTC
-    ports:
-      - "8000:8000"
-      - "9666:9666"
-    volumes:
-      - ./docker-data/pyload/config:/config
-      - ./docker-data/downloads:/downloads
-    restart: unless-stopped
+    # Host address: http://localhost:3128
+    # From Jellyfin: http://gluetun:3128 (JDownloader shares Gluetun's network namespace)
+    # for setup info see: https://github.com/hexxone/jdownloader2
+    jdownloader2:
+        build:
+            context: .
+            dockerfile: jd2.Dockerfile
+        container_name: jdownloader2
+        # hostname: jdownloader2
+        environment:
+            USER_ID: 1000
+            GROUP_ID: 1000
+            TZ: ${TZ}
+#        ports:
+#            - "3128:3128" # Deprecated local API
+        volumes:
+            # JDownloader reads its runtime configuration from /jdownloader/cfg.
+            - ./docker-data/jdownloader/config/cfg:/jdownloader/cfg:rw
+            # Keep TeleJelly's configured staging path identical in both containers.
+            - ./docker-data/downloads:/downloads:rw
+            - ./docker-data/downloads:/output:rw
+        restart: unless-stopped
+        network_mode: "service:gluetun"
 
-  jdownloader-2:
-    image: jlesage/jdownloader-2:latest
-    container_name: telejelly-jdownloader
-    environment:
-      USER_ID: 1000
-      GROUP_ID: 1000
-      TZ: UTC
-    ports:
-      - "5800:5800"
-      - "3129:3129"
-    volumes:
-      - ./docker-data/jdownloader/config:/config:rw
-      - ./docker-data/downloads:/downloads:rw
-      - ./docker-data/downloads:/output:rw
-    restart: unless-stopped
+    # alternative for qBittorrent:
+    #    transmission:
+    #        image: lscr.io/linuxserver/transmission:latest
+    #        container_name: transmission
+    #        environment:
+    #            PUID: 1000
+    #            PGID: 1000
+    #            TZ: ${TZ}
+    #            USER: telejelly
+    #            PASS: telejelly
+    #            PEERPORT: 51413
+    #            TRANSMISSION_WEB_HOME: /combustion-release/
+    #        ports:
+    #            - "9091:9091"
+    #            - "51413:51413"
+    #            - "51413:51413/udp"
+    #        volumes:
+    #            - ./docker-data/transmission/config:/config
+    #            - ./docker-data/downloads:/downloads
+    #            - ./docker-data/transmission/watch:/watch
+    #        restart: unless-stopped
+    #        network_mode: "service:gluetun"
 
-  fixture-http:
-    image: nginx:alpine
-    container_name: telejelly-fixture-http
-    ports:
-      - "18080:80"
-    volumes:
-      - ./docker-data/fixtures/http:/usr/share/nginx/html:ro
-    restart: unless-stopped
+    # alternative for jDownloader2:
+    #    pyload-ng:
+    #        image: lscr.io/linuxserver/pyload-ng:latest
+    #        container_name: telejelly-pyload
+    #        environment:
+    #            PUID: 1000
+    #            PGID: 1000
+    #            TZ: ${TZ}
+    #        ports:
+    #            - "8000:8000"
+    #            - "9666:9666"
+    #        volumes:
+    #            - ./docker-data/pyload/config:/config
+    #            - ./docker-data/downloads:/downloads
+    #        restart: unless-stopped
+    #        network_mode: "service:gluetun"

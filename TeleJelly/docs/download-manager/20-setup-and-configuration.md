@@ -78,6 +78,13 @@ Each service also needs:
 - credentials
 - `StagingPath`
 
+For `JDownloader2`, `ConnectionMode` controls how TeleJelly talks to the service:
+
+- `MyJDownloader`
+  Uses the My.JDownloader account settings: `Email`, `Password`, and `DeviceName`.
+- `LocalOnly`
+  Uses the deprecated local Remote API via `LocalApiBaseUrl`, for example `http://localhost:3128` or `http://jdownloader-2:3128` in Docker.
+
 Recent change worth knowing:
 
 - hosted services now accept multi-link payloads, not just a single URL, because some providers expose several direct hoster parts instead of one file container.
@@ -171,6 +178,10 @@ Those variables must also be defined in `LibrarySettings.DynamicVariables`, othe
 ### Quality profiles
 
 The per-library `QualityProfile` drives search-result ranking and filtering.
+
+Search first returns only candidates that satisfy every strict profile rule. If providers found downloads but every candidate fails a profile rule, the best candidates are returned as clearly marked quality fallbacks for manual selection instead of producing a misleading "No results" failure. Quality fallbacks are never auto-selected. The global download-size limit and conflicting year or season metadata remain hard filters.
+
+Search logs include a funnel summary (provider results, global-size rejections, metadata mismatches, strict-quality rejections, strict matches, and returned results) plus grouped quality rejection reasons. Language codes and provider language names are normalized, so values such as `ger`, `deu`, `German`, and `Deutsch` are treated as equivalent.
 
 It includes preferences and constraints for:
 

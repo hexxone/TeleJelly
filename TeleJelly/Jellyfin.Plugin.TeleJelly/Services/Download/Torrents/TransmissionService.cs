@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.TeleJelly.Classes.Configuration;
+using Jellyfin.Plugin.TeleJelly.Classes.Configuration.Torrent;
 using Microsoft.Extensions.Logging;
 using Transmission.API.RPC;
 using Transmission.API.RPC.Entity;

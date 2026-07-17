@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Jellyfin.Plugin.TeleJelly.Services.Download.Search;
 
@@ -8,6 +9,7 @@ public sealed class ScoringBreakdown
     public string ServiceType { get; set; } = string.Empty;
     public bool Disqualified { get; set; }
     public string? DisqualificationReason { get; set; }
+    public List<string> DisqualificationReasons { get; set; } = [];
 
     public double BaseScore { get; set; }
     public double ResolutionScore { get; set; }

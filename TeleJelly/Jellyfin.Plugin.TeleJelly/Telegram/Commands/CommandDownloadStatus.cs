@@ -51,6 +51,11 @@ public class CommandDownloadStatus : ICommandBase
             return;
         }
 
+        foreach (var activeDownload in downloads.Where(d => d.Status is DownloadStatus.Resolving or DownloadStatus.Downloading or DownloadStatus.Stalled))
+        {
+            await _orchestrator.RefreshDownloadProgressAsync(activeDownload.Id, cancellationToken);
+        }
+
         var sb = new StringBuilder();
         sb.AppendLine("<b>Your Recent Downloads:</b>");
         sb.AppendLine();
@@ -66,16 +71,26 @@ public class CommandDownloadStatus : ICommandBase
             }
 
             sb.AppendLine(CultureInfo.InvariantCulture, $"<b>{download.Title} ({download.Year})</b>");
-            sb.AppendLine(CultureInfo.InvariantCulture, $"Status: <i>{download.Status}</i> {download.ProgressPercentage:F1}%{etaString}");
+            if (!string.IsNullOrWhiteSpace(download.ErrorMessage))
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"Error: {System.Net.WebUtility.HtmlEncode(download.ErrorMessage)}");
+            }
+            else
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"Status: <i>{download.Status}</i>");
+                if (download.Status is DownloadStatus.Resolving or DownloadStatus.Downloading or DownloadStatus.Stalled)
+                {
+                    sb.AppendLine(CultureInfo.InvariantCulture, $"Progress: {download.ProgressPercentage:F1}%{etaString}");
+                    if (!string.IsNullOrWhiteSpace(download.BackendStatusText))
+                    {
+                        sb.AppendLine(CultureInfo.InvariantCulture, $"Status text: {System.Net.WebUtility.HtmlEncode(download.BackendStatusText)}");
+                    }
+                }
+            }
             if (download.RequiresExtraction)
             {
                 var attemptedPasswords = download.TriedPasswords?.Length ?? 0;
                 sb.AppendLine(CultureInfo.InvariantCulture, $"Extraction: required{(attemptedPasswords > 0 ? $" | password candidates: {attemptedPasswords}" : string.Empty)}");
-            }
-
-            if (!string.IsNullOrEmpty(download.ErrorMessage))
-            {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"Error: <pre>{download.ErrorMessage}</pre>");
             }
 
             sb.AppendLine(CultureInfo.InvariantCulture, $"Started: {download.StartedAt:g}");

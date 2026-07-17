@@ -60,7 +60,7 @@ internal sealed class ArchiveExtractionService
         return Task.FromResult(archives);
     }
 
-    public async Task ExtractArchiveAsync(string archivePath, string destinationPath, string[] passwords, IProgress<int> progress, CancellationToken ct)
+    public async Task<string?> ExtractArchiveAsync(string archivePath, string destinationPath, string[] passwords, IProgress<int> progress, CancellationToken ct)
     {
         _logger.LogInformation("Starting extraction for archive: {ArchivePath}", archivePath);
         var successfulPassword = await TryAllPasswordsAsync(archivePath, passwords, ct);
@@ -86,19 +86,22 @@ internal sealed class ArchiveExtractionService
         }
 
         _logger.LogInformation("Successfully extracted archive: {ArchivePath}", archivePath);
+        return successfulPassword;
     }
 
     public Task<string?> TryAllPasswordsAsync(string archivePath, string[] passwords, CancellationToken ct)
     {
         return Task.Run(() =>
         {
-            foreach (var password in passwords.Concat([null])) // Try with no password last
+            // Try without a password first: some archive readers reject an
+            // otherwise unprotected archive when a non-empty password is supplied.
+            foreach (var password in new string?[] { null }.Concat(passwords))
             {
                 ct.ThrowIfCancellationRequested();
                 try
                 {
                     _logger.LogDebug("Trying password '{Password}' for archive {ArchivePath}", string.IsNullOrEmpty(password) ? "(none)" : "******", archivePath);
-                    using (var archive = ArchiveFactory.Open(archivePath, new ReaderOptions { Password = password }))
+                    using (var archive = ArchiveFactory.Open(archivePath, CreateReaderOptions(password)))
                     {
                         var smallestEntry = archive.Entries
                             .Where(entry => !entry.IsDirectory)
@@ -113,7 +116,9 @@ internal sealed class ArchiveExtractionService
                     }
 
                     _logger.LogInformation("Found successful password for archive {ArchivePath}", archivePath);
-                    return password;
+                    // Empty string represents a successful password-free open;
+                    // null remains reserved for "no candidate worked".
+                    return password ?? string.Empty;
                 }
                 catch (System.Security.Cryptography.CryptographicException)
                 {
@@ -133,7 +138,7 @@ internal sealed class ArchiveExtractionService
     {
         return Task.Run(() =>
         {
-            using var archive = ArchiveFactory.Open(archivePath, new ReaderOptions { Password = password });
+            using var archive = ArchiveFactory.Open(archivePath, CreateReaderOptions(password));
 
             return archive.Entries
                 .Where(e => !e.IsDirectory)
@@ -148,7 +153,7 @@ internal sealed class ArchiveExtractionService
     {
         await Task.Run(() =>
         {
-            using var archive = ArchiveFactory.Open(archivePath, new ReaderOptions { Password = password });
+            using var archive = ArchiveFactory.Open(archivePath, CreateReaderOptions(password));
             var entries = archive.Entries.Where(entry => !entry.IsDirectory).ToArray();
             var totalSize = Math.Max(1L, entries.Sum(entry => Math.Max(1L, entry.Size)));
             long extractedSize = 0;
@@ -199,6 +204,13 @@ internal sealed class ArchiveExtractionService
 
             await ExtractNestedArchivesAsync(nestedDestination, passwords, remainingDepth - 1, ct);
         }
+    }
+
+    private static ReaderOptions CreateReaderOptions(string? password)
+    {
+        return string.IsNullOrEmpty(password)
+            ? new ReaderOptions()
+            : new ReaderOptions { Password = password };
     }
 
     private async Task EnsureSufficientFreeSpaceAsync(FileInfo archiveFile, string destinationPath, CancellationToken ct)
